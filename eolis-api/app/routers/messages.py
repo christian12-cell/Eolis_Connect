@@ -1,0 +1,219 @@
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from sqlalchemy.orm import Session, joinedload
+from ..database import get_db
+from ..models import User, Ticket, Message, Notification
+from ..schemas import MessageCreateRequest, MessageResponse
+from ..deps import get_current_user
+from ..config import settings
+from ..sms_service import sms_final_response, sms_document_requested, sms_docs_submitted
+
+router = APIRouter(prefix="/tickets/{ticket_id}/messages", tags=["messages"])
+
+STAFF_ROLES = {"AGENT", "OPS_ADMIN", "SYSTEM_ADMIN"}
+ALLOWED_STAFF_TYPES = {"INTERNAL_NOTE", "DOCUMENT_REQUEST", "FINAL_RESPONSE"}
+ALLOWED_CLIENT_TYPES = {"CLIENT", "DOCS_SUBMITTED"}
+
+
+@router.get("", response_model=list[MessageResponse])
+def list_messages(
+    ticket_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+    if current_user.role == "CLIENT" and ticket.client_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    q = db.query(Message).options(joinedload(Message.sender)).filter(Message.ticket_id == ticket_id)
+
+    # INTERNAL_NOTE hidden from clients
+    if current_user.role == "CLIENT":
+        q = q.filter(Message.sender_type != "INTERNAL_NOTE")
+
+    return q.order_by(Message.created_at.asc()).all()
+
+
+@router.post("/mark-read", status_code=200)
+def mark_messages_read(
+    ticket_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Mark as read all messages visible to the caller:
+    - CLIENT: marks AGENT, FINAL_RESPONSE, DOCUMENT_REQUEST messages as read
+    - STAFF: marks CLIENT, DOCS_SUBMITTED messages as read
+    """
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404)
+    if current_user.role == "CLIENT" and ticket.client_id != current_user.id:
+        raise HTTPException(status_code=403)
+
+    if current_user.role == "CLIENT":
+        sender_types = ["AGENT", "FINAL_RESPONSE", "DOCUMENT_REQUEST"]
+    else:
+        sender_types = ["CLIENT", "DOCS_SUBMITTED"]
+
+    db.query(Message).filter(
+        Message.ticket_id == ticket_id,
+        Message.sender_type.in_(sender_types),
+        Message.is_read == False,
+    ).update({"is_read": True, "read_at": datetime.utcnow()}, synchronize_session=False)
+
+    db.commit()
+    return {"success": True}
+
+
+@router.post("", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+def send_message(
+    ticket_id: str,
+    body: MessageCreateRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ticket = db.query(Ticket).options(joinedload(Ticket.client), joinedload(Ticket.agent)).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+    if current_user.role == "CLIENT" and ticket.client_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    # Determine sender_type
+    if current_user.role == "CLIENT":
+        sender_type = body.sender_type if body.sender_type in ALLOWED_CLIENT_TYPES else "CLIENT"
+    elif body.sender_type in ALLOWED_STAFF_TYPES:
+        sender_type = body.sender_type
+    else:
+        sender_type = "AGENT"
+
+    msg = Message(
+        ticket_id=ticket_id,
+        sender_id=current_user.id,
+        sender_type=sender_type,
+        content=body.content,
+        document_description=body.document_description if sender_type == "DOCUMENT_REQUEST" else None,
+    )
+    db.add(msg)
+    db.flush()
+
+    client = ticket.client
+
+    if sender_type == "FINAL_RESPONSE":
+        # Close the ticket
+        ticket.status = "CLOSED"
+        ticket.closed_at = datetime.utcnow()
+        # SMS + notification to client
+        if client:
+            db.add(Notification(
+                user_id=ticket.client_id,
+                ticket_id=ticket_id,
+                type="FINAL_RESPONSE",
+                title="Réponse finale" if (client.language != "en") else "Final response",
+                message=f"Votre dossier {ticket.ref} a été clôturé. Consultez la réponse." if (client.language != "en") else f"Your request {ticket.ref} has been closed. View the response.",
+            ))
+            if client.phone:
+                background_tasks.add_task(
+                    sms_final_response,
+                    client.phone, client.first_name, current_user.first_name,
+                    ticket.ref, client.language or "fr",
+                )
+
+    elif sender_type == "DOCUMENT_REQUEST":
+        if client:
+            db.add(Notification(
+                user_id=ticket.client_id,
+                ticket_id=ticket_id,
+                type="DOCUMENT_REQUEST",
+                title="Documents requis" if (client.language != "en") else "Documents required",
+                message=f"Documents demandés pour le dossier {ticket.ref}" if (client.language != "en") else f"Documents requested for {ticket.ref}",
+            ))
+            if client.phone:
+                background_tasks.add_task(
+                    sms_document_requested,
+                    client.phone, client.first_name, ticket.ref, client.language or "fr",
+                )
+
+    elif sender_type == "AGENT":
+        # Notify client (in-app notification only — no SMS)
+        if ticket.client_id and client:
+            db.add(Notification(
+                user_id=ticket.client_id,
+                ticket_id=ticket_id,
+                type="NEW_MESSAGE",
+                title="Nouveau message" if (client.language != "en") else "New message",
+                message=f"Nouveau message dans le dossier {ticket.ref}",
+            ))
+
+    elif sender_type == "INTERNAL_NOTE":
+        import re
+        from ..models import User as UserModel
+        # Parse @mentions in the note content
+        mentioned_usernames = set(re.findall(r'@([\w.]+)', body.content))
+        mentioned_users: list[UserModel] = []
+        if mentioned_usernames:
+            mentioned_users = (
+                db.query(UserModel)
+                .filter(
+                    UserModel.username.in_(list(mentioned_usernames)),
+                    UserModel.status == "ACTIVE",
+                    UserModel.role.in_(["AGENT", "OPS_ADMIN", "SYSTEM_ADMIN"]),
+                    UserModel.id != current_user.id,
+                )
+                .all()
+            )
+        if mentioned_users:
+            # Targeted notification for each @mentioned user
+            for u in mentioned_users:
+                db.add(Notification(
+                    user_id=u.id,
+                    ticket_id=ticket_id,
+                    type="MENTION",
+                    title=f"Mention — {ticket.ref}",
+                    message=f"{current_user.first_name} vous a mentionné dans une note sur le dossier {ticket.ref}",
+                ))
+        else:
+            # No @mention — broadcast to all active OPS_ADMIN
+            ops_users = db.query(UserModel).filter(
+                UserModel.role == "OPS_ADMIN", UserModel.status == "ACTIVE", UserModel.id != current_user.id,
+            ).all()
+            for ops in ops_users:
+                db.add(Notification(
+                    user_id=ops.id,
+                    ticket_id=ticket_id,
+                    type="INTERNAL_NOTE",
+                    title=f"Note interne — {ticket.ref}",
+                    message=f"{current_user.first_name} a ajouté une note interne sur le dossier {ticket.ref}",
+                ))
+
+    elif sender_type == "DOCS_SUBMITTED" and ticket.agent_id:
+        lang_notif = client.language if client else "fr"
+        db.add(Notification(
+            user_id=ticket.agent_id,
+            ticket_id=ticket_id,
+            type="DOCS_SUBMITTED",
+            title="Documents reçus" if lang_notif != "en" else "Documents received",
+            message=f"Le client a envoyé les documents demandés pour {ticket.ref}",
+        ))
+        if ticket.agent and ticket.agent.phone and client:
+            background_tasks.add_task(
+                sms_docs_submitted,
+                ticket.agent.phone, client.first_name, ticket.ref,
+            )
+
+    elif sender_type == "CLIENT" and ticket.agent_id:
+        # Notify the agent (in-app notification only — no SMS)
+        db.add(Notification(
+            user_id=ticket.agent_id,
+            ticket_id=ticket_id,
+            type="NEW_MESSAGE",
+            title="Réponse client",
+            message=f"Le client a répondu sur le dossier {ticket.ref}",
+        ))
+
+    db.commit()
+    db.refresh(msg)
+    return msg

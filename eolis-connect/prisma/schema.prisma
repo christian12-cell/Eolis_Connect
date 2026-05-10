@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String        @id @default(cuid())
+  firstName     String
+  lastName      String
+  username      String        @unique
+  email         String        @unique
+  phone         String
+  passwordHash  String
+  role          String        @default("CLIENT")
+  status        String        @default("PENDING")
+  language      String        @default("fr")
+  emailVerified DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  clientTickets   Ticket[]             @relation("ClientTickets")
+  agentTickets    Ticket[]             @relation("AgentTickets")
+  sentMessages    Message[]
+  notifications   Notification[]
+  logs            Log[]
+  ratings         SatisfactionRating[] @relation("ClientRatings")
+  agentRatings    SatisfactionRating[] @relation("AgentRatings")
+  passwordResets  PasswordReset[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Ticket {
+  id            String   @id @default(cuid())
+  ref           String   @unique
+  clientId      String
+  agentId       String?
+  category      String
+  subcategory   String
+  equipmentType String?
+  shipLine      String?
+  shipName      String?
+  voyageNumber  String?
+  shipDate      String?
+  optionalCode  String?
+  description   String
+  urgency       String   @default("LOW")
+  status        String   @default("PENDING")
+  takenAt       DateTime?
+  closedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  client        User                @relation("ClientTickets", fields: [clientId], references: [id])
+  agent         User?               @relation("AgentTickets", fields: [agentId], references: [id])
+  messages      Message[]
+  attachments   Attachment[]
+  rating        SatisfactionRating?
+  notifications Notification[]
+
+  @@index([clientId])
+  @@index([agentId])
+  @@index([status])
+  @@index([urgency])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  ticketId    String
+  senderId    String
+  senderType  String
+  content     String
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender      User         @relation(fields: [senderId], references: [id])
+  attachments Attachment[]
+
+  @@index([ticketId])
+  @@index([senderId])
+  @@index([isRead])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  messageId String?
+  filename  String
+  url       String
+  size      Int
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  ticket  Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message Message? @relation(fields: [messageId], references: [id])
+
+  @@index([ticketId])
+}
+
+model SatisfactionRating {
+  id        String   @id @default(cuid())
+  ticketId  String   @unique
+  clientId  String
+  agentId   String?
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  client User   @relation("ClientRatings", fields: [clientId], references: [id])
+  agent  User?  @relation("AgentRatings", fields: [agentId], references: [id])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  ticketId  String?
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticket Ticket? @relation(fields: [ticketId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model Log {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  details   String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model FAQ {
+  id          String   @id @default(cuid())
+  category    String
+  subcategory String?
+  question    String
+  answer      String
+  locale      String   @default("fr")
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+  @@index([locale])
+}

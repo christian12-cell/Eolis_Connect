@@ -1,0 +1,37 @@
+# ── Python / FastAPI ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+*.sqlite3
+dev.db
+*.db
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env.*.local
+eolis-api/.env
+
+# Uploads (user files)
+eolis-api/uploads/
+
+# ── Node / Next.js ────────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.cache/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log

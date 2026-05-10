@@ -1,0 +1,185 @@
+Enfaite j aimerais monter une app web, et une interface genre dashboard pour l'entreprise EOLIS cameroun. en francais et en anglais donc deja on aura la possibilite de choisir la langue. 
+
+
+EOLIS CAMEROUN
+Proposition d'amélioration du service client
+Mise en place d'une plateforme digitale — Eolis Connect
+Préparé par : Debora      |      Mai 2026
+ 
+INTRODUCTION
+
+Ce document présente une proposition concrète que j'ai développée à partir de ce que j'ai vécu et observé lors de mon stage chez Eolis Cameroun, dans les activités de manutention et de transport.
+
+Sur le terrain, plusieurs situations revenaient souvent et ralentissaient le travail des équipes. Des clients se déplaçaient pour des questions qui auraient pu être réglées à distance. Des agents passaient un temps considérable à demander des informations de base avant même de pouvoir traiter une demande. Et faute de structuration, les mêmes explications étaient répétées à plusieurs niveaux, sans que le dossier avance vraiment.
+
+J'ai aussi constaté que le site web actuel d'Eolis ne permettait pas aux clients de comprendre rapidement les services disponibles ni de trouver facilement comment contacter la bonne personne.
+
+Ce sont ces observations concrètes qui m'ont amenée à réfléchir à une solution simple, progressive et adaptée à la réalité du terrain. L'idée n'est pas de tout transformer, mais d'apporter des outils qui font gagner du temps à tout le monde — les clients comme les équipes internes.
+
+OBJECTIFS DU PROJET
+
+Ce projet vise à résoudre des problèmes précis que j'ai observés directement :
+
+•	Réduire les déplacements inutiles des clients en leur offrant un espace en ligne clair et fonctionnel
+•	Faire en sorte que les demandes arrivent déjà structurées, pour que les agents puissent les traiter immédiatement
+•	Alléger la charge des équipes en filtrant les cas simples avant qu'ils remontent au service client
+•	Assurer un suivi clair de chaque demande, de l'ouverture jusqu'à la clôture
+•	Améliorer l'image professionnelle d'Eolis auprès de ses clients
+
+ 
+SOLUTION PROPOSÉE
+
+La solution repose sur trois éléments qui fonctionnent ensemble. Chacun a un rôle précis, et c'est leur combinaison qui crée la valeur réelle du système.
+
+1. Optimisation du site web
+
+Le site actuel d'Eolis sera revu pour jouer un rôle d'orientation claire. Il ne s'agit pas d'y mettre toutes les informations, ce qui risquerait de noyer le client, mais de le rendre suffisamment utile pour que le client sache où aller et quoi apporter avant même de contacter quelqu'un.
+
+•	Présentation claire des services proposés par Eolis
+•	Liste des documents nécessaires selon le type de service
+•	Accès direct à la plateforme Eolis Connect
+
+Le site devient le premier filtre : le client arrive mieux préparé, ce qui réduit le travail d'explication en aval.
+
+2. La plateforme Eolis Connect
+
+C'est le cœur du projet. Eolis Connect est une application web accessible depuis n'importe quel navigateur, disponible en français et en anglais, sans téléchargement requis.
+
+Le client y crée un compte, soumet sa demande en suivant un formulaire guidé étape par étape, et peut ensuite suivre l'évolution de son dossier en temps réel. Le formulaire est conçu pour collecter dès le départ toutes les informations dont le service client a besoin : catégorie du problème, type d'engin, bateau concerné, numéro de passage, date. Plus besoin d'aller-retour pour obtenir ces données de base.
+
+Un numéro de référence est attribué à chaque demande (ex. REF-2026-0047). Le client peut ainsi suivre l'avancement de son dossier sans avoir à rappeler.
+
+3. Canal de communication : WhatsApp et appel téléphonique
+
+WhatsApp a été retenu comme canal principal de contact. Ce choix s'appuie sur une réalité simple : au Cameroun, WhatsApp est l'outil de communication le plus utilisé, par toutes les catégories de clients. Ils n'ont pas besoin d'apprendre quelque chose de nouveau, c'est déjà dans leurs habitudes.
+
+Le fonctionnement est fluide : une fois le formulaire soumis sur Eolis Connect, le client est redirigé vers WhatsApp avec un message déjà pré-rempli contenant toutes ses informations. L'agent qui reçoit ce message comprend immédiatement la situation et peut répondre directement, sans poser une seule question supplémentaire.
+
+Si le client ne répond pas dans les 30 minutes, un appel téléphonique est effectué. L'appel reste un canal complémentaire, principalement pour les urgences ou les clients peu réactifs par message.
+
+ 
+FONCTIONNEMENT DE L'APPLICATION
+
+Page 1 — Connexion et inscription
+Le client se connecte avec son email et son mot de passe. En cas d'oubli, il peut réinitialiser son accès via son numéro de téléphone. Pour les nouveaux utilisateurs, l'inscription déclenche une validation par l'administrateur avant activation du compte. Un email automatique informe l'utilisateur de l'acceptation ou du rejet de sa demande.
+
+Page 2 — Accueil personnalisé
+Dès la connexion, le client voit un message d'accueil avec son prénom, et trois boutons d'action clairs : « Faire une demande », « Contacter via WhatsApp » et « Appeler maintenant ». Un indicateur de disponibilité lui montre si le service client est en ligne. Ses deux dernières demandes sont affichées directement pour un accès rapide.
+
+Page 3 — Formulaire progressif
+Le formulaire se déroule en cinq étapes avec une barre de progression visible. Les champs apparaissent progressivement pour ne pas surcharger l'écran :
+
+•	Étape 1 : catégorie — Facturation, Livraison, Dossier, Information, autres
+•	Étape 2 : sous-catégorie correspondante
+•	Étape 3 : type d'engin — Conteneur 40 pieds, Conteneur 20 pieds, Conventionnel
+•	Étape 4 : informations logistiques — ligne, bateau, numéro de passage, date, code optionnel
+•	Étape 5 : description libre du problème
+
+Un récapitulatif est affiché avant l'envoi. Après soumission, un numéro de référence est attribué automatiquement.
+
+Page 4 — FAQ intelligente
+Avant d'aller vers le service client, le client consulte une FAQ qui s'adapte automatiquement à ce qu'il a sélectionné dans le formulaire. Si sa question trouve une réponse ici, il peut clôturer sa demande sans mobiliser un agent. Sinon, il clique sur « J'ai encore un problème » et est redirigé vers la page de contact.
+
+Page 5 — Contact
+Si la FAQ ne suffit pas, le client est redirigé vers WhatsApp avec son message structuré pré-rempli, ou peut appeler directement. Les horaires d'ouverture sont affichés, et un message automatique est envoyé en dehors des heures de service.
+
+ 
+GESTION INTERNE — TABLEAU DE BORD
+
+Tableau de bord — Service client
+
+C'est l'outil de travail quotidien des agents. Toutes les demandes reçues y sont centralisées, chacune affichant : le nom et le contact du client, la catégorie et sous-catégorie, le type d'engin, le bateau, le numéro de passage, la date, le niveau d'urgence automatique et le statut de traitement.
+
+Trois statuts permettent de suivre l'avancement : Nouveau, En cours, Traité. Des filtres par urgence, statut ou catégorie permettent de trier rapidement les demandes. Un compteur en haut de page affiche en temps réel le nombre de demandes urgentes, en cours et traitées.
+
+Fiche détaillée d'une demande
+
+En cliquant sur une demande, l'agent accède à la fiche complète du client. Depuis cette fiche, il peut répondre via WhatsApp avec un message déjà structuré, appeler en un clic, modifier le statut de la demande, ou ajouter une note interne visible uniquement par l'équipe.
+
+Tableau de bord — Administrateur
+
+L'administrateur dispose d'une vue globale : volume de demandes par période, répartition par catégorie, taux de résolution. Il gère également les comptes : validation des inscriptions, attribution des grades, envoi automatique des emails de confirmation. Quatre grades sont définis — Client, Agent service client, Chef de service, Administrateur — chacun avec un niveau d'accès différent.
+
+ 
+SYSTÈME DE NIVEAUX D'URGENCE
+
+Chaque demande reçoit automatiquement un niveau d'urgence dès sa soumission, basé sur la catégorie et la sous-catégorie sélectionnées — et non sur le ressenti du client. Ce niveau est invisible pour le client, mais affiché en priorité dans le tableau de bord des agents. L'objectif est simple : les cas critiques remontent en haut sans que personne n'ait à lire et trier manuellement.
+
+Catégorie	Sous-catégorie	Urgence	Raison
+Livraison	Conteneur bloqué	🔴 Élevée	Blocage total, action immédiate
+Livraison	Retard de livraison	🔴 Élevée	Impact direct sur le client
+Livraison	Problème à la réception	🔴 Élevée	Nécessite une réaction rapide
+Facturation	Retard de paiement	🟡 Moyenne	Impact financier, non bloquant immédiat
+Facturation	Paiement incomplet	🟡 Moyenne	Nécessite vérification
+Facturation	Remboursement	🟢 Faible	Non urgent
+Dossier	Dossier incomplet	🟡 Moyenne	Peut bloquer ultérieurement
+Dossier	Document manquant	🟡 Moyenne	Nécessite une correction
+Dossier	Validation de dossier	🟢 Faible	Délai d'attente normal
+Information	Demande d'information	🟢 Faible	Informatif, non urgent
+Information	Procédure	🟢 Faible	Informatif uniquement
+
+Les demandes sont triées automatiquement par ordre d'urgence dans le tableau de bord. Les agents voient d'abord les cas critiques, puis les cas moyens, puis les cas faibles.
+
+ 
+MISE EN ŒUVRE ET DÉPLOIEMENT
+
+Le déploiement est prévu en trois phases pour limiter les risques et permettre des ajustements à chaque étape.
+
+Phase 1 — Prototype
+Développement des fonctionnalités essentielles : formulaire, FAQ, redirection WhatsApp, tableau de bord basique. Cette première version permettra de valider le concept avec un cercle restreint d'utilisateurs avant tout déploiement plus large.
+
+Phase 2 — Tests et ajustements
+Déploiement auprès du service client et des équipes concernées. Collecte des retours terrain, corrections et améliorations avant l'ouverture au grand public.
+
+Phase 3 — Déploiement complet
+Ouverture à l'ensemble des clients avec toutes les fonctionnalités activées : notifications, gestion complète des rôles, historique, facturation mensuelle automatique.
+
+Infrastructure technique
+La mise en production nécessitera les éléments suivants :
+
+•	Un nom de domaine dédié (ex. eolisconnect.com)
+•	Des adresses email professionnelles liées au domaine Eolis (noreply, support, admin) — le service informatique d'Eolis peut les créer directement avec leur domaine existant
+•	Un serveur d'hébergement et une base de données sécurisée
+•	Coût d'entretien estimé : entre 50 et 100 € par mois
+
+Les coûts de développement seront couverts dans un premier temps lors de la phase prototype, puis une facture sera transmise à l'entreprise pour la mise en production et l'hébergement.
+
+BÉNÉFICES ATTENDUS
+
+Au-delà des gains organisationnels, ce projet apporte des bénéfices concrets mesurables dès les premières semaines d'utilisation :
+
+•	Les agents ne perdent plus de temps à demander des informations de base — tout est déjà là
+•	Les clients n'ont plus besoin de se déplacer pour des demandes simples
+•	Chaque dossier est tracé et suivi, ce qui évite les pertes et les oublis
+•	Les cas urgents sont identifiés et remontés automatiquement sans tri manuel
+•	L'entreprise projette une image moderne et structurée auprès de sa clientèle
+
+CONCLUSION
+
+Ce projet est né d'une observation simple : beaucoup de temps et d'énergie sont perdus à cause d'un manque de structuration dans la gestion des demandes clients. Eolis Connect propose d'y remédier avec un outil concret, progressif et adapté aux habitudes locales.
+
+La combinaison du site web, de la plateforme et de WhatsApp crée un parcours client cohérent, du premier contact jusqu'à la résolution du problème. Chaque outil a un rôle précis et les trois se renforcent mutuellement.
+
+Dans un premier temps, j'assurerai moi-même le suivi opérationnel du service client pour tester le dispositif en conditions réelles, identifier les ajustements nécessaires et garantir une montée en charge progressive et maîtrisée.
+
+« L'application structure la demande. WhatsApp facilite l'échange.
+Ensemble, ils permettent un service plus efficace et mieux adapté aux réalités du terrain. »
+
+
+lis bien tt sa mtn attend comment moi je te dis que je vois la chose car la c'etait l'idee de ma soeur: comment moi je vois la chose est simple dejacommencons par l application web
+
+deja le choix de la langue commence des la page la si il choisi francais tout sont process sera en francais et si il choisi anglais et bien toute l application se mettra en anglais pour lui mais la langue de defaut sera le francais.
+
+donc deja on va faire une belle interface de register tu vois un peu: l'utilisateur entrera son nom, son prenom, son adresse mail, son numero de tel, son mot de passe et etc.. et ensuite il validera, son co mpte sera automatiquement creer et ses infos sauvegarder par la base de donnes ensuite le systeme lui enverrai un mail ou un SMS pour lui donner son usr name et un lien que qd il cliqueras il pourras voir son mot de passe et etc... et se sera ecrit copier le lien expire des utilisation et etc.. bref un peu comme les trucs securise que je vois souvent la biensur qd il aura log in il pourra changer son mail et son mot de passe sur la partie setting mais bien sa c'est apres. bef continuons ensuite y aura le logo de l entreprise eolis comaroun et les couleur de eolis genre l app devra respecter les couleurs du logo je crois meme le dashboard pour le service clent que on fera, bref continuons.
+
+apres avoir login donc il entrera dans la page qui demandera quelle pb on peut regler genre il y aura une liste de truc et ett mais il y aura pas de contacter via WhatsApp ett appeler maintenant si nn les gars vnt passer leur temps a contacter via WhatsApp et appeler au lieu de suivre le formulaire et creer le dossier. mais par contre se serait bien de mtre une partie chat genre l'utilisateur le client pourra causer ave un membre du service client mais via le site, et que via le dossier et etc... sa faire du genre chaque ref de dossier creer par le client contiendra une partie chat uniquement liee a ce dossier mais je me sais pas trop comment sa marchera tu vois, je ne sais pas si tu cape un peu l idee, ensuite en fonction de des elements rentrer etc.. et bien le client peut avoir la possibliter d uploader un document ou de le scanner si la en papier et uploader dans le dossier etc.. tu vois un peu ? et qd tu clique donc a la fin il y aura un recapitulative de tt ce qu il a fait dossier mis et etc.. pour lui donner la possibiliter de rectifier et etc... mais qd il fini donc la la partie chat par rapport a se dossier s ouvre uniquement bref ce ne sera meme pas une partie chat qu'est ce que je raconte meme nn ce que je voulais dire c'est qque dans le site on mette une partie messagerie et bien ou le service client enverra odonc tous les ifos a l utilisat tu vois leurs via sa par rapport a sa demande et etc.. bref un peu comme certains apps font la en faite c est sa que je voulais dire avant que a chaque fois cest le mot chat qui sorait de ma bouche haha. bref et qd le service client finira donc ilo enverra tout genre en haut y aura la demandes faite et c l obkete dera l intituler de la demande aveccc sa REF creer et etc.. et mtn y aura donc toutes les informattions envoyer par le service client des images des document attache et etc.. tu vois un peu le genr que jen dis? c'est un truc tres repandu ici en occident mais pas en Afrique et je veux commencer avec eolis. ensuite biensur l utilisateur pourra voir qd sa demande est envoyer et en attente d'etre en cours e traitement, et qd cest en cours de traitement et qd c est traiter et bien completement et si le service client a elle aussi besoin d info elle peut envoyer sa dans la messagerie du compte de l utilisateur oiur dire voila on a besoin que vous fournissier entre tel document ou tel infos et etc.. et il mettrons le lien de ou il doit envoyer sa genre la parie du dossier qu il devra completer, et etc... et c est comme sa donc qu a la fin et bien sur l app il y aira biensur une partie historique avec les different dossiers de l utilisatiers deja traiter et etc.. tuu vois un peu ? et qd je dis que le service client mettra gene le liens pour les document a mettre encore dans le dossier pour qu'il soit bien traiter c'est plus un truc du genre comme on fait souvent ici avec unr place on vous cliquez ici pour mettre le document ou soit scanner le document avec sa etc... tu vois un peu ? et mtn faut savoir que poiur le sms qd le service client a besoin de quelque choses certains tt le truc sera envoyer a l utilisateur tu vois et en fonction de la langie quu il aura selectionner dans l'app et bien le site cite service client lui enverra un sms pour dire soit en angalsi ou en Français que pour votre demande intitule tel ref tel et bien le service client a besoinque vous entreser des infos encore pour mieux vous aider please connecter a votre compte et regarder votre messagerie, tu vois un peu et qd le dossier est traiter genre traiter et cloturer et bien il recevra le message donc pour lui dire que votre dossier a été completement traiter comnnectre vous pour voir le résultats et reponses envoyers par le services clients etc.. et biensur dans l app y aura aussi un chatbot car il y a souvent certaines questions qui oeuvent aussi trouver questions sans toute fois deranger tt monde . mtn passons aux dashboard coter service client,
+
+
+
+déjà chaque agent devvra créer un compte et etc.. en antrant son nom renom mot de passe, mail etc.. et ensuite il enverra la requete de creation et l admin system devra valider ou nom la creation de son compte qd il valide un mail lui est envoyer avec ses credentials genre username et le liens pour voir son mot e passe et etc.. biensur il pourra chaqger sa apres et qd sa creation de compte est refuser et bien le gar recevra aussi un polie mail de refus avec le mail de l admin a contacter, et il fau donc savoir qu il y aura 3 branche la partie agent service client la partie admin operation et l admin system et bien sur en fonction du grade tu peux voir plusiers choses. mtn comment le site se presentera commencons avec la partie agent serice client je oensait plus a un dashboard complet avec les différents dossier envoyer et classer en fonction des prioriter avec des refs des noms et etc.. bref des dossiers quoi et tous les agents pourront voir les ops en cours mais qd un aganet selectionne une op et bien sa disparais de lecran commun, et dans la partie donc de cette agent la premiere chose qu il fera c est d activer le mdoe en cours de traitement pour que dans l apps de l utilisateurs en question et bien le status de sont dossier quitte de envoyer et en attente d'etre traiter a en cours de traitement et etc... et puis donc l agent mettra donc tt ce u il faut mettre demandera tt ce ui faut repondra aux attentes de l utilisateurs meme si c est via des document qu il a aussi mis en attache et etc.. et faut savoir donc que par dossier y aura donc pluisieurs page lagent peut cliquer sur tel bouton pour que le site envoie une demande de completion de dossier via sms biensur apres que l agent s déjà tt remplie et envoyers dans la messagerie de l utilisateirs et etc... et un bouton qd cest traiter et cloturer pour envoyer le sms, et biensur qu il n oublie ps que qd il traite et bien de cliquer sur le bouton de cloture du dossier pour valide r car sa changera aussi le status dans l app de l utilisateur et etc.. en Traite ou Treated, etc.. brf et qd un agent traite donc un dossier sa va dans son historique de telle sorte s'il a commencer hier et a fini aujourd'hui et etc.. et bien qu il puisse revenir dessus. et etc.. bref je veux des trucs tops et beaux, mtn en ce qu il en ai des operateurs ops et bien eux ils pourront bien sur voir tt ce que les agent voient et faire pareil la meme chose traitement de dossier et etc... mais la parie qui est importantes pour eux c est la page qu on mettra pour leur montrer qui a fait quoi qui a traiter quel dossier qd est ce qu mil a commencere et etc.. la duree qun il a mis pour traiter le dosier etc... et en fonction de toutes ses data donc ils oauront aussi un classement de qui traites le mieux et le plus vite les ops urgents les ops moyens les ops faibles et etc.. tu vois un peu et qui es le meilleur et prkoi toutes les categories confondue, etude de ces performances et etc.. et se sera aussi en fonction des retours des clients car dans l app et bien on mettra la possibiliter de mettre un score de satisfaction genre 5 etoiles et des remarques ou suggestions et sa je crois c'est plsu les ops qui verrornts les résultats de chaqu'un car comme je t ai dit si un client met sur un traitement dossier 5 etoiles sa signifie que sa ira a l agent qui a traiter sa deande et etc.. tu vois un peu etc.. vraiment evec les remarques et etc.. amsi sa les agents ne sauraont pas que les clients mettent des notes de satisfactions et vomments la, et etc.. il y aura donc des graphes d analyses de performances par agent en plus de la page de rank en fonction de score et ett un tat de truc et...bref il verra tt sa.
+
+
+et mtn l admin system déjà cest lui qui valide la creation des comptes et reinatialiise des mots de passes si necessaire, les cookies, les logs il voit tt, il gere tt il fait tt bref tt tt tt. bref penses tu sa faisable ce projet au Cameroun ?
+
+
+j allais oublier et bien qd un message est envoyer a un utilisateur via un agent lie a l operation qu il traitait et que le site constate qu apres 1h et bien l'utilisateurs n est toujours pas aller sur la page en questions genre dans sa messagerie pour voir le dit message et bien le système enverra un warning su l'ecran de l agent qui a traiter pour lui dire sa fait déjà une heire et nous avons remarquer que l utilisatuers ne c est pas nrendu sur sa messagerie pour voir les résultats ou les messages de demandes de complement, please veuillez appeler M tel au tel numero, tu vois un peu comme sa nous dedoiene aussi on pourra dire a l utilisateur on a envoyers des notifications des sms et on vous a appeler mais vous n'ave pas pris. etc... 

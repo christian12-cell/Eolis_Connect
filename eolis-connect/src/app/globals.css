@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --eolis-navy: #1B3A5C;
+  --eolis-blue: #4A8FC4;
+  --eolis-brown: #8B5A2B;
+  --eolis-light: #F8FAFC;
+  --eolis-success: #10B981;
+  --eolis-warning: #F59E0B;
+  --eolis-danger: #EF4444;
+  --background: #F8FAFC;
+  --foreground: #1a1a2e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-inter, sans-serif);
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.eolis-gradient {
+  background: linear-gradient(135deg, #1B3A5C 0%, #4A8FC4 100%);
+}
+
+.eolis-gradient-soft {
+  background: linear-gradient(135deg, #1B3A5C 0%, #2d5f8a 50%, #4A8FC4 100%);
+}
+
+.card-shadow {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(27,58,92,0.06);
+}
+
+.card-shadow-hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1), 0 8px 24px rgba(27,58,92,0.12);
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid #4A8FC4;
+  outline-offset: 2px;
+}
