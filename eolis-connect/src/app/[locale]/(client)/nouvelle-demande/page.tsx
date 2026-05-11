@@ -1216,11 +1216,19 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
             {/* Équipement */}
             <RecapSection title={t.equipment} isOpen={openRecap.equip} onToggle={() => toggleRecap('equip')}>
-              {mode === 'simple' ? (
+              {mode === 'conventionnel' ? (
+                <div className="pt-3">
+                  <span className="inline-flex items-center bg-[#1B3A5C]/8 text-[#1B3A5C] text-xs font-semibold px-3 py-1.5 rounded-xl mb-2">
+                    {isFr ? 'Conventionnel' : 'Conventional'}
+                  </span>
+                  <p className="text-sm text-gray-700">{form.conventionnelDesc}</p>
+                </div>
+              ) : mode === 'simple' ? (
                 <div className="pt-3 space-y-2">
                   <span className="inline-flex items-center bg-[#1B3A5C]/8 text-[#1B3A5C] text-sm font-semibold px-3 py-1.5 rounded-xl">
                     {(form.equipmentType === 'Autre' || form.equipmentType === 'Other') ? form.equipmentOther : form.equipmentType}
                   </span>
+
                   {form.containerNumber.trim() && (
                     <div className="flex items-center gap-1.5">
                       <span className="inline-block bg-gray-100 text-gray-600 font-mono text-[11px] px-2.5 py-1 rounded">
