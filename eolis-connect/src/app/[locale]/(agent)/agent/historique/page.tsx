@@ -156,7 +156,6 @@ export default function AgentHistoriquePage({ params }: { params: Promise<{ loca
     year:     isFr ? 'Année' : 'Year',
     month:    isFr ? 'Mois' : 'Month',
     day:      isFr ? 'Jour' : 'Day',
-    urgency:  isFr ? 'Urgence' : 'Urgency',
     clearAll: isFr ? 'Effacer les filtres' : 'Clear filters',
     results:  isFr ? 'résultat(s)' : 'result(s)',
     rating:   isFr ? 'Satisfaction' : 'Satisfaction',
