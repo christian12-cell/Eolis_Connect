@@ -4,6 +4,7 @@ import "./globals.css";
 import CookieBanner from "@/components/CookieBanner";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
 import { SplashHider } from "@/components/ui/SplashHider";
+import { NavigationSplash } from "@/components/ui/NavigationSplash";
 import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -72,6 +73,7 @@ export default function RootLayout({
       <body className="min-h-full font-sans">
         <div dangerouslySetInnerHTML={{ __html: splashHTML }} suppressHydrationWarning />
         <SplashHider />
+        <NavigationSplash />
         <OfflineBanner />
         {children}
         <CookieBanner />
