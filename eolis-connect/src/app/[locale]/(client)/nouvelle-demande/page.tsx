@@ -1008,6 +1008,22 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               </div>
             )}
 
+            {/* Conventionnel: BL only, no vessel info needed */}
+            {mode === 'conventionnel' && (
+              <div className="bg-white rounded-2xl p-4">
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                  {t.blCode}<Req />
+                </label>
+                <input
+                  type="text"
+                  value={form.code}
+                  onChange={e => set('code', e.target.value)}
+                  placeholder="Ex: BL-2024-XXXX"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C] font-mono"
+                />
+              </div>
+            )}
+
             {/* Multiple vessel blocks — multi+separateVessels */}
             {isMultiSeparate && (
               <div className="space-y-3">
