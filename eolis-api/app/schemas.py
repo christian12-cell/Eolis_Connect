@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, ConfigDict, PlainSerializer
+from pydantic import BaseModel, ConfigDict, PlainSerializer
 from pydantic.alias_generators import to_camel
 from datetime import datetime, timezone
 from typing import Optional, Annotated
@@ -28,7 +28,7 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     first_name: str
     last_name: str
-    email: EmailStr
+    email: str
     phone: Optional[str] = None
     password: str
     language: str = "fr"
