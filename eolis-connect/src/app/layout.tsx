@@ -24,6 +24,12 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+const splashCSS = `
+@keyframes splashUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+@keyframes sdBounce{0%,80%,100%{transform:scale(.6);opacity:.4;}40%{transform:scale(1);opacity:1;}}
+@keyframes swMove{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+`
+
 const splashHTML = `
 <div id="eolis-splash" style="position:fixed;inset:0;z-index:9999;background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
   <div style="color:#fff;font-size:1.875rem;font-weight:700;letter-spacing:.05em;animation:splashUp .6s ease forwards;">Eolis Connect</div>
@@ -48,11 +54,6 @@ const splashHTML = `
     </div>
   </div>
 </div>
-<style>
-@keyframes splashUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-@keyframes sdBounce{0%,80%,100%{transform:scale(.6);opacity:.4;}40%{transform:scale(1);opacity:1;}}
-@keyframes swMove{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
-</style>
 `
 
 export default function RootLayout({
@@ -66,6 +67,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <style dangerouslySetInnerHTML={{ __html: splashCSS }} />
       </head>
       <body className="min-h-full font-sans">
         <div dangerouslySetInnerHTML={{ __html: splashHTML }} suppressHydrationWarning />
