@@ -10,7 +10,7 @@ export function SplashHider() {
       splash.style.opacity = '0'
       splash.style.transition = 'opacity 0.4s ease'
       setTimeout(() => splash.remove(), 400)
-    }, 700)
+    }, 1500)
   }, [])
   return null
 }
