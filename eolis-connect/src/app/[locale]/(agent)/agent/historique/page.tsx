@@ -215,7 +215,6 @@ export default function AgentHistoriquePage({ params }: { params: Promise<{ loca
                   <th className="px-3 py-3 text-left">{t.category}</th>
                   <th className="px-3 py-3 text-left">{t.urgency}</th>
                   {isAdmin && <th className="px-3 py-3 text-left">{t.agent}</th>}
-                  <th className="px-3 py-3 text-left">{t.rating}</th>
                   <th className="px-3 py-3 text-left">{t.closedAt}</th>
                   <th className="px-3 py-3 text-left"></th>
                 </tr>
@@ -237,19 +236,6 @@ export default function AgentHistoriquePage({ params }: { params: Promise<{ loca
                         {ticket.agent ? `${ticket.agent.firstName} ${ticket.agent.lastName}` : '—'}
                       </td>
                     )}
-                    <td className="px-3 py-3">
-                      {ticket.satisfactionRating ? (
-                        <div className="flex items-center gap-0.5">
-                          {[1,2,3,4,5].map(s => (
-                            <Star key={s} size={12}
-                              className={s <= (ticket.satisfactionRating.score ?? ticket.satisfactionRating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
-                          ))}
-                          <span className="text-xs text-gray-500 ml-1">{ticket.satisfactionRating.score ?? ticket.satisfactionRating}/5</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-300 italic">{t.noRating}</span>
-                      )}
-                    </td>
                     <td className="px-3 py-3 text-gray-500 text-xs whitespace-nowrap">
                       {formatDate(ticket.closedAt ?? ticket.updatedAt, locale)}
                     </td>

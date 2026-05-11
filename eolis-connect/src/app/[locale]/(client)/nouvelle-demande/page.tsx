@@ -32,8 +32,8 @@ const SUBCATEGORIES_EN: Record<string, string[]> = {
   Other:       [],
 }
 
-const EQUIPMENT_FR = ['20 pieds', '40 pieds', 'Conventionnel', 'Autre']
-const EQUIPMENT_EN = ['20 feet',  '40 feet',  'Conventional',  'Other']
+const EQUIPMENT_FR = ['20 pieds', '40 pieds', 'Autre']
+const EQUIPMENT_EN = ['20 feet',  '40 feet',  'Other']
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,8 +43,9 @@ interface FormState {
   category: string; categoryOther: string
   subcategory: string; subcategoryOther: string
   equipmentType: string; equipmentOther: string
+  conventionnelDesc: string
   containerNumber: string
-  shipLine: string; shipName: string; voyageNumber: string; shipDate: string
+  shipName: string; voyageNumber: string; shipDate: string
   code: string
   description: string
 }
@@ -61,7 +62,7 @@ interface VesselBlock {
 }
 
 interface LogisticsLabels {
-  shipLine: string; shipName: string; voyageNo: string; shipDate: string; optional: string
+  shipName: string; voyageNo: string; shipDate: string; optional: string
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -75,15 +76,14 @@ function isValidContainerNumber(n: string): boolean {
 
 const Req = () => <span className="text-red-400 ml-0.5">*</span>
 
-function LogisticsFields({ sl, sn, vn, sd, onChange, lbl }: {
-  sl: string; sn: string; vn: string; sd: string
+function LogisticsFields({ sn, vn, sd, onChange, lbl }: {
+  sn: string; vn: string; sd: string
   onChange: (key: string, val: string) => void
   lbl: LogisticsLabels
 }) {
   return (
     <div className="space-y-3">
       {[
-        { key: 'shipLine',     label: lbl.shipLine, val: sl, required: false },
         { key: 'shipName',     label: lbl.shipName, val: sn, required: true },
         { key: 'voyageNumber', label: lbl.voyageNo, val: vn, required: false },
       ].map(f => (
@@ -207,13 +207,14 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     category: '', categoryOther: '',
     subcategory: '', subcategoryOther: '',
     equipmentType: '', equipmentOther: '',
+    conventionnelDesc: '',
     containerNumber: '',
-    shipLine: '', shipName: '', voyageNumber: '', shipDate: '',
+    shipName: '', voyageNumber: '', shipDate: '',
     code: '',
     description: '',
   })
 
-  const [mode, setMode]             = useState<'simple' | 'multi'>('simple')
+  const [mode, setMode]             = useState<'simple' | 'multi' | 'conventionnel'>('simple')
   const [containers, setContainers] = useState<ContainerEntry[]>([{ id: 1, type: '', typeOther: '', number: '' }])
   const [nextCId, setNextCId]       = useState(2)
   const [sameVessel, setSameVessel] = useState<boolean | null>(null)
@@ -290,6 +291,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
   const finalEquipment = mode === 'multi'
     ? buildMultiEquipment()
+    : mode === 'conventionnel'
+    ? (isFr ? `Conventionnel : ${form.conventionnelDesc}` : `Conventional: ${form.conventionnelDesc}`)
     : (() => {
         const base = (form.equipmentType === 'Autre' || form.equipmentType === 'Other') ? form.equipmentOther : form.equipmentType
         return form.containerNumber.trim() ? `${base} [${form.containerNumber.trim()}]` : base
@@ -378,7 +381,6 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   async function submit() {
     setSubmitting(true)
     try {
-      const shipLine     = isMultiSeparate ? (vessels[0]?.shipLine || undefined)     : (form.shipLine || undefined)
       const shipName     = isMultiSeparate ? (vessels[0]?.shipName || undefined)     : (form.shipName || undefined)
       const voyageNumber = isMultiSeparate ? (vessels[0]?.voyageNumber || undefined) : (form.voyageNumber || undefined)
       const shipDate     = isMultiSeparate ? (vessels[0]?.shipDate || undefined)     : (form.shipDate || undefined)
@@ -394,7 +396,6 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
       const vesselData = isMultiSeparate
         ? JSON.stringify(vessels.map(v => ({
-            shipLine:      v.shipLine || null,
             shipName:      v.shipName || null,
             voyageNumber:  v.voyageNumber || null,
             shipDate:      v.shipDate || null,
@@ -406,7 +407,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         category:      finalCategory,
         subcategory:   finalSubcat || undefined,
         equipmentType: finalEquipment || undefined,
-        shipLine, shipName, voyageNumber, shipDate,
+        shipName, voyageNumber, shipDate,
         code:        isMultiSeparate ? undefined : (form.code.trim() || undefined),
         vesselData,
         description,
@@ -475,6 +476,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     otherLabel:  'Précisez...',
     modeSimple:  'Conteneur unique',
     modeMulti:   'Multi-conteneurs',
+    modeConv:    'Conventionnel',
+    convTitle:   'Nature de la marchandise',
+    convSub:     'Décrivez le contenu de votre envoi (ex: vélo, balot de vêtements, mobilier...)',
+    convPh:      'Ex: 3 vélos, 2 caisses de mobilier...',
     equipTitle:  "Type d'équipement",
     equipSub:    'Sélectionnez le type de conteneur concerné',
     multiTitle:  'Vos conteneurs',
@@ -490,8 +495,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     logTitle: 'Informations logistiques',
     logSub:   'Ces informations accélèrent le traitement de votre demande',
     blCode:   'N° BL / Code dossier',
-    shipLine: 'Compagnie maritime', shipName: 'Nom du navire',
-    voyageNo: 'Numéro de voyage',  shipDate: 'Date de voyage', optional: 'Optionnel',
+    shipName: 'Nom du navire',
+    voyageNo: 'Numéro de voyage', shipDate: 'Date de voyage', optional: 'Optionnel',
     descTitle:           'Décrivez votre situation',
     descSub:             'Plus vous êtes précis, mieux nous pouvons vous aider',
     descPlaceholder:     'Expliquez votre problème en détail...',
@@ -513,6 +518,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     catTitle:    'Request category', catSub: 'Choose the most appropriate category',
     subcatTitle: 'Type of issue',    otherLabel: 'Specify...',
     modeSimple:  'Single container', modeMulti: 'Multi-container',
+    modeConv:    'Conventional',
+    convTitle:   'Nature of goods',
+    convSub:     'Describe the content of your shipment (e.g. bicycle, clothing bale, furniture...)',
+    convPh:      'E.g.: 3 bicycles, 2 boxes of furniture...',
     equipTitle:  'Equipment type',   equipSub: 'Select the type of container involved',
     multiTitle:  'Your containers',  multiSub: 'Add each container involved in this request',
     addCont:     'Add a container',
@@ -526,8 +535,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     logTitle: 'Logistics information',
     logSub:   'This information speeds up the processing of your request',
     blCode:   'BL no. / File code',
-    shipLine: 'Shipping company', shipName: 'Ship name',
-    voyageNo: 'Voyage number',   shipDate: 'Travel date', optional: 'Optional',
+    shipName: 'Ship name',
+    voyageNo: 'Voyage number', shipDate: 'Travel date', optional: 'Optional',
     descTitle:           'Describe your situation',
     descSub:             'The more precise you are, the better we can help',
     descPlaceholder:     'Explain your issue in detail...',
@@ -546,7 +555,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   }
 
   const lbl: LogisticsLabels = {
-    shipLine: t.shipLine, shipName: t.shipName,
+    shipName: t.shipName,
     voyageNo: t.voyageNo, shipDate: t.shipDate, optional: t.optional,
   }
 
@@ -562,7 +571,9 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     (!needsSubcat || (!!form.subcategory &&
       (form.subcategory !== 'Autre' && form.subcategory !== 'Other' ? true : !!form.subcategoryOther.trim())))
 
-  const canStep2 = mode === 'simple'
+  const canStep2 = mode === 'conventionnel'
+    ? form.conventionnelDesc.trim().length >= 3
+    : mode === 'simple'
     ? (!!form.equipmentType && (form.equipmentType !== 'Autre' && form.equipmentType !== 'Other' ? true : !!form.equipmentOther.trim()))
     : containers.some(c => {
         if (!c.type) return false
@@ -571,6 +582,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       })
 
   const canStep3 = (() => {
+    // Conventionnel: only BL code required
+    if (mode === 'conventionnel') return !!form.code.trim()
     // Multi mode: must choose same vessel or not before continuing
     if (mode === 'multi' && sameVessel === null) return false
     // Multi mode — separate vessels: each vessel needs ship name + BL code
@@ -758,13 +771,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         {/* ── STEP 2 : Équipement ── */}
         {step === 'equipement' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              {(['simple', 'multi'] as const).map(m => (
+            <div className="grid grid-cols-3 gap-2">
+              {(['simple', 'multi', 'conventionnel'] as const).map(m => (
                 <button key={m} onClick={() => setMode(m)}
                   className={`py-3 rounded-2xl text-sm font-bold border-2 transition-all ${
                     mode === m ? 'border-white bg-white text-[#1B3A5C]' : 'border-white/30 text-white'
                   }`}>
-                  {m === 'simple' ? t.modeSimple : t.modeMulti}
+                  {m === 'simple' ? t.modeSimple : m === 'multi' ? t.modeMulti : t.modeConv}
                 </button>
               ))}
             </div>
@@ -792,6 +805,22 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     placeholder={t.otherLabel} autoFocus
                     className="w-full px-4 py-3 rounded-2xl bg-white text-[#1B3A5C] text-sm font-medium outline-none" />
                 )}
+              </>
+            )}
+
+            {mode === 'conventionnel' && (
+              <>
+                <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
+                  <h2 className="text-base font-bold text-white mb-0.5">{t.convTitle}<Req /></h2>
+                  <p className="text-sm text-blue-100">{t.convSub}</p>
+                </div>
+                <textarea
+                  value={form.conventionnelDesc}
+                  onChange={e => set('conventionnelDesc', e.target.value)}
+                  placeholder={t.convPh}
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-2xl bg-white text-[#1B3A5C] text-sm font-medium outline-none placeholder-gray-400 resize-none"
+                />
               </>
             )}
 
@@ -972,7 +1001,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             {(mode === 'simple' || sameVessel === true) && (
               <div className="bg-white rounded-2xl p-4">
                 <LogisticsFields
-                  sl={form.shipLine} sn={form.shipName} vn={form.voyageNumber} sd={form.shipDate}
+                  sn={form.shipName} vn={form.voyageNumber} sd={form.shipDate}
                   onChange={(k, v) => set(k as keyof FormState, v)}
                   lbl={lbl}
                 />
@@ -1002,7 +1031,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     </div>
                     <div className="p-4 space-y-3">
                       <LogisticsFields
-                        sl={v.shipLine} sn={v.shipName} vn={v.voyageNumber} sd={v.shipDate}
+                        sn={v.shipName} vn={v.voyageNumber} sd={v.shipDate}
                         onChange={(k, val) => updateVessel(v.id, { [k]: val })}
                         lbl={lbl}
                       />

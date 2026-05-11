@@ -240,7 +240,7 @@ src/
 | Paramètres | `parametres/page.tsx` | ✅ Profil + OTP + langue + page démarrage |
 
 ### Notes importantes
-- Urgence **jamais affichée** côté client
+- Urgence **jamais affichée** côté client comme tu peux deja le voir 
 - Login redirige vers `eolis_fav_page` (localStorage) pour les CLIENTs
 - Chat : navy = client, `#D6E7F5` = agent
 - `satisfactionRating` : facultatif, proposé après clôture, une seule fois
@@ -379,7 +379,7 @@ useEffect(() => {
 ### Agent Dashboard — ce qui est fait
 - Queue de tickets (filtre urgence + recherche)
 - Stats : en attente / en cours / traités aujourd'hui
-- Bannière d'alerte si message non lu depuis > 1h
+- Bannière d'alerte si message non lu depuis > 1h et envoie d'un sms a l agent pour lui dire que tel client dont vous etiez responsable du dossier n as vu la reponse finale ....
 - Tri par priorité d'urgence
 
 ### Agent Dossier Detail — ce qui est fait
@@ -556,18 +556,6 @@ Menu dynamique selon le rôle :
 
 ## 15. TOUTES LES TÂCHES RESTANTES
 
-### ⚠️ ORDRE DE TRAVAIL CONVENU
-
-> **Terminer toutes les modifications de l'app client (PWA mobile) EN PREMIER, avant de toucher au dashboard web (agent / ops / admin).**
->
-> Raison : le client est l'utilisateur final principal, et la PWA mobile doit être 100% fonctionnelle et belle avant qu'on s'occupe des interfaces internes. Les agents et admins sont des utilisateurs internes qui peuvent tolérer une interface plus basique temporairement.
->
-> **Ordre :**
-> 1. ✅ Finir les modifications PWA client (nouvelle-demande, scanner, détail dossier affichage multi-conteneurs)
-> 2. Ensuite seulement → redesign interface agent (dashboard + dossier detail)
-> 3. Ensuite → améliorations OPS dashboard
-> 4. Ensuite → améliorations Admin
-
 ### 🔴 Priorité 1 — Affichage multi-conteneurs (client + agent)
 
 **Fichiers** :
@@ -587,168 +575,45 @@ Menu dynamique selon le rôle :
 
 ---
 
-### 🔴 Priorité 2 — Redesign interface agent (dossier detail) — SPEC COMPLÈTE
+### 🔴 Priorité 2 — Redesign interface agent
 
-**Fichier principal** : `src/app/[locale]/(agent)/agent/dossiers/[id]/page.tsx`
+**Fichier** : `src/app/[locale]/(agent)/agent/dossiers/[id]/page.tsx`
 
-Ce redesign est le plus complexe et le plus important. Voici la spec complète telle que voulue par Christian :
-
----
-
-#### A. Chat coloré
-- Bulles navy (`#1B3A5C`) = messages agent
-- Bulles `#D6E7F5` = messages client
-- Identique au rendu côté client (`mes-demandes/[id]/page.tsx`)
-
----
-
-#### B. Notes internes
-- Nouveau `sender_type = "INTERNAL_NOTE"` dans le modèle Message
-- **Non visible côté client** (le backend filtre les INTERNAL_NOTE pour les CLIENTs)
-- Badge "Note interne" distinctif dans le chat (couleur ambre/orange, style différent des messages normaux)
-- Bouton séparé "🔒 Note interne" dans la barre d'action de l'agent
-
----
-
-#### C. Demande de documents (workflow complet)
-
-**Côté agent** :
-- Bouton "📎 Demander un document" dans les actions du dossier
-- Ouvre un petit panneau/modal avec :
-  - Champ texte : description du document demandé (ex: "Merci de fournir votre BL original")
-  - Bouton "Envoyer la demande"
-- Crée un message de type `"DOCUMENT_REQUEST"` dans le thread
-
-**Côté client (dans `mes-demandes/[id]/page.tsx`)** :
-- Le message de type `DOCUMENT_REQUEST` s'affiche différemment dans le chat client :
-  - Carte distincte (fond orange clair, icône trombone)
-  - Texte : "L'agent vous demande : [description]"
-  - Bouton inline "📎 Joindre le document" directement dans la carte
-- Le client peut uploader le fichier depuis cette carte
-- Le fichier est attaché au ticket via `POST /api/tickets/{id}/attachments`
-- Une notification est envoyée à l'agent : "Le client a complété la demande de documents"
-- **SMS envoyé à l'agent** : "[Prénom Client] a uploadé les documents demandés pour le dossier [REF]. Connectez-vous pour les consulter."
-
-**Côté agent après upload client** :
-- Notification dans l'interface agent
-- Le document apparaît dans la section pièces jointes du dossier
-- Bouton download direct depuis l'interface agent
+**Ce qu'il faut faire** :
+1. **Chat** : bulles colorées (navy pour l'agent, `#D6E7F5` pour le client, idem PWA client)
+2. **Notes internes** :
+   - Nouveau type de message : `sender_type = "INTERNAL_NOTE"`
+   - Non visible côté client
+   - Badge "Note interne" distinctif (couleur dorée/orange)
+   - Bouton séparé "Ajouter une note" dans l'interface agent
+   - Backend : le router messages doit filtrer les INTERNAL_NOTE pour les clients
+3. **Demande de documents** :
+   - Bouton "Demander un document" dans l'interface agent
+   - Envoie un message spécial type "DOCUMENT_REQUEST" avec description du document requis
+   - Le client voit une notification + dans son dossier une section "Documents demandés"
+   - Le client peut uploader directement en réponse
+4. **Boutons d'action** : prise en charge (si PENDING) et clôture (si IN_PROGRESS) visibles et distincts
+5. **Affichage beau de l'équipement** et du code BL (voir priorité 1)
 
 ---
 
-#### D. Bouton "Finaliser la demande" (workflow clôture enrichi)
+### 🔴 Priorité 3 — Notes internes (backend)
 
-C'est le workflow le plus important. Quand l'agent est prêt à clôturer :
+**Fichier** : `eolis-api/app/routers/messages.py`
 
-**1. Bouton "Finaliser" visible et distinct** (vert, en haut du dossier si statut IN_PROGRESS)
-
-**2. Clic → ouvre un panneau/section de finalisation avec :**
-- Champ texte : message de réponse finale (textarea, obligatoire)
-- Upload de documents : l'agent peut joindre des fichiers à sa réponse finale (rapport, document officiel, BL validé, etc.)
-- Bouton "✅ Envoyer et clôturer"
-
-**3. Après validation :**
-- Le message final + les documents s'affichent dans le chat avec **un style spécial** :
-  - **Barre verte** en haut de la carte (ou bordure gauche épaisse verte)
-  - Badge "Réponse finale" en vert
-  - Le message de l'agent
-  - Les documents téléchargeables (liste des fichiers avec bouton download)
-  - Date et heure de clôture
-- Le statut du ticket passe à `CLOSED`
-- La date `closed_at` est remplie
-
-**4. SMS envoyé au client** dans **la langue de préférence du client** (`user.language`) :
-
-```
-FR : "Bonjour [Prénom], l'agent [Prénom Agent] d'Eolis a envoyé une réponse 
-finale à votre demande [REF] et l'a clôturée. Connectez-vous sur Eolis Connect 
-pour consulter la réponse, télécharger les documents et évaluer votre expérience."
-
-EN : "Hello [FirstName], agent [AgentFirstName] from Eolis has sent a final 
-response to your request [REF] and closed it. Log in to Eolis Connect to view 
-the response, download the documents and rate your experience."
-```
-
-**5. Côté client (`mes-demandes/[id]/page.tsx`)** :
-- Le message final s'affiche avec le même style spécial (barre/bordure verte, badge "Réponse finale")
-- Les documents de l'agent sont téléchargeables directement depuis le chat
-- La demande de satisfaction (étoiles) s'affiche en dessous (déjà implémenté, vérifier que ça s'active bien à la clôture)
+**Ce qu'il faut faire** :
+- Ajouter `sender_type = "INTERNAL_NOTE"` comme valeur valide
+- Lors de la récupération des messages pour un CLIENT : filtrer les `INTERNAL_NOTE`
+- Lors de la récupération pour AGENT/OPS/ADMIN : tout afficher
 
 ---
 
-#### E. Résumé des types de messages à gérer
+### 🟡 Priorité 4 — Demande de documents (backend)
 
-| `sender_type` | Visible client | Visible agent | Style |
-|---------------|----------------|---------------|-------|
-| `CLIENT` | ✅ | ✅ | Bulle `#D6E7F5` |
-| `AGENT` | ✅ | ✅ | Bulle navy |
-| `INTERNAL_NOTE` | ❌ | ✅ | Carte ambre, badge "Note interne" |
-| `DOCUMENT_REQUEST` | ✅ | ✅ | Carte orange, bouton upload inline côté client |
-| `FINAL_RESPONSE` | ✅ | ✅ | Carte verte, badge "Réponse finale", fichiers téléchargeables |
-
----
-
-#### F. Modifications backend nécessaires
-
-**`eolis-api/app/models.py`** — Message :
-- `sender_type` doit accepter : `CLIENT`, `AGENT`, `INTERNAL_NOTE`, `DOCUMENT_REQUEST`, `FINAL_RESPONSE`
-- Ajouter `document_description: str | None` (pour les DOCUMENT_REQUEST)
-- Les attachments d'un message final doivent être liés au message via `message_id` (déjà prévu dans le modèle Attachment)
-
-**`eolis-api/app/routers/messages.py`** :
-- GET messages pour CLIENT : exclure les `INTERNAL_NOTE`
-- POST message de type `FINAL_RESPONSE` : déclencher SMS client + changer statut ticket
-- POST message de type `DOCUMENT_REQUEST` : créer notification agent quand le client uploade en réponse
-
-**`eolis-api/app/routers/tickets.py`** :
-- PATCH ticket (clôture via FINAL_RESPONSE) : mettre `status = CLOSED` et `closed_at = now()`
-
-**`eolis-api/app/sms_service.py`** :
-- Fonction `sms_final_response_to_client(client, agent, ticket, lang)` → SMS bilingue
-- Fonction `sms_document_uploaded_to_agent(agent, client, ticket)` → SMS à l'agent
-
----
-
-### 🔴 Priorité 3 — Backend pour le redesign agent (messages étendus)
-
-**Fichiers** :
-- `eolis-api/app/models.py`
-- `eolis-api/app/routers/messages.py`
-- `eolis-api/app/routers/tickets.py`
-- `eolis-api/app/sms_service.py`
-
-**Modèle Message — ce qu'il faut modifier** :
-```python
-# sender_type étendu :
-# "CLIENT" | "AGENT" | "INTERNAL_NOTE" | "DOCUMENT_REQUEST" | "FINAL_RESPONSE"
-sender_type: Mapped[str] = mapped_column(String(30))  # était String(20)
-
-# Nouveau champ optionnel pour les DOCUMENT_REQUEST :
-document_description: Mapped[str | None] = mapped_column(Text, nullable=True)
-# Migration startup : ALTER TABLE messages ADD COLUMN IF NOT EXISTS document_description TEXT
-```
-
-**Router messages.py** :
-- GET messages pour rôle CLIENT → ajouter filtre `sender_type != "INTERNAL_NOTE"`
-- POST message DOCUMENT_REQUEST → créer notification pour le client
-- POST message FINAL_RESPONSE → changer statut ticket en CLOSED + filled closed_at + envoyer SMS client
-- Quand client uploade un fichier en réponse à DOCUMENT_REQUEST → notifier l'agent + SMS agent
-
-**SMS à implémenter dans sms_service.py** :
-```python
-# SMS au client quand l'agent finalise (bilingue selon user.language)
-def sms_final_response_to_client(client: User, agent: User, ticket: Ticket):
-    if client.language == 'fr':
-        body = f"Bonjour {client.first_name}, l'agent {agent.first_name} d'Eolis a envoyé une réponse finale à votre demande {ticket.ref} et l'a clôturée. Connectez-vous sur Eolis Connect pour consulter la réponse et évaluer votre expérience."
-    else:
-        body = f"Hello {client.first_name}, agent {agent.first_name} from Eolis has sent a final response to your request {ticket.ref} and closed it. Log in to Eolis Connect to view the response and rate your experience."
-    # → envoyer SMS au client.phone
-
-# SMS à l'agent quand le client uploade les documents demandés
-def sms_document_uploaded_to_agent(agent: User, client: User, ticket: Ticket):
-    body = f"{client.first_name} a complété les documents demandés pour le dossier {ticket.ref}. Connectez-vous pour les consulter."
-    # → envoyer SMS à agent.phone
-```
+Si on implémente les demandes de documents formelles :
+- Soit un nouveau type de message (`"DOCUMENT_REQUEST"`) avec champ `document_description`
+- Soit une nouvelle table `DocumentRequest` (ticket_id, description, status, fulfilled_at)
+- Le client voit une UI dédiée dans son dossier pour répondre à la demande
 
 ---
 

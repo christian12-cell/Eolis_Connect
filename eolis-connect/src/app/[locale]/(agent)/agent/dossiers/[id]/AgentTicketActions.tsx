@@ -76,6 +76,7 @@ export default function AgentTicketActions({
   const [finalFiles, setFinalFiles]       = useState<File[]>([])
   const [sending, setSending]             = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [takenByOther, setTakenByOther]   = useState(false)
   const [allStaff, setAllStaff]           = useState<any[]>([])
   const [mentionUsers, setMentionUsers]   = useState<any[]>([])
   const [internalFiles, setInternalFiles] = useState<File[]>([])
@@ -133,10 +134,16 @@ export default function AgentTicketActions({
       ]).then(([msgs, tkt]) => {
         if (Array.isArray(msgs)) setMessages(msgs)
         if (tkt?.attachments) setAttachments(tkt.attachments)
+        // Detect if ticket was taken by another agent while we were on the page
+        if (tkt?.agentId && tkt.agentId !== currentAgentId && localAgentId !== tkt.agentId && !takenByOther) {
+          setLocalAgentId(tkt.agentId)
+          setLocalStatus(tkt.status)
+          setTakenByOther(true)
+        }
       }).catch(() => {})
     }, 8000)
     return () => clearInterval(iv)
-  }, [ticketId])
+  }, [ticketId, takenByOther, currentAgentId, localAgentId])
 
   useEffect(() => {
     if (messages.length > prevLenRef.current) {
@@ -446,6 +453,31 @@ export default function AgentTicketActions({
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col" style={{ height: '650px' }}>
+
+      {/* ── Popup double prise en charge ── */}
+      {takenByOther && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+            <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+              <UserCheck size={28} className="text-amber-600" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900 mb-2">
+              {isFr ? 'Dossier pris en charge' : 'Ticket taken'}
+            </h3>
+            <p className="text-sm text-gray-500 mb-5">
+              {isFr
+                ? "Ce dossier vient d'être pris en charge par un autre agent. Veuillez retourner à la liste des dossiers."
+                : 'This ticket has just been taken by another agent. Please go back to the ticket list.'}
+            </p>
+            <button
+              onClick={() => window.history.back()}
+              className="w-full py-3 rounded-xl bg-[#1B3A5C] text-white font-bold text-sm"
+            >
+              {isFr ? 'Retour aux dossiers' : 'Back to tickets'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Tabs ── */}
       <div className="flex flex-shrink-0 border-b border-gray-100">
