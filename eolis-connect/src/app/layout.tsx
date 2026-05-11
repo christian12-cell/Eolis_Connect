@@ -35,7 +35,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
-      <body className="min-h-full font-sans">
+      <body className="min-h-full font-sans" style={{ backgroundColor: '#0f172a' }}>
         <OfflineBanner />
         {children}
         <CookieBanner />
