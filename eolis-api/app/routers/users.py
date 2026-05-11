@@ -138,7 +138,8 @@ def update_user(
             setattr(user, field, value)
     db.commit()
     db.refresh(user)
-    login_url = f"{settings.ALLOWED_ORIGINS.split(",")[0].strip()}/fr/login"
+    _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
+    login_url = f"{_frontend}/fr/login"
     if body.status == "ACTIVE" and prev_status == "PENDING":
         background_tasks.add_task(send_account_approved, user.email, user.first_name, user.username)
         if user.phone:
@@ -194,7 +195,8 @@ def admin_create_user(
     )
     db.add(setup)
     db.commit()
-    setup_url = f"{settings.ALLOWED_ORIGINS.split(",")[0].strip()}/{body.language}/account-setup/{token}"
+    _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
+    setup_url = f"{_frontend}/{body.language}/account-setup/{token}"
     background_tasks.add_task(send_account_created_by_admin, u.email, u.first_name, u.username, body.password, u.role, setup_url)
     return u
 
