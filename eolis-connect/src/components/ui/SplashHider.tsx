@@ -5,9 +5,12 @@ export function SplashHider() {
   useEffect(() => {
     const splash = document.getElementById('eolis-splash')
     if (!splash) return
-    splash.style.opacity = '0'
-    splash.style.transition = 'opacity 0.4s ease'
-    setTimeout(() => splash.remove(), 400)
+    // Wait for page to paint before fading out
+    setTimeout(() => {
+      splash.style.opacity = '0'
+      splash.style.transition = 'opacity 0.4s ease'
+      setTimeout(() => splash.remove(), 400)
+    }, 300)
   }, [])
   return null
 }
