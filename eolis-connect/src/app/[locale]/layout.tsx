@@ -2,8 +2,6 @@ import { NextIntlClientProvider, hasLocale } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
-import { Suspense } from 'react'
-import LoadingScreen from '@/components/ui/LoadingScreen'
 
 export default async function LocaleLayout({
   children,
@@ -18,9 +16,7 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider messages={messages}>
-      <Suspense fallback={<LoadingScreen />}>
-        {children}
-      </Suspense>
+      {children}
     </NextIntlClientProvider>
   )
 }
