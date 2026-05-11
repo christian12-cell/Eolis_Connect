@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { Save, Lock, User, CheckCircle, AlertCircle, Phone, RefreshCw, Globe } from 'lucide-react'
+import { Save, Lock, User, CheckCircle, AlertCircle, Phone, RefreshCw, Globe, Eye, EyeOff } from 'lucide-react'
 import { getUser, apiFetch, saveSession, getToken, apiUrl } from '@/lib/api-client'
 import { PhoneInput } from '@/components/ui/PhoneInput'
 
@@ -41,6 +41,7 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
   const [currentPw, setCurrentPw]   = useState('')
   const [newPw, setNewPw]           = useState('')
   const [confirmPw, setConfirmPw]   = useState('')
+  const [showPw, setShowPw]         = useState({ current: false, new: false, confirm: false })
   const [pwSaving, setPwSaving]     = useState(false)
   const [pwMsg, setPwMsg]           = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -298,14 +299,24 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
             <h2 className="font-semibold text-gray-900">{t.password}</h2>
           </div>
           {[
-            { label: t.currentPw, value: currentPw, set: setCurrentPw },
-            { label: t.newPw,     value: newPw,     set: setNewPw     },
-            { label: t.confirmPw, value: confirmPw, set: setConfirmPw },
+            { label: t.currentPw, value: currentPw, set: setCurrentPw, key: 'current' as const },
+            { label: t.newPw,     value: newPw,     set: setNewPw,     key: 'new'     as const },
+            { label: t.confirmPw, value: confirmPw, set: setConfirmPw, key: 'confirm' as const },
           ].map(f => (
             <div key={f.label}>
               <label className="text-xs text-gray-500 font-medium block mb-1">{f.label}</label>
-              <input type="password" value={f.value} onChange={e => f.set(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent" />
+              <div className="relative">
+                <input
+                  type={showPw[f.key] ? 'text' : 'password'}
+                  value={f.value} onChange={e => f.set(e.target.value)}
+                  className="w-full px-3 py-2.5 pr-10 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
+                />
+                <button type="button" tabIndex={-1}
+                  onClick={() => setShowPw(p => ({ ...p, [f.key]: !p[f.key] }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showPw[f.key] ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
           ))}
           <Msg msg={pwMsg} />

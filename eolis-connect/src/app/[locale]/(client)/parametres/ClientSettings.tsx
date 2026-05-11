@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Lock, Globe, CheckCircle, AlertCircle, Phone, RefreshCw } from 'lucide-react'
+import { User, Lock, Globe, CheckCircle, AlertCircle, Phone, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import { apiFetch, apiUrl, getUser, saveSession, getToken } from '@/lib/api-client'
 
 interface Props {
@@ -37,6 +37,7 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
   const [otpResent, setOtpResent] = useState(false)
 
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' })
+  const [showPw, setShowPw] = useState({ current: false, newPass: false, confirm: false })
   const [passSaving, setPassSaving] = useState(false)
   const [passMsg, setPassMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -315,11 +316,19 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
             ].map(({ key, label }) => (
               <div key={key} className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">{label}</label>
-                <input
-                  type="password" required value={passwords[key as keyof typeof passwords]}
-                  onChange={e => setPasswords(p => ({ ...p, [key]: e.target.value }))}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
-                />
+                <div className="relative">
+                  <input
+                    type={showPw[key as keyof typeof showPw] ? 'text' : 'password'}
+                    required value={passwords[key as keyof typeof passwords]}
+                    onChange={e => setPasswords(p => ({ ...p, [key]: e.target.value }))}
+                    className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
+                  />
+                  <button type="button" tabIndex={-1}
+                    onClick={() => setShowPw(p => ({ ...p, [key]: !p[key as keyof typeof p] }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPw[key as keyof typeof showPw] ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
             ))}
             {passMsg && (
