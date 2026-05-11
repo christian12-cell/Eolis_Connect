@@ -12,8 +12,9 @@
 6. [Le Backend FastAPI — Routes API](#6-le-backend-fastapi--routes-api)
 7. [Le Frontend Next.js — Pages et composants](#7-le-frontend-nextjs--pages-et-composants)
 8. [Comment modifier les catégories et sous-catégories](#8-comment-modifier-les-catégories-et-sous-catégories)
-9. [Comment rendre un champ obligatoire](#9-comment-rendre-un-champ-obligatoire)
-10. [Comment ajouter un nouveau champ](#10-comment-ajouter-un-nouveau-champ)
+9. [Comment modifier les degrés d'urgence](#9-comment-modifier-les-degrés-durgence)
+10. [Comment rendre un champ obligatoire](#10-comment-rendre-un-champ-obligatoire)
+11. [Comment ajouter un nouveau champ](#11-comment-ajouter-un-nouveau-champ)
 11. [Comment déployer après une modification](#11-comment-déployer-après-une-modification)
 12. [Variables d'environnement — Référence complète](#12-variables-denvironnement--référence-complète)
 13. [Erreurs fréquentes et solutions](#13-erreurs-fréquentes-et-solutions)
@@ -540,7 +541,80 @@ const SUBCATEGORIES_FR: Record<string, string[]> = {
 
 ---
 
-## 9. Comment rendre un champ obligatoire
+## 9. Comment modifier les degrés d'urgence
+
+### Comment ça fonctionne
+Le degré d'urgence est attribué **automatiquement** par le système selon la catégorie et la sous-catégorie choisies par le client. Le client ne choisit pas lui-même son urgence.
+
+**Fichier concerné :** `eolis-connect/src/lib/utils.ts` — fonction `getUrgency()` (lignes 14-56)
+
+### La table de correspondance actuelle
+```
+Livraison → Conteneur bloqué         = 🔴 HIGH
+Livraison → Retard de livraison       = 🔴 HIGH
+Livraison → Problème à la réception   = 🔴 HIGH
+
+Facturation → Retard de paiement      = 🟡 MEDIUM
+Facturation → Paiement incomplet      = 🟡 MEDIUM
+Facturation → Remboursement           = 🟢 LOW
+
+Dossier → Dossier incomplet           = 🟡 MEDIUM
+Dossier → Document manquant           = 🟡 MEDIUM
+Dossier → Validation de dossier       = 🟢 LOW
+
+Information → Demande d'information   = 🟢 LOW
+Information → Procédure               = 🟢 LOW
+
+Tout le reste (Autre, non défini...)  = 🟢 LOW  ← valeur par défaut
+```
+
+### Modifier l'urgence d'une sous-catégorie existante
+Dans `eolis-connect/src/lib/utils.ts`, modifiez la valeur `'HIGH'`, `'MEDIUM'` ou `'LOW'` :
+```typescript
+Facturation: {
+  'Retard de paiement': 'HIGH',    // ← était MEDIUM, on le passe en HIGH
+  'Paiement incomplet': 'MEDIUM',
+  Remboursement:        'LOW',
+},
+```
+
+### Ajouter une nouvelle catégorie avec ses urgences
+Quand vous ajoutez une catégorie (voir section 8), ajoutez aussi son bloc dans `getUrgency()` :
+```typescript
+// Dans utils.ts → getUrgency()
+Réclamation: {
+  'Prestation non conforme': 'HIGH',
+  'Délai non respecté':      'MEDIUM',
+  'Erreur de facturation':   'LOW',
+},
+// Et en anglais aussi :
+Complaint: {
+  'Non-compliant service': 'HIGH',
+  'Deadline not met':      'MEDIUM',
+  'Billing error':         'LOW',
+},
+```
+
+> ⚠️ Le nom de clé (`Réclamation`) doit être **exactement identique** à la valeur dans `CATEGORIES_FR`.
+> ⚠️ Si une sous-catégorie n'est pas listée ici, elle recevra automatiquement `LOW`.
+
+### Modifier manuellement l'urgence d'un ticket existant
+Un agent ou OPS Admin peut modifier l'urgence d'un ticket via l'interface. Côté API :
+```
+PATCH /api/tickets/{id}
+Body: { "urgency": "HIGH" }
+```
+
+### Commit après modification
+```bash
+git add eolis-connect/src/lib/utils.ts
+git commit -m "fix: modifier urgences selon nouvelles règles"
+git push
+```
+
+---
+
+## 10. Comment rendre un champ obligatoire
 
 ### Le composant `<Req />`
 Dans le fichier `nouvelle-demande/page.tsx`, il y a un petit composant :
@@ -584,7 +658,7 @@ ship_name: str
 
 ---
 
-## 10. Comment ajouter un nouveau champ
+## 11. Comment ajouter un nouveau champ
 
 Exemple complet : ajouter un champ "Port de destination" au formulaire de ticket.
 
@@ -655,7 +729,7 @@ const payload = {
 
 ---
 
-## 11. Comment déployer après une modification
+## 12. Comment déployer après une modification
 
 ### Backend (eolis-api/)
 ```bash
