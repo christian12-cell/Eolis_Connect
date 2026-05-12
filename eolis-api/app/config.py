@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""
 
+    # OpenAI — BL extraction
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o"
+
     # AWS S3 for file uploads in production
     USE_S3: bool = False
     AWS_ACCESS_KEY_ID: str = ""

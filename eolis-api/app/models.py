@@ -190,3 +190,22 @@ class Log(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User | None"] = relationship("User", back_populates="logs")
+
+
+class BLDocument(Base):
+    __tablename__ = "bl_documents"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_id)
+    client_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    booking_no: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    vessel: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    voyage: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    ets: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    eta: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    port_of_loading: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    port_of_discharge: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    description_of_goods: Mapped[str | None] = mapped_column(Text, nullable=True)
+    vessel_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_extracted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

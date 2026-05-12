@@ -238,6 +238,11 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [pendingOffline, setPendingOffline]   = useState(false)
   const [pendingHadFiles, setPendingHadFiles] = useState(false)
 
+  const [blUploading, setBlUploading]   = useState(false)
+  const [blExtracted, setBlExtracted]   = useState(false)
+  const [blDisplay, setBlDisplay]       = useState<any>(null)
+  const [blVesselData, setBlVesselData] = useState<string | null>(null)
+
   const [openRecap, setOpenRecap] = useState<Record<string, boolean>>({
     cat: true, equip: true, log: true, desc: true,
   })
@@ -376,6 +381,44 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     setVessels(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v))
   }
 
+  // ── BL Upload ─────────────────────────────────────────────────────────────────
+
+  async function handleBLUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setBlUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await apiUpload('/api/bl/extract', fd)
+      if (res.ok) {
+        const data = await res.json()
+        const f = data.form_data
+        setForm(prev => ({
+          ...prev,
+          shipName:      f.shipName     || prev.shipName,
+          voyageNumber:  f.voyageNumber || prev.voyageNumber,
+          shipDate:      f.shipDate     || prev.shipDate,
+          code:          f.code         || prev.code,
+          description:   f.description  || prev.description,
+        }))
+        setMode('simple')
+        setBlDisplay(data.display)
+        setBlVesselData(data.vesselData)
+        setBlExtracted(true)
+      }
+    } catch { /* ignore */ }
+    setBlUploading(false)
+  }
+
+  function resetBL() {
+    setBlExtracted(false)
+    setBlDisplay(null)
+    setBlVesselData(null)
+    setForm(prev => ({ ...prev, shipName: '', voyageNumber: '', shipDate: '', code: '', description: '' }))
+  }
+
   // ── Submit ────────────────────────────────────────────────────────────────────
 
   async function submit() {
@@ -401,7 +444,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             shipDate:      v.shipDate || null,
             code:          v.code.trim() || null,
           })))
-        : undefined
+        : (blVesselData || undefined)
 
       const body = {
         category:      finalCategory,
@@ -720,6 +763,62 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         {/* ── STEP 1 : Catégorie ── */}
         {step === 'categorie' && (
           <div className="space-y-4">
+
+            {/* ── BL Upload zone ── */}
+            {!blExtracted ? (
+              <div className="bg-white/10 rounded-2xl border border-white/20 px-4 py-3">
+                <p className="text-sm font-bold text-white mb-0.5">
+                  {isFr ? '📄 Vous avez un Booking Confirmation ?' : '📄 Have a Booking Confirmation?'}
+                </p>
+                <p className="text-xs text-blue-100 mb-3">
+                  {isFr
+                    ? 'Importez votre BL Eagle pour pré-remplir automatiquement le dossier.'
+                    : 'Import your Eagle BL to auto-fill the request.'}
+                </p>
+                <label className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
+                  blUploading ? 'bg-white/10 text-white/60' : 'bg-[#4A8FC4] text-white hover:bg-[#3a7eb4]'
+                }`}>
+                  {blUploading
+                    ? <><Loader2 size={15} className="animate-spin" /> {isFr ? 'Extraction en cours...' : 'Extracting...'}</>
+                    : <><Upload size={15} /> {isFr ? 'Importer mon BL (PDF)' : 'Import my BL (PDF)'}</>
+                  }
+                  <input type="file" className="sr-only" accept="application/pdf" onChange={handleBLUpload} disabled={blUploading} />
+                </label>
+              </div>
+            ) : (
+              <div className="rounded-2xl overflow-hidden border border-emerald-400/40">
+                <div className="bg-emerald-500/20 px-4 py-3 flex items-center gap-3">
+                  <Check size={18} className="text-emerald-300 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white">{isFr ? '✅ BL importé' : '✅ BL imported'}</p>
+                    <p className="text-xs text-blue-100">{isFr ? 'Données logistiques pré-remplies' : 'Logistics data pre-filled'}</p>
+                  </div>
+                  <button onClick={resetBL} className="text-white/50 hover:text-white transition-colors">
+                    <X size={16} />
+                  </button>
+                </div>
+                {blDisplay && (
+                  <div className="bg-white/10 px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2">
+                    {[
+                      { l: isFr ? 'N° Booking' : 'Booking no.', v: blDisplay.bookingNo },
+                      { l: isFr ? 'Navire' : 'Vessel',         v: blDisplay.vessel },
+                      { l: isFr ? 'Voyage' : 'Voyage',         v: blDisplay.voyage },
+                      { l: 'ETS',                               v: blDisplay.ets },
+                      { l: isFr ? 'Chargement' : 'Loading',    v: blDisplay.portOfLoading },
+                      { l: isFr ? 'Déchargement' : 'Discharge',v: blDisplay.portOfDischarge },
+                      { l: isFr ? 'Conteneur' : 'Container',   v: blDisplay.sizeType },
+                      { l: isFr ? 'Marchandise' : 'Goods',     v: blDisplay.goodsDescription },
+                    ].filter(f => f.v).map(f => (
+                      <div key={f.l}>
+                        <p className="text-[10px] text-blue-200 font-medium">{f.l}</p>
+                        <p className="text-xs font-semibold text-white truncate">{f.v}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
               <h2 className="text-base font-bold text-white mb-0.5">{t.catTitle}<Req /></h2>
               <p className="text-sm text-blue-100">{t.catSub}</p>
