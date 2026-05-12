@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle, BookOpen } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { clearSession } from '@/lib/api-client'
 import { syncPending } from '@/lib/offline-sync'
@@ -124,6 +124,11 @@ export function MobileLayout({
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/20 text-white text-xs font-semibold hover:bg-white/30 transition-colors">
             <Globe size={13} />
             {otherLocale.toUpperCase()}
+          </button>
+          <button onClick={() => router.push(`/${locale}/aide`)}
+            className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/20 hover:bg-white/30 transition-colors"
+            title={isFr ? 'Aide' : 'Help'}>
+            <BookOpen size={15} className="text-white" />
           </button>
           {showLogout && (
             <button onClick={logout}
