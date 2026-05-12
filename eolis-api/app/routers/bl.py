@@ -131,8 +131,9 @@ async def extract_bl(
     text = _extract_pdf_text(content)
     data = _call_gpt(text)
 
-    # Données extra sauvegardées dans vessel_data
+    # Données complètes sauvegardées dans vessel_data
     extra = {
+        "date":             data.get("date"),
         "service":          data.get("service"),
         "customer_ref":     data.get("customer_ref"),
         "booking_party":    data.get("booking_party"),
@@ -172,26 +173,7 @@ async def extract_bl(
 
     return {
         "bl_id": bl.id,
-        "form_data": {
-            "shipName":      data.get("vessel") or "",
-            "voyageNumber":  data.get("voyage") or "",
-            "shipDate":      data.get("ets") or "",
-            "code":          data.get("booking_no") or "",
-            "sizeType":      size_type,
-            "description":   desc_goods,
-        },
-        "display": {
-            "bookingNo":       data.get("booking_no"),
-            "vessel":          data.get("vessel"),
-            "voyage":          data.get("voyage"),
-            "ets":             data.get("ets"),
-            "eta":             data.get("eta"),
-            "portOfLoading":   data.get("port_of_loading"),
-            "portOfDischarge": data.get("port_of_discharge"),
-            "bookingParty":    data.get("booking_party"),
-            "sizeType":        size_type,
-            "goodsDescription":desc_goods,
-        },
+        "raw": data,  # full GPT extraction — used by frontend review step
         "vesselData": json.dumps(extra, ensure_ascii=False),
     }
 

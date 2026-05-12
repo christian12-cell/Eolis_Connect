@@ -239,12 +239,14 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [pendingHadFiles, setPendingHadFiles] = useState(false)
 
   const [pageMode, setPageMode]         = useState<null | 'manual' | 'bl'>(null)
-  const [blStep, setBlStep]             = useState<'upload' | 'category' | 'recap'>('upload')
+  const [blStep, setBlStep]             = useState<'upload' | 'review' | 'describe' | 'recap'>('upload')
   const [blUploading, setBlUploading]   = useState(false)
-  const [blExtracted, setBlExtracted]   = useState(false)
-  const [blDisplay, setBlDisplay]       = useState<any>(null)
+  const [blFields, setBlFields]         = useState<any>(null)
   const [blVesselData, setBlVesselData] = useState<string | null>(null)
   const [blError, setBlError]           = useState<string | null>(null)
+  const [blOpenSection, setBlOpenSection] = useState<Record<string,boolean>>({
+    ref: true, vessel: true, pickup: true, turnin: false, items: true, containers: true, remarks: false,
+  })
 
   const [openRecap, setOpenRecap] = useState<Record<string, boolean>>({
     cat: true, equip: true, log: true, desc: true,
@@ -398,21 +400,58 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       const res = await apiUpload('/api/bl/extract', fd)
       if (res.ok) {
         const data = await res.json()
-        const f = data.form_data
-        setForm(prev => ({
-          ...prev,
-          shipName:       f.shipName      || '',
-          voyageNumber:   f.voyageNumber  || '',
-          shipDate:       f.shipDate      || '',
-          code:           f.code          || '',
-          equipmentType:  isFr ? 'Autre' : 'Other',
-          equipmentOther: f.sizeType      || '',
-        }))
-        setMode('simple')
-        setBlDisplay(data.display)
-        setBlVesselData(data.vesselData)
-        setBlExtracted(true)
-        setBlStep('category')
+        const r = data.raw || {}
+        const p = r.pickup || {}
+        const ti = r.turn_in || {}
+        setBlFields({
+          bookingNo:       r.booking_no    || '',
+          date:            r.date          || '',
+          customerRef:     r.customer_ref  || '',
+          service:         r.service       || '',
+          vessel:          r.vessel        || '',
+          voyage:          r.voyage        || '',
+          ets:             r.ets           || '',
+          eta:             r.eta           || '',
+          portOfLoading:   r.port_of_loading   || '',
+          portOfDischarge: r.port_of_discharge || '',
+          placeOfReceipt:  r.place_of_receipt  || '',
+          placeOfDelivery: r.place_of_delivery || '',
+          pickup: {
+            reference:      p.reference       || '',
+            quantity:       String(p.quantity ?? ''),
+            sizeType:       p.size_type       || '',
+            depot:          p.depot           || '',
+            containerUsage: p.container_usage || '',
+            releaseDate:    p.release_date    || '',
+          },
+          turnIn: {
+            reference:       ti.reference        || '',
+            terminal:        ti.terminal         || '',
+            terminalClosing: ti.terminal_closing || '',
+            vgmClosing:      ti.vgm_closing      || '',
+            customsClosing:  ti.customs_closing  || '',
+          },
+          bookingItems: (r.booking_items || []).map((it: any) => ({
+            item:               String(it.item ?? ''),
+            noOfPacks:          String(it.no_of_packs ?? ''),
+            kindOfPack:         it.kind_of_pack         || '',
+            descriptionOfGoods: it.description_of_goods || '',
+            linerTerms:         it.liner_terms          || '',
+            imo:                it.imo                  || '',
+            grossWeightTons:    String(it.gross_weight_tons ?? ''),
+            measurementCbm:     String(it.measurement_cbm ?? ''),
+          })),
+          containerDetails: (r.container_details || []).map((cd: any) => ({
+            containerNo: cd.container_no || '',
+            setPoint:    cd.set_point    || '',
+            vent:        cd.vent         || '',
+            drains:      cd.drains       || '',
+            humidity:    cd.humidity     || '',
+            remarks:     cd.remarks      || '',
+          })),
+          remarks: r.remarks || '',
+        })
+        setBlStep('review')
       } else {
         const err = await res.json().catch(() => ({}))
         setBlError(err.detail || (isFr ? "Erreur lors de l'extraction." : 'Extraction error.'))
@@ -423,9 +462,21 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     setBlUploading(false)
   }
 
+  function updateBLF(path: string, value: string) {
+    const parts = path.split('.')
+    setBlFields((prev: any) => {
+      if (parts.length === 1) return { ...prev, [parts[0]]: value }
+      if (parts.length === 2) return { ...prev, [parts[0]]: { ...prev[parts[0]], [parts[1]]: value } }
+      if (parts.length === 3) {
+        const [key, idx, field] = parts
+        return { ...prev, [key]: prev[key].map((item: any, i: number) => i === parseInt(idx) ? { ...item, [field]: value } : item) }
+      }
+      return prev
+    })
+  }
+
   function resetBL() {
-    setBlExtracted(false)
-    setBlDisplay(null)
+    setBlFields(null)
     setBlVesselData(null)
     setBlStep('upload')
     setBlError(null)
@@ -860,45 +911,195 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       )
     }
 
-    // Step 2 : Category + description
-    if (blStep === 'category') {
+    // Step 2 : Review all extracted fields (editable)
+    if (blStep === 'review' && blFields) {
+      const bf = blFields
+      const inp = "w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C] text-gray-800"
+      const lbl = "text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1 block"
+      const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
+        <div className="bg-white rounded-2xl overflow-hidden">
+          <button onClick={() => setBlOpenSection(p => ({ ...p, [id]: !p[id] }))}
+            className="w-full flex items-center justify-between px-4 py-3 active:bg-gray-50">
+            <p className="text-sm font-bold text-[#1B3A5C]">{title}</p>
+            <ChevronDown size={15} className={`text-gray-400 transition-transform ${blOpenSection[id] ? '' : '-rotate-90'}`} />
+          </button>
+          {blOpenSection[id] && <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">{children}</div>}
+        </div>
+      )
+      return (
+        <MobileLayout locale={locale} title={isFr ? 'Vérifier les données BL' : 'Review BL data'} showBack>
+          <div className="space-y-3">
+            <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-2xl px-4 py-3">
+              <p className="text-sm font-bold text-white mb-0.5">✅ {isFr ? 'BL extrait — vérifiez et corrigez si besoin' : 'BL extracted — review and correct if needed'}</p>
+              <p className="text-xs text-blue-100">{isFr ? "L'IA peut parfois se tromper. Tous les champs sont modifiables." : 'AI can make mistakes. All fields are editable.'}</p>
+            </div>
+
+            {/* Références */}
+            <Section id="ref" title={isFr ? 'Références' : 'References'}>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { l: 'Booking no.', k: 'bookingNo' },
+                  { l: isFr ? 'Date' : 'Date', k: 'date' },
+                  { l: 'Customer ref', k: 'customerRef' },
+                  { l: 'Service', k: 'service' },
+                ].map(f => (
+                  <div key={f.k}>
+                    <label className={lbl}>{f.l}</label>
+                    <input className={inp} value={bf[f.k] || ''} onChange={e => updateBLF(f.k, e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            {/* Navire & Voyage */}
+            <Section id="vessel" title={isFr ? 'Navire & Voyage' : 'Vessel & Voyage'}>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { l: isFr ? 'Navire' : 'Vessel', k: 'vessel' },
+                  { l: 'Voyage', k: 'voyage' },
+                  { l: 'ETS', k: 'ets' },
+                  { l: 'ETA', k: 'eta' },
+                  { l: isFr ? 'Port chargement' : 'Port of loading', k: 'portOfLoading' },
+                  { l: isFr ? 'Port déchargement' : 'Port of discharge', k: 'portOfDischarge' },
+                  { l: isFr ? 'Lieu réception' : 'Place of receipt', k: 'placeOfReceipt' },
+                  { l: isFr ? 'Lieu livraison' : 'Place of delivery', k: 'placeOfDelivery' },
+                ].map(f => (
+                  <div key={f.k}>
+                    <label className={lbl}>{f.l}</label>
+                    <input className={inp} value={bf[f.k] || ''} onChange={e => updateBLF(f.k, e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            {/* Pickup reference */}
+            <Section id="pickup" title="Pickup reference / Dépôt">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { l: 'Pickup ref', k: 'pickup.reference' },
+                  { l: isFr ? 'Quantité' : 'Quantity', k: 'pickup.quantity' },
+                  { l: 'Size type', k: 'pickup.sizeType' },
+                  { l: 'Dépôt', k: 'pickup.depot' },
+                  { l: 'Container usage', k: 'pickup.containerUsage' },
+                  { l: 'Release date', k: 'pickup.releaseDate' },
+                ].map(f => (
+                  <div key={f.k}>
+                    <label className={lbl}>{f.l}</label>
+                    <input className={inp} value={(f.k.includes('.') ? bf.pickup?.[f.k.split('.')[1]] : bf[f.k]) || ''} onChange={e => updateBLF(f.k, e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            {/* Turn in location */}
+            <Section id="turnin" title="Turn in location">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { l: 'Turn in ref', k: 'turnIn.reference' },
+                  { l: 'Terminal', k: 'turnIn.terminal' },
+                  { l: 'Terminal closing', k: 'turnIn.terminalClosing' },
+                  { l: 'VGM closing', k: 'turnIn.vgmClosing' },
+                  { l: 'Customs closing', k: 'turnIn.customsClosing' },
+                ].map(f => (
+                  <div key={f.k} className={f.k === 'turnIn.terminal' ? 'col-span-2' : ''}>
+                    <label className={lbl}>{f.l}</label>
+                    <input className={inp} value={bf.turnIn?.[f.k.split('.')[1]] || ''} onChange={e => updateBLF(f.k, e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            {/* Booking items */}
+            <Section id="items" title="Booking items">
+              {(bf.bookingItems || []).map((item: any, idx: number) => (
+                <div key={idx} className="rounded-xl border border-gray-100 p-3 space-y-2">
+                  <p className="text-[10px] font-bold text-[#1B3A5C] uppercase">Item {item.item || idx + 1}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { l: isFr ? 'Nb colis' : 'No. of packs', k: 'noOfPacks' },
+                      { l: isFr ? 'Type colis' : 'Kind of pack', k: 'kindOfPack' },
+                      { l: isFr ? 'Description marchandises' : 'Description of goods', k: 'descriptionOfGoods' },
+                      { l: 'Liner terms', k: 'linerTerms' },
+                      { l: 'IMO', k: 'imo' },
+                      { l: isFr ? 'Poids brut (t)' : 'Gross weight (t)', k: 'grossWeightTons' },
+                      { l: 'Mesure (cbm)', k: 'measurementCbm' },
+                    ].map(f => (
+                      <div key={f.k} className={f.k === 'descriptionOfGoods' ? 'col-span-2' : ''}>
+                        <label className={lbl}>{f.l}</label>
+                        <input className={inp} value={item[f.k] || ''} onChange={e => updateBLF(`bookingItems.${idx}.${f.k}`, e.target.value)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </Section>
+
+            {/* Container details */}
+            {(bf.containerDetails || []).length > 0 && (
+              <Section id="containers" title="Container details">
+                {(bf.containerDetails || []).map((cd: any, idx: number) => (
+                  <div key={idx} className="rounded-xl border border-gray-100 p-3 space-y-2">
+                    <p className="text-[10px] font-bold text-[#1B3A5C] uppercase">{isFr ? `Conteneur ${idx + 1}` : `Container ${idx + 1}`}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { l: 'Container no', k: 'containerNo' },
+                        { l: 'Set point', k: 'setPoint' },
+                        { l: 'Vent', k: 'vent' },
+                        { l: 'Drains', k: 'drains' },
+                        { l: 'Humidity', k: 'humidity' },
+                        { l: isFr ? 'Remarques' : 'Remarks', k: 'remarks' },
+                      ].map(f => (
+                        <div key={f.k}>
+                          <label className={lbl}>{f.l}</label>
+                          <input className={inp} value={cd[f.k] || ''} onChange={e => updateBLF(`containerDetails.${idx}.${f.k}`, e.target.value)} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </Section>
+            )}
+
+            {/* Remarques */}
+            <Section id="remarks" title={isFr ? 'Remarques' : 'Remarks'}>
+              <textarea className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C] resize-none text-gray-800" rows={3}
+                value={bf.remarks || ''} onChange={e => updateBLF('remarks', e.target.value)} />
+            </Section>
+
+            <button onClick={() => {
+              setBlVesselData(JSON.stringify(blFields))
+              setForm(prev => ({
+                ...prev,
+                shipName:       blFields.vessel      || '',
+                voyageNumber:   blFields.voyage       || '',
+                shipDate:       blFields.ets          || '',
+                code:           blFields.bookingNo    || '',
+                equipmentType:  isFr ? 'Autre' : 'Other',
+                equipmentOther: blFields.pickup?.sizeType || '',
+              }))
+              setMode('simple')
+              setBlStep('describe')
+            }}
+              className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2">
+              {isFr ? 'Valider et continuer' : 'Validate & continue'} <ChevronRight size={18} />
+            </button>
+            <button onClick={resetBL}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
+              ← {isFr ? 'Changer de BL' : 'Change BL'}
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
+    // Step 3 : Description + fichiers
+    if (blStep === 'describe') {
       const blCanNext = !!form.category &&
         (form.category !== 'Autre' && form.category !== 'Other' ? true : !!form.categoryOther.trim()) &&
         form.description.trim().length >= 10
       return (
         <MobileLayout locale={locale} title={isFr ? 'Votre demande' : 'Your request'} showBack>
           <div className="space-y-4">
-            {/* BL summary */}
-            {blDisplay && (
-              <div className="bg-white/10 rounded-2xl border border-emerald-400/30 overflow-hidden">
-                <div className="bg-emerald-500/20 px-4 py-2.5 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Check size={14} className="text-emerald-300" />
-                    <p className="text-xs font-bold text-white uppercase tracking-wide">
-                      {isFr ? 'BL extrait automatiquement' : 'BL auto-extracted'}
-                    </p>
-                  </div>
-                  <button onClick={resetBL} className="text-white/50 hover:text-white text-xs">
-                    {isFr ? 'Changer' : 'Change'}
-                  </button>
-                </div>
-                <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2">
-                  {[
-                    { l: isFr ? 'N° Booking' : 'Booking no.', v: blDisplay.bookingNo },
-                    { l: isFr ? 'Navire' : 'Vessel',          v: blDisplay.vessel },
-                    { l: 'ETS',                                v: blDisplay.ets },
-                    { l: isFr ? 'Déchargement' : 'Discharge', v: blDisplay.portOfDischarge },
-                    { l: isFr ? 'Conteneur' : 'Container',    v: blDisplay.sizeType },
-                    { l: isFr ? 'Marchandise' : 'Goods',      v: blDisplay.goodsDescription },
-                  ].filter(f => f.v).map(f => (
-                    <div key={f.l}>
-                      <p className="text-[10px] text-blue-200 font-medium">{f.l}</p>
-                      <p className="text-xs font-semibold text-white truncate">{f.v}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
             {/* Category */}
             <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
               <h2 className="text-sm font-bold text-white mb-0.5">{t.catTitle}<Req /></h2>
@@ -935,18 +1136,41 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed" />
                   <p className="text-xs text-gray-300 text-right mt-1">{form.description.length}/10000</p>
                 </div>
+                {/* Documents */}
+                <div className="bg-white/10 rounded-2xl p-4 border border-white/15 space-y-3">
+                  <div>
+                    <p className="text-xs font-bold text-white/80 uppercase tracking-wide mb-1">Documents</p>
+                    <p className="text-xs text-blue-100">{t.uploadHint}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => uploadRef.current?.click()}
+                      className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
+                      <Upload size={16} /> {t.addFile}
+                    </button>
+                    <button onClick={() => { setScanVesselId(null); setShowScanner(true) }}
+                      className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
+                      <Camera size={16} /> {t.scan}
+                    </button>
+                  </div>
+                  {files.length > 0 && <p className="text-xs text-emerald-300 font-semibold">{files.length} {t.filesAdded}</p>}
+                  <FilePreviews prevs={previews} fls={files} onRemove={removeFile} dark />
+                </div>
               </>
             )}
             <button onClick={() => setBlStep('recap')} disabled={!blCanNext}
               className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">
               {t.next} <ChevronRight size={18} />
             </button>
+            <button onClick={() => setBlStep('review')}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
+              ← {isFr ? 'Retour au BL' : 'Back to BL'}
+            </button>
           </div>
         </MobileLayout>
       )
     }
 
-    // Step 3 : Recap + submit
+    // Step 4 : Recap + submit
     if (blStep === 'recap') {
       return (
         <MobileLayout locale={locale} title={t.recap} showBack>
@@ -955,19 +1179,19 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               <h2 className="text-base font-bold text-white mb-0.5">{t.recap}</h2>
               <p className="text-sm text-blue-100">{t.recapSub}</p>
             </div>
-            {blDisplay && (
+            {blFields && (
               <RecapSection title={isFr ? 'BL / Logistique' : 'BL / Logistics'} isOpen={openRecap.log} onToggle={() => toggleRecap('log')}>
                 <div className="pt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
                   {[
-                    { l: isFr ? 'N° Booking' : 'Booking no.', v: blDisplay.bookingNo },
-                    { l: isFr ? 'Navire' : 'Vessel',          v: blDisplay.vessel },
-                    { l: isFr ? 'Voyage' : 'Voyage',          v: blDisplay.voyage },
-                    { l: 'ETS',                                v: blDisplay.ets },
-                    { l: 'ETA',                                v: blDisplay.eta },
-                    { l: isFr ? 'Chargement' : 'Loading',     v: blDisplay.portOfLoading },
-                    { l: isFr ? 'Déchargement' : 'Discharge', v: blDisplay.portOfDischarge },
-                    { l: isFr ? 'Conteneur' : 'Container',    v: blDisplay.sizeType },
-                    { l: isFr ? 'Marchandise' : 'Goods',      v: blDisplay.goodsDescription },
+                    { l: 'Booking no.', v: blFields.bookingNo },
+                    { l: isFr ? 'Navire' : 'Vessel',        v: blFields.vessel },
+                    { l: 'Voyage',                           v: blFields.voyage },
+                    { l: 'ETS',                              v: blFields.ets },
+                    { l: 'ETA',                              v: blFields.eta },
+                    { l: isFr ? 'Chargement' : 'Loading',   v: blFields.portOfLoading },
+                    { l: isFr ? 'Déchargement' : 'Discharge',v: blFields.portOfDischarge },
+                    { l: isFr ? 'Conteneur' : 'Container',  v: blFields.pickup?.sizeType },
+                    { l: isFr ? 'Marchandise' : 'Goods',    v: blFields.bookingItems?.[0]?.descriptionOfGoods },
                   ].filter(f => f.v).map(f => (
                     <div key={f.l}>
                       <p className="text-[10px] text-gray-400 font-medium">{f.l}</p>
@@ -978,17 +1202,21 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               </RecapSection>
             )}
             <RecapSection title={t.catLabel} isOpen={openRecap.cat} onToggle={() => toggleRecap('cat')}>
-              <div className="pt-3">
-                <p className="text-sm font-bold text-[#1B3A5C]">{finalCategory}</p>
-              </div>
+              <div className="pt-3"><p className="text-sm font-bold text-[#1B3A5C]">{finalCategory}</p></div>
             </RecapSection>
             <RecapSection title={t.descLabel} isOpen={openRecap.desc} onToggle={() => toggleRecap('desc')}>
-              <div className="pt-3">
+              <div className="pt-3 space-y-3">
                 <p className="text-sm text-gray-700 leading-relaxed">{form.description}</p>
+                {files.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">{t.documents}</p>
+                    <RecapPreviews prevs={previews} fls={files} noDoc={t.noDoc} filesAdded={t.filesAdded} />
+                  </div>
+                )}
               </div>
             </RecapSection>
             <div className="flex gap-3 pb-4">
-              <button onClick={() => setBlStep('category')}
+              <button onClick={() => setBlStep('describe')}
                 className="flex items-center gap-1 px-4 py-3.5 rounded-2xl border-2 border-white/30 text-white font-medium text-sm">
                 <ChevronLeft size={16} /> {t.back}
               </button>
