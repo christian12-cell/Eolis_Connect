@@ -73,6 +73,78 @@ function parseVesselData(raw: string | null | undefined): VesselLogistics[] | nu
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const isImg = file.type.startsWith('image/')
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!isImg) return
+    const u = URL.createObjectURL(file)
+    setUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [file, isImg])
+  return (
+    <div className="relative flex-shrink-0">
+      {isImg && url ? (
+        <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-md">
+          <img src={url} alt={file.name} className="w-full h-full object-cover" />
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm max-w-[150px]">
+          <FileText size={20} className="text-blue-500 flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-gray-800 truncate">{file.name}</p>
+            <p className="text-[10px] text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
+          </div>
+        </div>
+      )}
+      <button onClick={onRemove}
+        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 shadow flex items-center justify-center z-10">
+        <X size={10} className="text-white" />
+      </button>
+    </div>
+  )
+}
+
+function AttachmentBubble({ att, onDownload, dark }: { att: any; onDownload: () => void; dark?: boolean }) {
+  const isImg = att.mimeType?.startsWith('image/')
+  const [imgSrc, setImgSrc] = useState<string | null>(null)
+  const blobRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!isImg) return
+    const token = getToken()
+    fetch(apiUrl(`/api/attachments/${att.id}/download`), {
+      headers: { Authorization: `Bearer ${token ?? ''}` },
+    }).then(r => r.blob()).then(b => {
+      const u = URL.createObjectURL(b)
+      blobRef.current = u
+      setImgSrc(u)
+    }).catch(() => {})
+    return () => { if (blobRef.current) URL.revokeObjectURL(blobRef.current) }
+  }, [att.id, isImg])
+
+  if (isImg) {
+    return (
+      <button onClick={onDownload} className="block rounded-xl overflow-hidden max-w-[200px] shadow-sm mt-1">
+        {imgSrc
+          ? <img src={imgSrc} alt={att.filename} className="max-w-full max-h-48 object-cover rounded-xl" />
+          : <div className="w-32 h-20 rounded-xl animate-pulse" style={{ background: dark ? 'rgba(255,255,255,0.15)' : '#e5e7eb' }} />
+        }
+      </button>
+    )
+  }
+  return (
+    <button onClick={onDownload}
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl mt-1 text-left transition-colors max-w-[200px] ${dark ? 'bg-white/15 hover:bg-white/25' : 'bg-black/8 hover:bg-black/12'}`}>
+      <FileText size={18} className={dark ? 'text-blue-200 flex-shrink-0' : 'text-blue-500 flex-shrink-0'} />
+      <div className="min-w-0 flex-1">
+        <p className={`text-xs font-medium truncate ${dark ? 'text-white' : 'text-gray-800'}`}>{att.filename}</p>
+        {att.size && <p className={`text-[10px] ${dark ? 'text-blue-200' : 'text-gray-400'}`}>{(att.size / 1024).toFixed(1)} KB</p>}
+      </div>
+      <Download size={11} className={dark ? 'text-blue-200 flex-shrink-0' : 'text-gray-400 flex-shrink-0'} />
+    </button>
+  )
+}
+
 function DossierSection({ title, icon, isOpen, onToggle, children }: {
   title: string
   icon: React.ReactNode
@@ -829,12 +901,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                         <p className="text-sm leading-relaxed">{msg.content}</p>
                       )}
                       {msgAtts.length > 0 && (
-                        <div className={`flex flex-wrap gap-1.5 ${msg.content.trim() && msg.content !== ' ' ? 'mt-2 pt-2 border-t border-white/20' : ''}`}>
+                        <div className={`flex flex-col gap-1 ${msg.content.trim() && msg.content !== ' ' ? 'mt-1.5' : ''}`}>
                           {msgAtts.map((att: any) => (
-                            <button key={att.id} onClick={() => downloadFile(att)}
-                              className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg transition-colors ${isClient ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
-                              <FileText size={10} /> <span className="max-w-[80px] truncate">{att.filename}</span> <Download size={9} />
-                            </button>
+                            <AttachmentBubble key={att.id} att={att} onDownload={() => downloadFile(att)} dark={isClient} />
                           ))}
                         </div>
                       )}
@@ -858,15 +927,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
             {(ticket.status === 'PENDING' || ticket.status === 'IN_PROGRESS') && (
               <div className="flex-shrink-0 bg-white border-t border-gray-200 px-3 py-2.5">
                 {clientFiles.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2">
+                  <div className="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 rounded-xl border border-gray-100">
                     {clientFiles.map((f, i) => (
-                      <span key={i} className="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 rounded-lg px-2 py-1 font-medium">
-                        <FileText size={10} />
-                        <span className="max-w-[90px] truncate">{f.name}</span>
-                        <button onClick={() => setClientFiles(prev => prev.filter((_, idx) => idx !== i))}>
-                          <X size={10} className="text-blue-400 hover:text-red-500" />
-                        </button>
-                      </span>
+                      <FilePreview key={i} file={f} onRemove={() => setClientFiles(prev => prev.filter((_, idx) => idx !== i))} />
                     ))}
                   </div>
                 )}
