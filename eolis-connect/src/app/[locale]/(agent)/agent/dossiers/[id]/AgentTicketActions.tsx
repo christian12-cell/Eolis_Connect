@@ -171,6 +171,12 @@ export default function AgentTicketActions({
   const canAct         = isAssignedToMe && !isClosed
   const isAdmin        = currentAgentRole === 'SYSTEM_ADMIN' || currentAgentRole === 'OPS_ADMIN'
 
+  // True if there's a DOCUMENT_REQUEST with no DOCS_SUBMITTED after it
+  const hasPendingDocRequest = messages.some((m, idx) => {
+    if (m.senderType !== 'DOCUMENT_REQUEST') return false
+    return !messages.slice(idx + 1).some(n => n.senderType === 'DOCS_SUBMITTED')
+  })
+
   // ── Tab switching ─────────────────────────────────────────────────────────
 
   function switchTab(tab: Tab) {
@@ -401,16 +407,29 @@ export default function AgentTicketActions({
     if (msg.senderType === 'DOCUMENT_REQUEST') {
       let docs: string[] = []
       try { docs = JSON.parse(msg.documentDescription ?? '[]') } catch { docs = [] }
+      const msgIdx = messages.indexOf(msg)
+      const isAnswered = messages.slice(msgIdx + 1).some(n => n.senderType === 'DOCS_SUBMITTED')
       return (
         <div key={msg.id} className="flex justify-center">
           <div className="max-w-[85%] w-full bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
-            <p className="text-[10px] font-bold text-orange-600 mb-2 uppercase tracking-wide flex items-center gap-1">
-              <Paperclip size={10} /> {t.docLabel}
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wide flex items-center gap-1">
+                <Paperclip size={10} /> {t.docLabel}
+              </p>
+              {isAnswered ? (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  <CheckCircle size={9} /> {isFr ? 'Répondu' : 'Answered'}
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                  {isFr ? '⏳ En attente' : '⏳ Pending'}
+                </span>
+              )}
+            </div>
             {docs.length > 0
               ? <ul className="space-y-1 mb-2">{docs.map((d, i) => (
-                  <li key={i} className="text-sm text-orange-800 flex items-center gap-1.5">
-                    <span className="text-orange-400 font-bold">{i + 1}.</span> {d}
+                  <li key={i} className={`text-sm flex items-center gap-1.5 ${isAnswered ? 'text-orange-400 line-through' : 'text-orange-800'}`}>
+                    <span className="text-orange-400 font-bold flex-shrink-0">{i + 1}.</span> {d}
                   </li>
                 ))}</ul>
               : <p className="text-sm text-orange-800 mb-2">{msg.content}</p>
@@ -589,13 +608,21 @@ export default function AgentTicketActions({
             </button>
           )}
           {canAct && (
-            <button onClick={() => setMode(mode === 'docrequest' ? 'reply' : 'docrequest')}
+            <button
+              onClick={() => !hasPendingDocRequest && setMode(mode === 'docrequest' ? 'reply' : 'docrequest')}
+              disabled={hasPendingDocRequest}
+              title={hasPendingDocRequest ? (isFr ? 'Une demande est déjà en attente de réponse' : 'A request is already pending a response') : undefined}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-colors ${
-                mode === 'docrequest'
+                hasPendingDocRequest
+                  ? 'border-orange-200 text-orange-300 cursor-not-allowed'
+                  : mode === 'docrequest'
                   ? 'bg-orange-100 text-orange-700 border-orange-300'
                   : 'border-orange-300 text-orange-600 hover:bg-orange-50'
               }`}>
-              <Paperclip size={13} /> {t.docReq}
+              <Paperclip size={13} />
+              {hasPendingDocRequest
+                ? (isFr ? 'En attente...' : 'Pending...')
+                : t.docReq}
             </button>
           )}
         </div>

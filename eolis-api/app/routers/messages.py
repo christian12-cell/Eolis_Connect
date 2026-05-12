@@ -90,6 +90,37 @@ def send_message(
     else:
         sender_type = "AGENT"
 
+    # Block non-INTERNAL_NOTE messages on closed/treated tickets
+    if ticket.status in ("CLOSED", "TREATED") and sender_type != "INTERNAL_NOTE":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="ticket_closed")
+
+    # Block DOCS_SUBMITTED if no unanswered DOCUMENT_REQUEST exists
+    if sender_type == "DOCS_SUBMITTED":
+        last_doc_req = (
+            db.query(Message)
+            .filter(
+                Message.ticket_id == ticket_id,
+                Message.sender_type == "DOCUMENT_REQUEST",
+                Message.is_deleted == False,
+            )
+            .order_by(Message.created_at.desc())
+            .first()
+        )
+        if not last_doc_req:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no_pending_document_request")
+        already_answered = (
+            db.query(Message)
+            .filter(
+                Message.ticket_id == ticket_id,
+                Message.sender_type == "DOCS_SUBMITTED",
+                Message.created_at > last_doc_req.created_at,
+                Message.is_deleted == False,
+            )
+            .first()
+        )
+        if already_answered:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no_pending_document_request")
+
     msg = Message(
         ticket_id=ticket_id,
         sender_id=current_user.id,

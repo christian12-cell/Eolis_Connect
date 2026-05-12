@@ -608,27 +608,40 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                   let docs: string[] = []
                   try { docs = JSON.parse(msg.documentDescription ?? '[]') } catch {}
                   if (!docs.length) docs = [msg.content]
+                  const alreadyAnswered = messages.some(
+                    (m: any) => m.senderType === 'DOCS_SUBMITTED' && new Date(m.createdAt) > new Date(msg.createdAt)
+                  )
                   const slots = docSlots[msg.id] ?? docs.map(() => null)
                   const allFilled = slots.length > 0 && slots.every(f => f !== null)
                   const isSubmitting = submittingDocs === msg.id
                   return (
                     <div key={msg.id} className="flex justify-start">
                       <div className="w-[90%] bg-orange-50 border border-orange-200 rounded-2xl rounded-tl-sm px-3.5 py-3">
-                        <p className="text-[10px] font-bold text-orange-600 mb-2 flex items-center gap-1">
-                          <Paperclip size={10} /> {isFr ? 'DOCUMENTS REQUIS' : 'DOCUMENTS REQUIRED'}
-                        </p>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[10px] font-bold text-orange-600 flex items-center gap-1">
+                            <Paperclip size={10} /> {isFr ? 'DOCUMENTS REQUIS' : 'DOCUMENTS REQUIRED'}
+                          </p>
+                          {alreadyAnswered && (
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              <CheckCircle size={9} /> {isFr ? 'Envoyés' : 'Sent'}
+                            </span>
+                          )}
+                        </div>
                         <div className="space-y-2">
                           {docs.map((docName, i) => {
                             const file = slots[i] ?? null
                             return (
-                              <div key={i} className="rounded-xl bg-white border border-orange-100 p-2.5">
+                              <div key={i} className={`rounded-xl bg-white border p-2.5 ${alreadyAnswered ? 'border-emerald-100 opacity-70' : 'border-orange-100'}`}>
                                 <div className="flex items-center gap-2 mb-2">
-                                  <div className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-[9px] font-bold text-orange-600">{i + 1}</span>
+                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${alreadyAnswered ? 'bg-emerald-100' : 'bg-orange-100'}`}>
+                                    {alreadyAnswered
+                                      ? <CheckCircle size={11} className="text-emerald-600" />
+                                      : <span className="text-[9px] font-bold text-orange-600">{i + 1}</span>
+                                    }
                                   </div>
-                                  <p className="text-xs font-semibold text-orange-800">{docName}</p>
+                                  <p className={`text-xs font-semibold ${alreadyAnswered ? 'text-emerald-800 line-through decoration-emerald-400' : 'text-orange-800'}`}>{docName}</p>
                                 </div>
-                                {file ? (
+                                {!alreadyAnswered && (file ? (
                                   <div className="flex items-center gap-2">
                                     {file.type.startsWith('image/') ? (
                                       <img src={URL.createObjectURL(file)} alt={file.name}
@@ -676,12 +689,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                                       {isFr ? 'Scanner' : 'Scan'}
                                     </button>
                                   </div>
-                                )}
+                                ))}
                               </div>
                             )
                           })}
                         </div>
-                        {allFilled && (
+                        {!alreadyAnswered && allFilled && (
                           <button onClick={() => submitDocSlots(msg.id)} disabled={isSubmitting}
                             className="mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 transition-colors">
                             {isSubmitting
