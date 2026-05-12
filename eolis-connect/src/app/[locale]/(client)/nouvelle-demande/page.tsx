@@ -1283,10 +1283,9 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </div>
                 )}
                 {/* Single ship info */}
-                {!isMultiSeparate && (form.shipLine || form.shipName || form.voyageNumber || form.shipDate) && (
+                {!isMultiSeparate && (form.shipName || form.voyageNumber || form.shipDate) && (
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
                     {[
-                      { l: t.shipLine, v: form.shipLine },
                       { l: t.shipName, v: form.shipName },
                       { l: t.voyageNo, v: form.voyageNumber },
                       { l: t.shipDate, v: form.shipDate },
@@ -1298,7 +1297,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     ))}
                   </div>
                 )}
-                {!isMultiSeparate && !form.shipLine && !form.shipName && !form.voyageNumber && !form.shipDate && !form.code.trim() && (
+                {!isMultiSeparate && !form.shipName && !form.voyageNumber && !form.shipDate && !form.code.trim() && (
                   <p className="text-xs text-gray-400 italic">{t.noLog}</p>
                 )}
                 {/* Per-vessel ship info */}
