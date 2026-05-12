@@ -110,6 +110,8 @@ def startup():
         conn.commit()
 
     _ensure_system_admin()
+    print(f"[startup] OPENAI_API_KEY set: {bool(settings.OPENAI_API_KEY)}")
+    print(f"[startup] OPENAI_MODEL: {settings.OPENAI_MODEL}")
 
 
 @app.get("/")
