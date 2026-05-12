@@ -764,41 +764,39 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                 const canDelete = isClient && withinLimit
 
                 return (
-                  <div key={msg.id} className={`flex ${isClient ? 'justify-end' : 'justify-start'}`}>
-                    <div className="relative group">
-                      <div className={`max-w-[80%] px-3.5 py-2.5 shadow-sm ${isClient
-                        ? 'bg-[#1B3A5C] text-white rounded-2xl rounded-tr-sm'
-                        : 'bg-[#D6E7F5] text-gray-900 rounded-2xl rounded-tl-sm'
-                      } ${msg.pending ? 'opacity-60' : ''}`}>
-                        {!isClient && msg.sender && (
-                          <p className="text-[10px] font-bold text-[#4A8FC4] mb-1">
-                            {msg.sender.firstName} {msg.sender.lastName}
-                          </p>
-                        )}
-                        <p className="text-sm leading-relaxed">{msg.content}</p>
-                        <p className={`text-[10px] mt-1 ${isClient ? 'text-blue-200' : 'text-gray-500'}`}>
-                          {msg.pending
-                            ? (isFr ? '⏱ En attente...' : '⏱ Pending...')
-                            : formatDate(msg.createdAt, locale)
+                  <div key={msg.id} className={`flex items-end gap-1.5 ${isClient ? 'justify-end' : 'justify-start'}`}>
+                    {canDelete && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(isFr ? 'Supprimer ce message ?' : 'Delete this message?')) return
+                          const res = await apiFetch(`/api/tickets/${ticket.id}/messages/${msg.id}`, { method: 'DELETE' })
+                          if (res.ok) {
+                            setMessages((prev: any[]) => prev.map((m: any) => m.id === msg.id ? { ...m, isDeleted: true, content: '' } : m))
+                          } else {
+                            const d = await res.json().catch(() => ({}))
+                            if (d.detail === 'delete_too_late') alert(isFr ? 'Délai de 5 min dépassé' : '5 min window expired')
                           }
+                        }}
+                        className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mb-1">
+                        <Trash2 size={12} className="text-red-400" />
+                      </button>
+                    )}
+                    <div className={`max-w-[80%] px-3.5 py-2.5 shadow-sm ${isClient
+                      ? 'bg-[#1B3A5C] text-white rounded-2xl rounded-tr-sm'
+                      : 'bg-[#D6E7F5] text-gray-900 rounded-2xl rounded-tl-sm'
+                    } ${msg.pending ? 'opacity-60' : ''}`}>
+                      {!isClient && msg.sender && (
+                        <p className="text-[10px] font-bold text-[#4A8FC4] mb-1">
+                          {msg.sender.firstName} {msg.sender.lastName}
                         </p>
-                      </div>
-                      {canDelete && (
-                        <button
-                          onClick={async () => {
-                            if (!confirm(isFr ? 'Supprimer ce message ?' : 'Delete this message?')) return
-                            const res = await apiFetch(`/api/tickets/${ticket.id}/messages/${msg.id}`, { method: 'DELETE' })
-                            if (res.ok) {
-                              setMessages((prev: any[]) => prev.map((m: any) => m.id === msg.id ? { ...m, isDeleted: true, content: '' } : m))
-                            } else {
-                              const d = await res.json().catch(() => ({}))
-                              if (d.detail === 'delete_too_late') alert(isFr ? 'Délai de 5 min dépassé' : '5 min window expired')
-                            }
-                          }}
-                          className="absolute -top-1.5 -left-6 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
-                          <Trash2 size={10} className="text-red-500" />
-                        </button>
                       )}
+                      <p className="text-sm leading-relaxed">{msg.content}</p>
+                      <p className={`text-[10px] mt-1 ${isClient ? 'text-blue-200' : 'text-gray-500'}`}>
+                        {msg.pending
+                          ? (isFr ? '⏱ En attente...' : '⏱ Pending...')
+                          : formatDate(msg.createdAt, locale)
+                        }
+                      </p>
                     </div>
                   </div>
                 )
