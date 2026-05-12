@@ -82,10 +82,12 @@ export default function AgentTicketActions({
   const [allStaff, setAllStaff]           = useState<any[]>([])
   const [mentionUsers, setMentionUsers]   = useState<any[]>([])
   const [internalFiles, setInternalFiles] = useState<File[]>([])
+  const [replyFiles, setReplyFiles]       = useState<File[]>([])
 
   const bottomRef       = useRef<HTMLDivElement>(null)
   const fileRef         = useRef<HTMLInputElement>(null)
   const internalFileRef = useRef<HTMLInputElement>(null)
+  const replyFileRef    = useRef<HTMLInputElement>(null)
   const prevLenRef      = useRef(0)
 
   const t = {
@@ -265,10 +267,14 @@ export default function AgentTicketActions({
   }
 
   async function sendReply() {
-    if ((!text.trim() && (chatTab === 'client' || internalFiles.length === 0)) || sending) return
+    const noContent = !text.trim() && (chatTab === 'client' ? replyFiles.length === 0 : internalFiles.length === 0)
+    if (noContent || sending) return
     setSending(true)
     const senderType = chatTab === 'internal' ? 'INTERNAL_NOTE' : 'AGENT'
     const content = text.trim() || ' '
+    const filesToSend = chatTab === 'client' ? [...replyFiles] : [...internalFiles]
+    if (chatTab === 'client') setReplyFiles([])
+    else setInternalFiles([])
 
     try {
       const res = await apiFetch(`/api/tickets/${ticketId}/messages`, {
@@ -277,22 +283,21 @@ export default function AgentTicketActions({
       })
       if (res.ok) {
         const msg = await res.json()
-        if (chatTab === 'internal' && internalFiles.length > 0 && msg.id) {
+        if (filesToSend.length > 0 && msg.id) {
           const fd = new FormData()
-          internalFiles.forEach(f => fd.append('files', f))
+          filesToSend.forEach(f => fd.append('files', f))
           const up = await apiUpload(`/api/tickets/${ticketId}/attachments?message_id=${msg.id}`, fd).catch(() => null)
           if (up?.ok) {
             const newAtts = await up.json().catch(() => [])
             setAttachments(prev => [...prev, ...newAtts])
           }
-          setInternalFiles([])
         }
         setMessages(prev => [...prev, msg])
       }
     } catch {
       // Offline — queue and show optimistically
-      const storedFiles = internalFiles.length > 0
-        ? await Promise.all(internalFiles.map(f => fileToStored(f)))
+      const storedFiles = filesToSend.length > 0
+        ? await Promise.all(filesToSend.map(f => fileToStored(f)))
         : undefined
       await offlineDb.add({
         type: chatTab === 'internal' ? 'INTERNAL_NOTE' : 'AGENT_REPLY',
@@ -308,9 +313,9 @@ export default function AgentTicketActions({
         createdAt: new Date().toISOString(),
         isRead: false,
         pending: true,
+        _pendingFileCount: filesToSend.length,
       }
       setMessages(prev => [...prev, optimistic])
-      setInternalFiles([])
     }
 
     setText('')
@@ -495,6 +500,9 @@ export default function AgentTicketActions({
       )
     }
 
+    const msgAtts = attachments.filter((a: any) => a.messageId === msg.id)
+    const pendingFileCount = (msg as any)._pendingFileCount ?? 0
+
     return (
       <div key={msg.id} className={`flex ${isClient ? 'justify-start' : 'justify-end'}`}>
         <div className={`max-w-[75%] flex flex-col gap-1 ${isClient ? 'items-start' : 'items-end'} ${isPending ? 'opacity-60' : ''}`}>
@@ -503,7 +511,20 @@ export default function AgentTicketActions({
             <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
               isClient ? 'bg-[#D6E7F5] text-gray-900 rounded-tl-sm' : `${staffBubbleClass(senderRole)} rounded-tr-sm`
             }`}>
-              {msg.content}
+              {msg.content.trim() !== '' && msg.content !== ' ' && <p>{msg.content}</p>}
+              {msgAtts.length > 0 && (
+                <div className={`flex flex-wrap gap-1.5 ${msg.content.trim() && msg.content !== ' ' ? 'mt-2 pt-2 border-t border-white/20' : ''}`}>
+                  {msgAtts.map((att: any) => (
+                    <button key={att.id} onClick={() => downloadFile(att)}
+                      className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg transition-colors ${isClient ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-white/20 hover:bg-white/30 text-white'}`}>
+                      <FileText size={10} /> <span className="max-w-[80px] truncate">{att.filename}</span> <Download size={9} />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {isPending && pendingFileCount > 0 && (
+                <p className="text-[10px] opacity-60 mt-1">📎 {pendingFileCount} fichier(s) en attente</p>
+              )}
             </div>
             {canDelete && (
               <button
@@ -757,16 +778,39 @@ export default function AgentTicketActions({
                     )}
                   </div>
                 ) : (
-                  <div className="flex gap-2 items-end">
-                    <textarea value={text} onChange={e => setText(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
-                      placeholder={t.replyPh} rows={2}
-                      className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-[#1B3A5C] resize-none transition-colors" />
-                    <button onClick={sendReply} disabled={!text.trim() || sending}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1B3A5C] text-white disabled:opacity-40 hover:bg-[#152d47] transition-colors flex-shrink-0">
-                      {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                    </button>
-                  </div>
+                  <>
+                    {replyFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {replyFiles.map((f, i) => (
+                          <span key={i} className="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 rounded-lg px-2 py-1 font-medium">
+                            <FileText size={10} />
+                            <span className="max-w-[100px] truncate">{f.name}</span>
+                            <button onMouseDown={e => { e.preventDefault(); setReplyFiles(p => p.filter((_, idx) => idx !== i)) }}>
+                              <X size={10} className="text-blue-400 hover:text-red-500" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2 items-end">
+                      <input ref={replyFileRef} type="file" multiple className="hidden"
+                        accept="image/*,application/pdf,.doc,.docx"
+                        onChange={e => { setReplyFiles(p => [...p, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+                      <button type="button" onClick={() => replyFileRef.current?.click()}
+                        title={isFr ? 'Joindre un fichier' : 'Attach file'}
+                        className="flex-shrink-0 mb-2.5 text-gray-400 hover:text-[#1B3A5C] transition-colors">
+                        <Paperclip size={18} />
+                      </button>
+                      <textarea value={text} onChange={e => setText(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
+                        placeholder={t.replyPh} rows={2}
+                        className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-[#1B3A5C] resize-none transition-colors" />
+                      <button onClick={sendReply} disabled={(!text.trim() && replyFiles.length === 0) || sending}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1B3A5C] text-white disabled:opacity-40 hover:bg-[#152d47] transition-colors flex-shrink-0">
+                        {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             )}

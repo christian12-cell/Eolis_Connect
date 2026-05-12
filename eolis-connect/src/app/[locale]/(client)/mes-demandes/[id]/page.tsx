@@ -11,7 +11,7 @@ import {
 import { DocCardRow } from '@/components/ui/DocCard'
 import { ScannerModal } from '@/components/scanner/ScannerModal'
 import { getUser, apiFetch, apiUpload, getToken, apiUrl } from '@/lib/api-client'
-import { offlineDb } from '@/lib/offline-db'
+import { offlineDb, fileToStored } from '@/lib/offline-db'
 import { formatDate } from '@/lib/utils'
 
 const STATUS_STYLE: Record<string, string> = {
@@ -119,6 +119,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const [docSlots, setDocSlots] = useState<Record<string, (File | null)[]>>({})
   const [submittingDocs, setSubmittingDocs] = useState<string | null>(null)
   const [scanTarget, setScanTarget] = useState<{ msgId: string; slotIdx: number } | null>(null)
+  const [clientFiles, setClientFiles] = useState<File[]>([])
+  const clientFileRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState({ equip: true, log: true, desc: true, docs: true })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -173,10 +175,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   }
 
   async function sendMessage() {
-    if (!text.trim() || sending) return
-    const content = text.trim()
+    if ((!text.trim() && clientFiles.length === 0) || sending) return
+    const content = text.trim() || ' '
+    const filesToSend = [...clientFiles]
     setSending(true)
     setText('')
+    setClientFiles([])
     try {
       const r = await apiFetch(`/api/tickets/${ticketId}/messages`, {
         method: 'POST',
@@ -184,21 +188,33 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       })
       if (r.ok) {
         const msg = await r.json()
+        if (filesToSend.length > 0 && msg.id) {
+          const fd = new FormData()
+          filesToSend.forEach(f => fd.append('files', f))
+          await apiUpload(`/api/tickets/${ticketId}/attachments?message_id=${msg.id}`, fd).catch(() => {})
+          const tk = await apiFetch(`/api/tickets/${ticketId}`).then(res => res.json()).catch(() => null)
+          if (tk) setTicket(tk)
+        }
         setMessages(prev => [...prev, msg])
       }
     } catch {
       // Offline — queue the message and show optimistically
+      const storedFiles = filesToSend.length > 0
+        ? await Promise.all(filesToSend.map(f => fileToStored(f)))
+        : undefined
       await offlineDb.add({
         type: 'SEND_MESSAGE',
         payload: { ticketId, content },
+        files: storedFiles,
       })
-      const optimistic = {
+      const optimistic: any = {
         id: `pending-${Date.now()}`,
         senderType: 'CLIENT',
         content,
         createdAt: new Date().toISOString(),
         sender: getUser(),
         pending: true,
+        _pendingFileCount: filesToSend.length,
       }
       setMessages(prev => [...prev, optimistic])
     } finally {
@@ -303,13 +319,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
           isFr={isFr}
           onClose={() => setScanTarget(null)}
           onScan={file => {
-            const { msgId, slotIdx } = scanTarget
-            setDocSlots(prev => {
-              const slot = prev[msgId] ?? []
-              const s = [...slot]
-              s[slotIdx] = file
-              return { ...prev, [msgId]: s }
-            })
+            const { msgId } = scanTarget
+            if (msgId === '__chat__') {
+              setClientFiles(prev => [...prev, file])
+            } else {
+              setDocSlots(prev => {
+                const slot = prev[msgId] ?? []
+                const s = [...slot]
+                s[scanTarget.slotIdx] = file
+                return { ...prev, [msgId]: s }
+              })
+            }
             setScanTarget(null)
           }}
         />
@@ -776,6 +796,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                 const withinLimit = !msg.pending && (Date.now() - new Date(msg.createdAt).getTime()) < 5 * 60 * 1000
                 const canDelete = isClient && withinLimit
 
+                const msgAtts = (ticket.attachments ?? []).filter((a: any) => a.messageId === msg.id)
+                const pendingFileCount = (msg as any)._pendingFileCount ?? 0
                 return (
                   <div key={msg.id} className={`flex items-end gap-1.5 ${isClient ? 'justify-end' : 'justify-start'}`}>
                     {canDelete && (
@@ -803,7 +825,22 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                           {msg.sender.firstName} {msg.sender.lastName}
                         </p>
                       )}
-                      <p className="text-sm leading-relaxed">{msg.content}</p>
+                      {msg.content.trim() && msg.content !== ' ' && (
+                        <p className="text-sm leading-relaxed">{msg.content}</p>
+                      )}
+                      {msgAtts.length > 0 && (
+                        <div className={`flex flex-wrap gap-1.5 ${msg.content.trim() && msg.content !== ' ' ? 'mt-2 pt-2 border-t border-white/20' : ''}`}>
+                          {msgAtts.map((att: any) => (
+                            <button key={att.id} onClick={() => downloadFile(att)}
+                              className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg transition-colors ${isClient ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
+                              <FileText size={10} /> <span className="max-w-[80px] truncate">{att.filename}</span> <Download size={9} />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {msg.pending && pendingFileCount > 0 && (
+                        <p className="text-[10px] text-blue-200 mt-1">📎 {pendingFileCount} fichier(s) en attente</p>
+                      )}
                       <p className={`text-[10px] mt-1 ${isClient ? 'text-blue-200' : 'text-gray-500'}`}>
                         {msg.pending
                           ? (isFr ? '⏱ En attente...' : '⏱ Pending...')
@@ -820,7 +857,33 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
             {/* Input intégré dans le bloc chat */}
             {(ticket.status === 'PENDING' || ticket.status === 'IN_PROGRESS') && (
               <div className="flex-shrink-0 bg-white border-t border-gray-200 px-3 py-2.5">
-                <div className="flex items-end gap-2">
+                {clientFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {clientFiles.map((f, i) => (
+                      <span key={i} className="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 rounded-lg px-2 py-1 font-medium">
+                        <FileText size={10} />
+                        <span className="max-w-[90px] truncate">{f.name}</span>
+                        <button onClick={() => setClientFiles(prev => prev.filter((_, idx) => idx !== i))}>
+                          <X size={10} className="text-blue-400 hover:text-red-500" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-end gap-1.5">
+                  <input ref={clientFileRef} type="file" multiple className="hidden"
+                    accept="image/*,application/pdf,.doc,.docx"
+                    onChange={e => { setClientFiles(prev => [...prev, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+                  <button type="button" onClick={() => clientFileRef.current?.click()}
+                    title={isFr ? 'Joindre un fichier' : 'Attach file'}
+                    className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors">
+                    <Paperclip size={20} />
+                  </button>
+                  <button type="button" onClick={() => setScanTarget({ msgId: '__chat__', slotIdx: 0 })}
+                    title={isFr ? 'Scanner un document' : 'Scan document'}
+                    className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors">
+                    <Camera size={20} />
+                  </button>
                   <textarea
                     value={text}
                     onChange={e => setText(e.target.value)}
@@ -830,7 +893,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                     className="flex-1 text-sm bg-gray-100 rounded-2xl px-4 py-2.5 resize-none outline-none leading-relaxed text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#1B3A5C]/20 transition-all"
                     style={{ maxHeight: '5rem', overflowY: 'auto' }}
                   />
-                  <button onClick={sendMessage} disabled={!text.trim() || sending}
+                  <button onClick={sendMessage} disabled={(!text.trim() && clientFiles.length === 0) || sending}
                     className="w-9 h-9 rounded-full bg-[#1B3A5C] flex items-center justify-center flex-shrink-0 disabled:opacity-40 active:scale-95 transition-transform">
                     <Send size={15} className="text-white" />
                   </button>
