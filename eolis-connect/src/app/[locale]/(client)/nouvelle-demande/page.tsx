@@ -458,8 +458,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
           await apiUpload(`/api/tickets/${data.id}/attachments`, fd).catch(() => {})
         }
         setSuccess({ ref: data.ref ?? '', id: data.id ?? '' })
+      } else {
+        const err = await res.json().catch(() => ({}))
+        alert(`Erreur ${res.status}: ${JSON.stringify(err)}`)
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      alert(`Exception: ${e}`)
+    }
     setSubmitting(false)
   }
 
