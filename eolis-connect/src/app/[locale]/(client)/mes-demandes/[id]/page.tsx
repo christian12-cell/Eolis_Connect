@@ -591,6 +591,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
               <span className="text-xs text-blue-300 font-medium">{messages.length}</span>
             </div>
             <div className="bg-[#EDF4FB] flex-1 overflow-y-auto px-3 py-3 space-y-2">
+              {/* Info banner — message deletion */}
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-[11px] text-blue-500">
+                <span>ℹ️</span>
+                <span>{isFr ? 'Appuyez longuement sur votre message pour le supprimer (5 min max après envoi).' : 'Long press your message to delete it (within 5 min of sending).'}</span>
+              </div>
               {messages.length === 0 ? (
                 <p className="text-center text-xs text-gray-400 py-6">
                   {isFr ? "Aucun échange pour l'instant" : 'No messages yet'}
