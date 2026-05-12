@@ -117,3 +117,13 @@ def startup():
 @app.get("/")
 def root():
     return {"status": "ok", "app": "Eolis Connect API"}
+
+
+@app.get("/api/debug/config")
+def debug_config():
+    return {
+        "openai_configured": bool(settings.OPENAI_API_KEY),
+        "openai_key_prefix": settings.OPENAI_API_KEY[:8] + "..." if settings.OPENAI_API_KEY else "EMPTY",
+        "openai_model": settings.OPENAI_MODEL,
+        "allowed_origins": settings.ALLOWED_ORIGINS,
+    }
