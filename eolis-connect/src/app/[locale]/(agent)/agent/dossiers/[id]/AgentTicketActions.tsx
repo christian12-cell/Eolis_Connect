@@ -242,8 +242,10 @@ export default function AgentTicketActions({
   const isAssignedToMe = localAgentId === currentAgentId
   const isUnassigned   = !localAgentId
   const isClosed       = localStatus === 'CLOSED' || localStatus === 'TREATED'
-  const canAct         = isAssignedToMe && !isClosed
   const isAdmin        = currentAgentRole === 'SYSTEM_ADMIN' || currentAgentRole === 'OPS_ADMIN'
+  const canAct         = (isAssignedToMe || isAdmin) && !isClosed
+  // Admins can take over any open ticket not already theirs; agents only take unassigned PENDING ones
+  const canTake        = !isClosed && (isUnassigned || (!isAssignedToMe && isAdmin))
 
   // True if there's a DOCUMENT_REQUEST with no DOCS_SUBMITTED after it
   const hasPendingDocRequest = messages.some((m, idx) => {
@@ -680,14 +682,16 @@ export default function AgentTicketActions({
       {/* ── Action buttons (client tab only) ── */}
       {chatTab === 'client' && (localStatus === 'PENDING' || canAct) && (
         <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 border-b border-gray-100 flex-shrink-0 bg-gray-50/50">
-          {localStatus === 'PENDING' && (isUnassigned || isAssignedToMe) && (
+          {canTake && (
             <button onClick={takeTicket} disabled={actionLoading === 'take'}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1B3A5C] text-white text-xs font-semibold hover:bg-[#152d47] disabled:opacity-60 transition-colors">
               {actionLoading === 'take' ? <Spinner /> : <UserCheck size={13} />}
-              {t.take}
+              {isAdmin && !isUnassigned && !isAssignedToMe
+                ? (isFr ? 'Reprendre le dossier' : 'Take over')
+                : t.take}
             </button>
           )}
-          {localStatus === 'IN_PROGRESS' && isAssignedToMe && (
+          {localStatus === 'IN_PROGRESS' && (isAssignedToMe || isAdmin) && (
             <button onClick={() => setMode(mode === 'finalize' ? 'reply' : 'finalize')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                 mode === 'finalize'
