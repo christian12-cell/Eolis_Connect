@@ -20,6 +20,27 @@ export function saveSession(token: string, user: any) {
   localStorage.setItem('eolis_user', JSON.stringify(user))
 }
 
+export function isTokenExpired(): boolean {
+  const token = getToken()
+  if (!token) return true
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp < Date.now() / 1000
+  } catch {
+    return true
+  }
+}
+
+export function checkSessionAndRedirect(locale = 'fr'): boolean {
+  if (typeof window === 'undefined') return false
+  if (isTokenExpired()) {
+    clearSession()
+    window.location.href = `/${locale}/login`
+    return true
+  }
+  return false
+}
+
 export function clearSession() {
   localStorage.removeItem('eolis_token')
   localStorage.removeItem('eolis_user')

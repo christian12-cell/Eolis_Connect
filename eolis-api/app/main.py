@@ -5,7 +5,7 @@ from sqlalchemy import text
 from .config import settings
 from .database import engine
 from .models import Base
-from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl
+from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions
 
 app = FastAPI(title="Eolis Connect API", version="1.0.0")
 
@@ -28,6 +28,7 @@ app.include_router(ratings.router, prefix="/api")
 app.include_router(admin_logs.router, prefix="/api")
 app.include_router(attachments.router, prefix="/api")
 app.include_router(bl.router, prefix="/api")
+app.include_router(sessions.router, prefix="/api")
 
 
 def _ensure_system_admin():
@@ -88,6 +89,12 @@ def startup():
         ))
         conn.execute(text(
             "ALTER TABLE messages ALTER COLUMN sender_type TYPE VARCHAR(30)"
+        ))
+        conn.execute(text(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP"
+        ))
+        conn.execute(text(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP"
         ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS bl_documents (

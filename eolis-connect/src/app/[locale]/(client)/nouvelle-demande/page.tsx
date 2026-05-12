@@ -239,7 +239,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [pendingHadFiles, setPendingHadFiles] = useState(false)
 
   const [pageMode, setPageMode]         = useState<null | 'manual' | 'bl'>(null)
-  const [blStep, setBlStep]             = useState<'upload' | 'review' | 'describe' | 'recap'>('upload')
+  const [blStep, setBlStep]             = useState<'upload' | 'review' | 'category' | 'describe' | 'recap'>('upload')
+  const [blScanMode, setBlScanMode]     = useState(false)
   const [blUploading, setBlUploading]   = useState(false)
   const [blFields, setBlFields]         = useState<any>(null)
   const [blVesselData, setBlVesselData] = useState<string | null>(null)
@@ -388,10 +389,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
   // ── BL Upload ─────────────────────────────────────────────────────────────────
 
-  async function handleBLUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
+  async function handleBLFile(file: File) {
     setBlError(null)
     setBlUploading(true)
     try {
@@ -460,6 +458,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       setBlError(isFr ? 'Erreur réseau. Vérifiez votre connexion.' : 'Network error. Check your connection.')
     }
     setBlUploading(false)
+  }
+
+  async function handleBLUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    handleBLFile(file)
   }
 
   function updateBLF(path: string, value: string) {
@@ -838,6 +843,22 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   // ── BL flow ───────────────────────────────────────────────────────────────────
 
   if (pageMode === 'bl') {
+    // Barre de progression BL
+    const BL_STEPS = isFr
+      ? ['Vérification', 'Catégorie', 'Description', 'Récap']
+      : ['Review', 'Category', 'Description', 'Recap']
+    const blStepIdx = blStep === 'review' ? 0 : blStep === 'category' ? 1 : blStep === 'describe' ? 2 : blStep === 'recap' ? 3 : -1
+    const BLProgress = blStepIdx >= 0 ? (
+      <div className="flex gap-1 mb-5">
+        {BL_STEPS.map((label, i) => (
+          <div key={label} className="flex-1">
+            <div className={`h-1.5 rounded-full transition-all duration-300 ${i < blStepIdx ? 'bg-white' : i === blStepIdx ? 'bg-[#4A8FC4]' : 'bg-white/25'}`} />
+            <p className={`text-[9px] mt-1 font-semibold text-center ${i === blStepIdx ? 'text-white' : i < blStepIdx ? 'text-white/70' : 'text-white/35'}`}>{label}</p>
+          </div>
+        ))}
+      </div>
+    ) : null
+
     // Step 1 : Upload
     if (blStep === 'upload') {
       return (
@@ -848,8 +869,9 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 {isFr ? '📄 Importez votre Booking Confirmation Eagle' : '📄 Import your Eagle Booking Confirmation'}
               </p>
               <ul className="space-y-1.5">
-                {(isFr ? ['Format PDF uniquement', 'Émis par Eagle (Europe Africa Global Line Express)', "Le formulaire sera pré-rempli automatiquement par IA"]
-                       : ['PDF format only', 'Issued by Eagle (Europe Africa Global Line Express)', 'The form will be auto-filled by AI']
+                {(isFr
+                  ? ['PDF ou photo du document', 'Émis par Eagle (Europe Africa Global Line Express)', "Le formulaire sera pré-rempli automatiquement par IA"]
+                  : ['PDF or photo of the document', 'Issued by Eagle (Europe Africa Global Line Express)', 'The form will be auto-filled by AI']
                 ).map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm text-blue-100">
                     <div className="w-1.5 h-1.5 rounded-full bg-[#4A8FC4] flex-shrink-0" />
@@ -860,18 +882,28 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             </div>
 
             {!blUploading && !blError && (
-              <label className="flex flex-col items-center justify-center w-full py-12 rounded-2xl border-2 border-dashed border-white/40 bg-white/5 cursor-pointer active:bg-white/10 transition-colors gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-[#4A8FC4]/20 flex items-center justify-center">
-                  <Upload size={32} className="text-[#4A8FC4]" />
-                </div>
-                <div className="text-center">
-                  <p className="text-white font-semibold text-sm mb-1">
-                    {isFr ? 'Appuyez pour sélectionner votre BL' : 'Tap to select your BL'}
-                  </p>
-                  <p className="text-blue-200 text-xs">PDF · max 10 MB</p>
-                </div>
-                <input type="file" className="sr-only" accept="application/pdf" onChange={handleBLUpload} />
-              </label>
+              <>
+                <label className="flex flex-col items-center justify-center w-full py-10 rounded-2xl border-2 border-dashed border-white/40 bg-white/5 cursor-pointer active:bg-white/10 transition-colors gap-3">
+                  <div className="w-14 h-14 rounded-2xl bg-[#4A8FC4]/20 flex items-center justify-center">
+                    <Upload size={28} className="text-[#4A8FC4]" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-white font-semibold text-sm mb-0.5">{isFr ? 'Importer un PDF' : 'Import a PDF'}</p>
+                    <p className="text-blue-200 text-xs">PDF · max 10 MB</p>
+                  </div>
+                  <input type="file" className="sr-only" accept="application/pdf" onChange={handleBLUpload} />
+                </label>
+                <button onClick={() => { setBlScanMode(true); setShowScanner(true) }}
+                  className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border-2 border-white/40 bg-white/5 active:bg-white/10 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Camera size={20} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-semibold text-sm">{isFr ? 'Scanner le document' : 'Scan the document'}</p>
+                    <p className="text-blue-200 text-xs">{isFr ? 'Prendre en photo votre BL papier' : 'Take a photo of your paper BL'}</p>
+                  </div>
+                </button>
+              </>
             )}
 
             {blUploading && (
@@ -881,12 +913,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   <div className="absolute inset-0 rounded-full border-4 border-t-[#4A8FC4] animate-spin" />
                 </div>
                 <div className="text-center">
-                  <p className="text-white font-semibold text-sm mb-1">
-                    {isFr ? 'Extraction en cours...' : 'Extracting...'}
-                  </p>
-                  <p className="text-blue-200 text-xs">
-                    {isFr ? "L'IA analyse votre BL Eagle" : 'AI is analyzing your Eagle BL'}
-                  </p>
+                  <p className="text-white font-semibold text-sm mb-1">{isFr ? 'Extraction en cours...' : 'Extracting...'}</p>
+                  <p className="text-blue-200 text-xs">{isFr ? "L'IA analyse votre BL Eagle" : 'AI is analyzing your Eagle BL'}</p>
                 </div>
               </div>
             )}
@@ -913,6 +941,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
     // Step 2 : Review all extracted fields (editable)
     if (blStep === 'review' && blFields) {
+      // (BLProgress injected below)
       const bf = blFields
       const inp = "w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C] text-gray-800"
       const lbl = "text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1 block"
@@ -929,6 +958,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       return (
         <MobileLayout locale={locale} title={isFr ? 'Vérifier les données BL' : 'Review BL data'} showBack>
           <div className="space-y-3">
+            {BLProgress}
             <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-2xl px-4 py-3">
               <p className="text-sm font-bold text-white mb-0.5">✅ {isFr ? 'BL extrait — vérifiez et corrigez si besoin' : 'BL extracted — review and correct if needed'}</p>
               <p className="text-xs text-blue-100">{isFr ? "L'IA peut parfois se tromper. Tous les champs sont modifiables." : 'AI can make mistakes. All fields are editable.'}</p>
@@ -1078,7 +1108,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 equipmentOther: blFields.pickup?.sizeType || '',
               }))
               setMode('simple')
-              setBlStep('describe')
+              setBlStep('category')
             }}
               className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2">
               {isFr ? 'Valider et continuer' : 'Validate & continue'} <ChevronRight size={18} />
@@ -1092,18 +1122,17 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       )
     }
 
-    // Step 3 : Description + fichiers
-    if (blStep === 'describe') {
-      const blCanNext = !!form.category &&
-        (form.category !== 'Autre' && form.category !== 'Other' ? true : !!form.categoryOther.trim()) &&
-        form.description.trim().length >= 10
+    // Step 3 : Category
+    if (blStep === 'category') {
+      const catCanNext = !!form.category &&
+        (form.category !== 'Autre' && form.category !== 'Other' ? true : !!form.categoryOther.trim())
       return (
-        <MobileLayout locale={locale} title={isFr ? 'Votre demande' : 'Your request'} showBack>
+        <MobileLayout locale={locale} title={t.catTitle} showBack>
           <div className="space-y-4">
-            {/* Category */}
+            {BLProgress}
             <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
-              <h2 className="text-sm font-bold text-white mb-0.5">{t.catTitle}<Req /></h2>
-              <p className="text-xs text-blue-100">{t.catSub}</p>
+              <h2 className="text-base font-bold text-white mb-0.5">{t.catTitle}<Req /></h2>
+              <p className="text-sm text-blue-100">{t.catSub}</p>
             </div>
             <div className="space-y-2">
               {categories.map(cat => (
@@ -1122,59 +1151,89 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 placeholder={t.otherLabel}
                 className="w-full px-4 py-3 rounded-2xl bg-white text-[#1B3A5C] text-sm font-medium outline-none" />
             )}
-            {/* Description */}
-            {form.category && (
-              <>
-                <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
-                  <h2 className="text-sm font-bold text-white mb-0.5">{t.descTitle}<Req /></h2>
-                  <p className="text-xs text-blue-100">{t.descSub}</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4">
-                  <textarea value={form.description}
-                    onChange={e => set('description', e.target.value.slice(0, 10000))}
-                    placeholder={t.descPlaceholder} rows={5}
-                    className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed" />
-                  <p className="text-xs text-gray-300 text-right mt-1">{form.description.length}/10000</p>
-                </div>
-                {/* Documents */}
-                <div className="bg-white/10 rounded-2xl p-4 border border-white/15 space-y-3">
-                  <div>
-                    <p className="text-xs font-bold text-white/80 uppercase tracking-wide mb-1">Documents</p>
-                    <p className="text-xs text-blue-100">{t.uploadHint}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => uploadRef.current?.click()}
-                      className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
-                      <Upload size={16} /> {t.addFile}
-                    </button>
-                    <button onClick={() => { setScanVesselId(null); setShowScanner(true) }}
-                      className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
-                      <Camera size={16} /> {t.scan}
-                    </button>
-                  </div>
-                  {files.length > 0 && <p className="text-xs text-emerald-300 font-semibold">{files.length} {t.filesAdded}</p>}
-                  <FilePreviews prevs={previews} fls={files} onRemove={removeFile} dark />
-                </div>
-              </>
+            {form.category && subcategories.length > 0 && (
+              <div className="bg-white/10 rounded-2xl p-3 border border-white/15 space-y-2">
+                <p className="text-xs font-bold text-white/60 uppercase tracking-wide px-1">{t.subcatTitle}</p>
+                {subcategories.map(sub => (
+                  <button key={sub}
+                    onClick={() => { set('subcategory', sub); set('subcategoryOther', '') }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${
+                      form.subcategory === sub ? 'border-[#4A8FC4] bg-[#4A8FC4] text-white' : 'border-white/20 bg-white/10 text-white/80'
+                    }`}>
+                    <span className="text-sm font-medium">{sub}</span>
+                    {form.subcategory === sub && <Check size={14} />}
+                  </button>
+                ))}
+              </div>
             )}
-            <button onClick={() => setBlStep('recap')} disabled={!blCanNext}
+            <button onClick={() => setBlStep('describe')} disabled={!catCanNext}
               className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">
               {t.next} <ChevronRight size={18} />
             </button>
             <button onClick={() => setBlStep('review')}
               className="w-full py-2.5 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
-              ← {isFr ? 'Retour au BL' : 'Back to BL'}
+              <ChevronLeft size={14} className="inline" /> {t.back}
             </button>
           </div>
         </MobileLayout>
       )
     }
 
-    // Step 4 : Recap + submit
+    // Step 4 : Description + fichiers
+    if (blStep === 'describe') {
+      const descCanNext = form.description.trim().length >= 10
+      return (
+        <MobileLayout locale={locale} title={t.descTitle} showBack>
+          <div className="space-y-4">
+            {BLProgress}
+            <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
+              <h2 className="text-base font-bold text-white mb-0.5">{t.descTitle}<Req /></h2>
+              <p className="text-sm text-blue-100">{t.descSub}</p>
+            </div>
+            <div className="bg-white rounded-2xl p-4">
+              <textarea value={form.description}
+                onChange={e => set('description', e.target.value.slice(0, 10000))}
+                placeholder={t.descPlaceholder} rows={6}
+                className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed" />
+              <p className="text-xs text-gray-300 text-right mt-1">{form.description.length}/10000</p>
+            </div>
+            <div className="bg-white/10 rounded-2xl p-4 border border-white/15 space-y-3">
+              <div>
+                <p className="text-xs font-bold text-white/80 uppercase tracking-wide mb-1">Documents</p>
+                <p className="text-xs text-blue-100">{t.uploadHint}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => uploadRef.current?.click()}
+                  className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
+                  <Upload size={16} /> {t.addFile}
+                </button>
+                <button onClick={() => { setScanVesselId(null); setShowScanner(true) }}
+                  className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
+                  <Camera size={16} /> {t.scan}
+                </button>
+              </div>
+              {files.length > 0 && <p className="text-xs text-emerald-300 font-semibold">{files.length} {t.filesAdded}</p>}
+              <FilePreviews prevs={previews} fls={files} onRemove={removeFile} dark />
+            </div>
+            <button onClick={() => setBlStep('recap')} disabled={!descCanNext}
+              className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">
+              {t.next} <ChevronRight size={18} />
+            </button>
+            <button onClick={() => setBlStep('category')}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
+              <ChevronLeft size={14} className="inline" /> {t.back}
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
+    // Step 5 : Recap + submit
     if (blStep === 'recap') {
       return (
         <MobileLayout locale={locale} title={t.recap} showBack>
           <div className="space-y-3">
+            {BLProgress}
             <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
               <h2 className="text-base font-bold text-white mb-0.5">{t.recap}</h2>
               <p className="text-sm text-blue-100">{t.recapSub}</p>
@@ -1217,7 +1276,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             </RecapSection>
             <div className="flex gap-3 pb-4">
               <button onClick={() => setBlStep('describe')}
-                className="flex items-center gap-1 px-4 py-3.5 rounded-2xl border-2 border-white/30 text-white font-medium text-sm">
+                className="flex items-center gap-1 px-3 py-3.5 rounded-2xl border-2 border-white/30 text-white font-medium text-sm">
                 <ChevronLeft size={16} /> {t.back}
               </button>
               <button onClick={submit} disabled={submitting}
@@ -1242,7 +1301,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         <ScannerModal
           isFr={isFr}
           onScan={file => {
-            if (scanVesselId !== null) {
+            if (blScanMode) {
+              handleBLFile(file)
+              setBlScanMode(false)
+            } else if (scanVesselId !== null) {
               setVessels(prev => prev.map(v =>
                 v.id === scanVesselId
                   ? { ...v, files: [...v.files, file], previews: [...v.previews, 'pdf:' + file.name] }
@@ -1255,7 +1317,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             setShowScanner(false)
             setScanVesselId(null)
           }}
-          onClose={() => { setShowScanner(false); setScanVesselId(null) }}
+          onClose={() => { setShowScanner(false); setScanVesselId(null); setBlScanMode(false) }}
         />
       )}
 

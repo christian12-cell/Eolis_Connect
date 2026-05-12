@@ -35,6 +35,10 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     if not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="wrong_password")
 
+    user.last_login_at = datetime.utcnow()
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     token = create_access_token({"sub": user.id, "role": user.role, "username": user.username})
     return {"access_token": token, "token_type": "bearer", "user": user}
 

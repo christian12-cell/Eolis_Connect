@@ -21,6 +21,8 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20), default="PENDING")
     language: Mapped[str] = mapped_column(String(5), default="fr")
+    last_login_at:  Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
