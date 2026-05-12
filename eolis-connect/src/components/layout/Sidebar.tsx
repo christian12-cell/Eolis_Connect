@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Home, FileText, PlusCircle, Settings, LayoutDashboard,
-  List, Clock, BarChart2, Trophy, Users, ScrollText, X, Globe, Bell,
+  List, Clock, BarChart2, Trophy, Users, ScrollText, X, Globe, Bell, BookOpen,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -26,10 +26,11 @@ function getNavItems(locale: string, role: string): NavItem[] {
 
   if (role === 'CLIENT') {
     return [
-      { label: locale === 'fr' ? 'Accueil' : 'Home', href: `${base}/accueil`, icon: <Home size={18} /> },
+      { label: locale === 'fr' ? 'Accueil' : 'Home',            href: `${base}/accueil`,         icon: <Home size={18} /> },
       { label: locale === 'fr' ? 'Nouvelle demande' : 'New request', href: `${base}/nouvelle-demande`, icon: <PlusCircle size={18} /> },
-      { label: locale === 'fr' ? 'Mes demandes' : 'My requests', href: `${base}/mes-demandes`, icon: <FileText size={18} /> },
-      { label: locale === 'fr' ? 'Paramètres' : 'Settings', href: `${base}/parametres`, icon: <Settings size={18} /> },
+      { label: locale === 'fr' ? 'Mes demandes' : 'My requests', href: `${base}/mes-demandes`,    icon: <FileText size={18} /> },
+      { label: locale === 'fr' ? 'Paramètres' : 'Settings',      href: `${base}/parametres`,      icon: <Settings size={18} /> },
+      { label: locale === 'fr' ? 'Aide' : 'Help',                href: `${base}/aide`,            icon: <BookOpen size={18} /> },
     ]
   }
 
@@ -40,6 +41,7 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Historique' : 'History',            href: `${base}/agent/historique`,      icon: <Clock size={18} /> },
       { label: locale === 'fr' ? 'Notifications' : 'Notifications',   href: `${base}/agent/notifications`,   icon: <Bell size={18} /> },
       { label: locale === 'fr' ? 'Paramètres' : 'Settings',           href: `${base}/agent/parametres`,      icon: <Settings size={18} /> },
+      { label: locale === 'fr' ? 'Aide' : 'Help',                    href: `${base}/agent/aide`,            icon: <BookOpen size={18} /> },
     ]
   }
 
@@ -52,6 +54,7 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Classement' : 'Rankings',            href: `${base}/ops/classement`,       icon: <Trophy size={18} /> },
       { label: locale === 'fr' ? 'Notifications' : 'Notifications',    href: `${base}/agent/notifications`,  icon: <Bell size={18} /> },
       { label: locale === 'fr' ? 'Paramètres' : 'Settings',            href: `${base}/agent/parametres`,     icon: <Settings size={18} /> },
+      { label: locale === 'fr' ? 'Aide' : 'Help',                     href: `${base}/agent/aide`,           icon: <BookOpen size={18} /> },
     ]
   }
 
@@ -67,6 +70,7 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Notifications' : 'Notifications',     href: `${base}/agent/notifications`, icon: <Bell size={18} /> },
       { label: locale === 'fr' ? 'Système' : 'System',                  href: `${base}/admin/systeme`,       icon: <Globe size={18} /> },
       { label: locale === 'fr' ? 'Paramètres' : 'Settings',             href: `${base}/agent/parametres`,    icon: <Settings size={18} /> },
+      { label: locale === 'fr' ? 'Aide' : 'Help',                      href: `${base}/agent/aide`,          icon: <BookOpen size={18} /> },
     ]
   }
 
