@@ -30,6 +30,7 @@ interface Props {
   agentId: string | null
   currentAgentId: string
   currentAgentName: string
+  currentAgentRole: string
   clientPhone: string | null
   attachments: any[]
   locale: string
@@ -59,7 +60,7 @@ function staffBubbleClass(senderRole?: string) {
 
 export default function AgentTicketActions({
   ticketId, ticketRef, ticketStatus,
-  agentId, currentAgentId, currentAgentName,
+  agentId, currentAgentId, currentAgentName, currentAgentRole,
   clientPhone, attachments: initialAttachments, locale,
 }: Props) {
   const isFr = locale === 'fr'
@@ -87,6 +88,8 @@ export default function AgentTicketActions({
   const prevLenRef      = useRef(0)
 
   const t = {
+    reopen:      isFr ? 'Réouvrir le dossier' : 'Reopen ticket',
+    reopenConfirm: isFr ? 'Confirmer la réouverture ?' : 'Confirm reopening?',
     take:        isFr ? 'Prendre en charge' : 'Take ownership',
     finalize:    isFr ? 'Finaliser' : 'Finalize',
     docReq:      isFr ? 'Demander docs' : 'Request docs',
@@ -162,6 +165,7 @@ export default function AgentTicketActions({
   const isUnassigned   = !localAgentId
   const isClosed       = localStatus === 'CLOSED' || localStatus === 'TREATED'
   const canAct         = isAssignedToMe && !isClosed
+  const isAdmin        = currentAgentRole === 'SYSTEM_ADMIN' || currentAgentRole === 'OPS_ADMIN'
 
   // ── Tab switching ─────────────────────────────────────────────────────────
 
@@ -225,6 +229,17 @@ export default function AgentTicketActions({
     setActionLoading('take')
     const res = await apiFetch(`/api/tickets/${ticketId}/take`, { method: 'PATCH' })
     if (res.ok) { setLocalStatus('IN_PROGRESS'); setLocalAgentId(currentAgentId) }
+    setActionLoading(null)
+  }
+
+  async function reopenTicket() {
+    if (!confirm(t.reopenConfirm)) return
+    setActionLoading('reopen')
+    const res = await apiFetch(`/api/tickets/${ticketId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'IN_PROGRESS' }),
+    })
+    if (res.ok) { setLocalStatus('IN_PROGRESS') }
     setActionLoading(null)
   }
 
@@ -657,7 +672,16 @@ export default function AgentTicketActions({
             {mode === 'reply' && (
               <div className="px-4 py-3">
                 {isClosed ? (
-                  <p className="text-xs text-gray-400 text-center py-2">{t.closed}</p>
+                  <div className="flex items-center justify-between py-1">
+                    <p className="text-xs text-gray-400">{t.closed}</p>
+                    {isAdmin && (
+                      <button onClick={reopenTicket} disabled={actionLoading === 'reopen'}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 disabled:opacity-60 transition-colors">
+                        {actionLoading === 'reopen' ? <Spinner /> : <MessageSquare size={13} />}
+                        {t.reopen}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex gap-2 items-end">
                     <textarea value={text} onChange={e => setText(e.target.value)}

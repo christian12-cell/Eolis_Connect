@@ -523,6 +523,7 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
                 agentId={ticket.agentId ?? null}
                 currentAgentId={user.id}
                 currentAgentName={`${user.firstName} ${user.lastName}`}
+                currentAgentRole={user.role}
                 clientPhone={ticket.client?.phone ?? null}
                 attachments={ticket.attachments ?? []}
                 locale={locale}
