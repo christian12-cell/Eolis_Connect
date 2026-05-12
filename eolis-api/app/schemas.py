@@ -183,6 +183,8 @@ class MessageResponse(BaseModel):
     document_description: Optional[str] = None
     is_read: bool
     read_at: Optional[UTCDatetime]
+    is_deleted: bool = False
+    deleted_at: Optional[UTCDatetime] = None
     created_at: UTCDatetime
     sender: Optional[UserResponse] = None
 

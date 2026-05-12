@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   Send, Lock, UserCheck, CheckCircle, Paperclip, Upload,
-  X, FileText, Download, Loader2, Plus, MessageSquare,
+  X, FileText, Download, Loader2, Plus, MessageSquare, Trash2,
 } from 'lucide-react'
 import { apiFetch, apiUpload, getToken, apiUrl } from '@/lib/api-client'
 import { offlineDb, fileToStored } from '@/lib/offline-db'
@@ -21,6 +21,7 @@ interface RawMessage {
   sender?: { firstName: string; lastName: string; role: string } | null
   createdAt: string
   isRead: boolean
+  isDeleted?: boolean
 }
 
 interface Props {
@@ -88,8 +89,11 @@ export default function AgentTicketActions({
   const prevLenRef      = useRef(0)
 
   const t = {
-    reopen:      isFr ? 'Réouvrir le dossier' : 'Reopen ticket',
+    reopen:        isFr ? 'Réouvrir le dossier' : 'Reopen ticket',
     reopenConfirm: isFr ? 'Confirmer la réouverture ?' : 'Confirm reopening?',
+    deleted:       isFr ? 'Message supprimé' : 'Message deleted',
+    deleteMsg:     isFr ? 'Supprimer ce message ?' : 'Delete this message?',
+    deleteTooLate: isFr ? 'Délai de 5 min dépassé' : '5 min window expired',
     take:        isFr ? 'Prendre en charge' : 'Take ownership',
     finalize:    isFr ? 'Finaliser' : 'Finalize',
     docReq:      isFr ? 'Demander docs' : 'Request docs',
@@ -230,6 +234,17 @@ export default function AgentTicketActions({
     const res = await apiFetch(`/api/tickets/${ticketId}/take`, { method: 'PATCH' })
     if (res.ok) { setLocalStatus('IN_PROGRESS'); setLocalAgentId(currentAgentId) }
     setActionLoading(null)
+  }
+
+  async function deleteMessage(msgId: string) {
+    if (!confirm(t.deleteMsg)) return
+    const res = await apiFetch(`/api/tickets/${ticketId}/messages/${msgId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, isDeleted: true, content: '' } : m))
+    } else {
+      const data = await res.json().catch(() => ({}))
+      if (data.detail === 'delete_too_late') alert(t.deleteTooLate)
+    }
   }
 
   async function reopenTicket() {
@@ -446,15 +461,38 @@ export default function AgentTicketActions({
     }
 
     // Normal CLIENT / AGENT message
-    const isPending = (msg as any).pending === true
+    const isPending   = (msg as any).pending === true
+    const isMine      = msg.senderId === currentAgentId
+    const withinLimit = !isPending && (Date.now() - new Date(msg.createdAt).getTime()) < 5 * 60 * 1000
+    const canDelete   = isMine && withinLimit && !msg.isDeleted
+
+    if (msg.isDeleted) {
+      return (
+        <div key={msg.id} className={`flex ${isClient ? 'justify-start' : 'justify-end'}`}>
+          <div className="px-4 py-2 rounded-2xl text-xs text-gray-400 italic border border-dashed border-gray-200">
+            🚫 {t.deleted}
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div key={msg.id} className={`flex ${isClient ? 'justify-start' : 'justify-end'}`}>
         <div className={`max-w-[75%] flex flex-col gap-1 ${isClient ? 'items-start' : 'items-end'} ${isPending ? 'opacity-60' : ''}`}>
           <span className="text-[10px] text-gray-400 px-1">{senderName}</span>
-          <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-            isClient ? 'bg-[#D6E7F5] text-gray-900 rounded-tl-sm' : `${staffBubbleClass(senderRole)} rounded-tr-sm`
-          }`}>
-            {msg.content}
+          <div className="relative group">
+            <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+              isClient ? 'bg-[#D6E7F5] text-gray-900 rounded-tl-sm' : `${staffBubbleClass(senderRole)} rounded-tr-sm`
+            }`}>
+              {msg.content}
+            </div>
+            {canDelete && (
+              <button
+                onClick={() => deleteMessage(msg.id)}
+                className={`absolute -top-1.5 ${isClient ? 'right-0 -mr-6' : 'left-0 -ml-6'} opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded-full bg-red-100 flex items-center justify-center`}>
+                <Trash2 size={10} className="text-red-500" />
+              </button>
+            )}
           </div>
           <span className="text-[10px] text-gray-400 px-1">
             {isPending ? '⏱ En attente...' : formatDate(msg.createdAt, locale)}

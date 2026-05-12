@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from ..database import get_db
@@ -217,3 +217,60 @@ def send_message(
     db.commit()
     db.refresh(msg)
     return msg
+
+
+@router.delete("/{message_id}", status_code=200)
+def delete_message(
+    ticket_id: str,
+    message_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    ticket = db.query(Ticket).options(joinedload(Ticket.client), joinedload(Ticket.agent)).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    msg = db.query(Message).filter(Message.id == message_id, Message.ticket_id == ticket_id).first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # Only the sender can delete
+    if msg.sender_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your message")
+
+    # Only within 5 minutes
+    if datetime.utcnow() - msg.created_at > timedelta(minutes=5):
+        raise HTTPException(status_code=400, detail="delete_too_late")
+
+    msg.is_deleted = True
+    msg.deleted_at = datetime.utcnow()
+
+    # Notify other participants
+    sender_name = f"{current_user.first_name} {current_user.last_name}"
+    is_fr_client = ticket.client and ticket.client.language != "en"
+
+    # Notify agent if sender is client
+    if current_user.role == "CLIENT" and ticket.agent_id:
+        db.add(Notification(
+            user_id=ticket.agent_id,
+            ticket_id=ticket_id,
+            type="NEW_MESSAGE",
+            title="Message supprimé" if True else "Message deleted",
+            message=f"Le client a supprimé un message sur le dossier {ticket.ref}",
+        ))
+
+    # Notify client if sender is staff
+    elif current_user.role != "CLIENT" and ticket.client_id:
+        title = "Message supprimé" if is_fr_client else "Message deleted"
+        message = (f"Un message a été supprimé sur votre dossier {ticket.ref}"
+                   if is_fr_client else f"A message was deleted on your request {ticket.ref}")
+        db.add(Notification(
+            user_id=ticket.client_id,
+            ticket_id=ticket_id,
+            type="NEW_MESSAGE",
+            title=title,
+            message=message,
+        ))
+
+    db.commit()
+    return {"ok": True}
