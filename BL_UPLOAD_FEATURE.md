@@ -1,6 +1,8 @@
 # Fonctionnalité : Upload & Extraction automatique de BL
 
-> **Statut** : Idée validée — en attente d'exemples de BL de différentes compagnies maritimes avant implémentation.
+> **Statut** : Idée validée — en attente de nouveaux exemples BL Eagle (attendus 2026-05-13) avant implémentation.
+
+> **Info clé** : Tous les BL Eolis passent par la société **Eagle**. Le format est toujours le même (seul le contenu change selon le type de conteneur / conventionnel). Un seul format à gérer → prompt GPT plus simple et plus fiable. Premier exemple déjà disponible : `BOOKCONFIR_EAGLETCWRC_263.pdf`.
 
 ---
 
@@ -232,8 +234,9 @@ Tous les champs pré-remplis doivent rester éditables — l'utilisateur peut co
 
 ## Étapes d'implémentation
 
-- [ ] **0. Collecter des exemples BL** — MSC, CMA CGM, Maersk, Evergreen, ICTSI Cameroun, autres
-- [ ] **1. Affiner le prompt GPT** avec les exemples réels
+- [x] **0. Format BL identifié** — format unique Eagle, structure constante (contenu varie selon type dossier). Exemple : `BOOKCONFIR_EAGLETCWRC_263.pdf`
+- [ ] **0b. Valider avec d'autres exemples Eagle** — confirmer que la structure est bien identique (attendus 2026-05-13)
+- [ ] **1. Affiner le prompt GPT** avec les exemples Eagle confirmés
 - [ ] **2. Backend** — table `bl_documents` + migration Neon + router `bl.py`
 - [ ] **3. Frontend** — composant `BLUploadMode.tsx` + états online/offline
 - [ ] **4. Cache IndexedDB** — store `bl_cache` + sync automatique
