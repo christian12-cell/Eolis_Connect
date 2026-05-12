@@ -130,7 +130,7 @@ def send_welcome_client(to_email: str, first_name: str, username: str):
       <table cellpadding="0" cellspacing="0" style="margin:24px 0;">
         <tr>
           <td style="background:#1B3A5C;border-radius:10px;padding:0;">
-            <a href="{settings.FRONTEND_URL}/fr/login" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:0.3px;">Se connecter →</a>
+            <a href="{settings.ALLOWED_ORIGINS.split(",")[0].strip()}/fr/login" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:0.3px;">Se connecter →</a>
           </td>
         </tr>
       </table>
@@ -181,7 +181,7 @@ def send_account_approved(to_email: str, first_name: str, username: str):
       <table cellpadding="0" cellspacing="0" style="margin:24px 0;">
         <tr>
           <td style="background:#059669;border-radius:10px;padding:0;">
-            <a href="{settings.FRONTEND_URL}/fr/login" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Accéder à la plateforme →</a>
+            <a href="{settings.ALLOWED_ORIGINS.split(",")[0].strip()}/fr/login" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Accéder à la plateforme →</a>
           </td>
         </tr>
       </table>
@@ -320,7 +320,7 @@ def send_new_message_notification(to_email: str, first_name: str, ticket_ref: st
       <table cellpadding="0" cellspacing="0" style="margin:20px 0;">
         <tr>
           <td style="background:#1B3A5C;border-radius:10px;padding:0;">
-            <a href="{settings.FRONTEND_URL}/fr/mes-demandes" style="display:inline-block;padding:13px 28px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Lire le message →</a>
+            <a href="{settings.ALLOWED_ORIGINS.split(",")[0].strip()}/fr/mes-demandes" style="display:inline-block;padding:13px 28px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Lire le message →</a>
           </td>
         </tr>
       </table>
