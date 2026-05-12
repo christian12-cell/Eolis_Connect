@@ -79,16 +79,6 @@ export function ScannerModal({ onScan, onClose, isFr }: ScannerModalProps) {
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(video, 0, 0)
 
-    // Grayscale + contrast boost
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    const d = imageData.data
-    for (let i = 0; i < d.length; i += 4) {
-      const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
-      const c = Math.max(0, Math.min(255, (gray - 128) * 1.8 + 128))
-      d[i] = d[i + 1] = d[i + 2] = c
-    }
-    ctx.putImageData(imageData, 0, 0)
-
     const url = canvas.toDataURL('image/jpeg', 0.92)
     setProcessedUrl(url)
     setCanvasDims({ w: canvas.width, h: canvas.height })
