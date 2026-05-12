@@ -192,7 +192,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const [submittingDocs, setSubmittingDocs] = useState<string | null>(null)
   const [scanTarget, setScanTarget] = useState<{ msgId: string; slotIdx: number } | null>(null)
   const [clientFiles, setClientFiles] = useState<File[]>([])
-  const clientFileRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState({ equip: true, log: true, desc: true, docs: true })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -934,14 +933,16 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                   </div>
                 )}
                 <div className="flex items-end gap-1.5">
-                  <input ref={clientFileRef} type="file" multiple className="hidden"
-                    accept="image/*,application/pdf,.doc,.docx"
-                    onChange={e => { setClientFiles(prev => [...prev, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
-                  <button type="button" onClick={() => clientFileRef.current?.click()}
-                    title={isFr ? 'Joindre un fichier' : 'Attach file'}
-                    className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors">
+                  <label className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors cursor-pointer"
+                    title={isFr ? 'Joindre un fichier' : 'Attach file'}>
                     <Paperclip size={20} />
-                  </button>
+                    <input type="file" multiple className="sr-only"
+                      accept="image/*,application/pdf,.doc,.docx"
+                      onChange={e => {
+                        const files = Array.from(e.target.files ?? [])
+                        if (files.length > 0) setClientFiles(prev => [...prev, ...files])
+                      }} />
+                  </label>
                   <button type="button" onClick={() => setScanTarget({ msgId: '__chat__', slotIdx: 0 })}
                     title={isFr ? 'Scanner un document' : 'Scan document'}
                     className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors">

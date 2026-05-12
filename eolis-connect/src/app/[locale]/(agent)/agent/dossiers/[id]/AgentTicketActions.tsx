@@ -158,8 +158,6 @@ export default function AgentTicketActions({
 
   const bottomRef       = useRef<HTMLDivElement>(null)
   const fileRef         = useRef<HTMLInputElement>(null)
-  const internalFileRef = useRef<HTMLInputElement>(null)
-  const replyFileRef    = useRef<HTMLInputElement>(null)
   const prevLenRef      = useRef(0)
 
   const t = {
@@ -860,14 +858,16 @@ export default function AgentTicketActions({
                       </div>
                     )}
                     <div className="flex gap-2 items-end">
-                      <input ref={replyFileRef} type="file" multiple className="hidden"
-                        accept="image/*,application/pdf,.doc,.docx"
-                        onChange={e => { setReplyFiles(p => [...p, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
-                      <button type="button" onClick={() => replyFileRef.current?.click()}
-                        title={isFr ? 'Joindre un fichier' : 'Attach file'}
-                        className="flex-shrink-0 mb-2.5 text-gray-400 hover:text-[#1B3A5C] transition-colors">
+                      <label className="flex-shrink-0 mb-2.5 text-gray-400 hover:text-[#1B3A5C] transition-colors cursor-pointer"
+                        title={isFr ? 'Joindre un fichier' : 'Attach file'}>
                         <Paperclip size={18} />
-                      </button>
+                        <input type="file" multiple className="sr-only"
+                          accept="image/*,application/pdf,.doc,.docx"
+                          onChange={e => {
+                            const files = Array.from(e.target.files ?? [])
+                            if (files.length > 0) setReplyFiles(p => [...p, ...files])
+                          }} />
+                      </label>
                       <textarea value={text} onChange={e => setText(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
                         placeholder={t.replyPh} rows={2}
@@ -919,13 +919,15 @@ export default function AgentTicketActions({
               )}
 
               <div className="flex gap-2 items-end">
-                <input ref={internalFileRef} type="file" multiple className="hidden"
-                  onChange={e => setInternalFiles(p => [...p, ...Array.from(e.target.files ?? [])])} />
-                <button type="button" onClick={() => internalFileRef.current?.click()}
-                  title={isFr ? 'Joindre un fichier' : 'Attach file'}
-                  className="flex-shrink-0 mb-2.5 text-amber-500 hover:text-amber-600 transition-colors">
+                <label className="flex-shrink-0 mb-2.5 text-amber-500 hover:text-amber-600 transition-colors cursor-pointer"
+                  title={isFr ? 'Joindre un fichier' : 'Attach file'}>
                   <Paperclip size={18} />
-                </button>
+                  <input type="file" multiple className="sr-only"
+                    onChange={e => {
+                      const files = Array.from(e.target.files ?? [])
+                      if (files.length > 0) setInternalFiles(p => [...p, ...files])
+                    }} />
+                </label>
                 <textarea value={text}
                   onChange={e => handleInternalChange(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
