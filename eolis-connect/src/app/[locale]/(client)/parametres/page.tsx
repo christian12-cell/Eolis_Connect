@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MobileLayout } from '@/components/layout/MobileLayout'
-import { LogOut, Save, Lock, User, Phone, CheckCircle, RefreshCw, Home, FileText, Bell } from 'lucide-react'
+import { LogOut, Save, Lock, User, Phone, CheckCircle, RefreshCw, Home, FileText, Bell, Eye, EyeOff } from 'lucide-react'
 import { getUser, apiFetch, clearSession, saveSession, getToken } from '@/lib/api-client'
 import { PhoneInput } from '@/components/ui/PhoneInput'
 
@@ -38,6 +38,7 @@ export default function ParametresPage({ params }: { params: Promise<{ locale: s
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
+  const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false })
   const [pwSaving, setPwSaving] = useState(false)
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -373,14 +374,22 @@ export default function ParametresPage({ params }: { params: Promise<{ locale: s
         </div>
         <div className="space-y-3">
           {[
-            { val: currentPw, set: setCurrentPw, label: isFr ? 'Mot de passe actuel' : 'Current password' },
-            { val: newPw, set: setNewPw, label: isFr ? 'Nouveau mot de passe' : 'New password' },
-            { val: confirmPw, set: setConfirmPw, label: isFr ? 'Confirmer' : 'Confirm' },
+            { val: currentPw, set: setCurrentPw, key: 'current' as const, label: isFr ? 'Mot de passe actuel' : 'Current password' },
+            { val: newPw,     set: setNewPw,     key: 'new'     as const, label: isFr ? 'Nouveau mot de passe' : 'New password' },
+            { val: confirmPw, set: setConfirmPw, key: 'confirm' as const, label: isFr ? 'Confirmer' : 'Confirm' },
           ].map(f => (
             <div key={f.label}>
               <label className="text-xs text-gray-500 font-medium mb-1 block">{f.label}</label>
-              <input value={f.val} onChange={e => f.set(e.target.value)} type="password"
-                className="w-full text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 outline-none focus:border-[#1B3A5C]" />
+              <div className="relative">
+                <input value={f.val} onChange={e => f.set(e.target.value)}
+                  type={showPw[f.key] ? 'text' : 'password'}
+                  className="w-full text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 pr-10 outline-none focus:border-[#1B3A5C]" />
+                <button type="button" tabIndex={-1}
+                  onClick={() => setShowPw(p => ({ ...p, [f.key]: !p[f.key] }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  {showPw[f.key] ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
           ))}
         </div>
