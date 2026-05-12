@@ -348,6 +348,14 @@ export default function AgentTicketActions({
     if (chatTab === 'client') setReplyFiles([])
     else setInternalFiles([])
 
+    // Afficher le message immédiatement
+    const tempId = `pending-${Date.now()}`
+    setMessages(prev => [...prev, {
+      id: tempId, senderId: currentAgentId, senderType,
+      content, sender: null, createdAt: new Date().toISOString(),
+      isRead: false, pending: true, _localFiles: filesToSend,
+    } as any])
+
     try {
       const res = await apiFetch(`/api/tickets/${ticketId}/messages`, {
         method: 'POST',
@@ -355,6 +363,7 @@ export default function AgentTicketActions({
       })
       if (res.ok) {
         const msg = await res.json()
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...msg, _localFiles: filesToSend } : m))
         if (filesToSend.length > 0 && msg.id) {
           const fd = new FormData()
           filesToSend.forEach(f => fd.append('files', f))
@@ -362,9 +371,9 @@ export default function AgentTicketActions({
           if (up?.ok) {
             const newAtts = await up.json().catch(() => [])
             setAttachments(prev => [...prev, ...newAtts])
+            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, _localFiles: [] } : m))
           }
         }
-        setMessages(prev => [...prev, msg])
       }
     } catch {
       // Offline — queue and show optimistically
@@ -573,7 +582,8 @@ export default function AgentTicketActions({
     }
 
     const msgAtts = attachments.filter((a: any) => a.messageId === msg.id)
-    const pendingFileCount = (msg as any)._pendingFileCount ?? 0
+    const localFiles: File[] = (msg as any)._localFiles ?? []
+    const showLocal = localFiles.length > 0 && msgAtts.length === 0
 
     return (
       <div key={msg.id} className={`flex ${isClient ? 'justify-start' : 'justify-end'}`}>
@@ -591,8 +601,12 @@ export default function AgentTicketActions({
                   ))}
                 </div>
               )}
-              {isPending && pendingFileCount > 0 && (
-                <p className="text-[10px] opacity-60 mt-1">📎 {pendingFileCount} fichier(s) en attente</p>
+              {showLocal && (
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {localFiles.map((f, i) => (
+                    <FilePreview key={i} file={f} uploading />
+                  ))}
+                </div>
               )}
             </div>
             {canDelete && (

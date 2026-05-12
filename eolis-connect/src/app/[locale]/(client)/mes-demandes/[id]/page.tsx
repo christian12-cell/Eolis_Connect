@@ -73,7 +73,8 @@ function parseVesselData(raw: string | null | undefined): VesselLogistics[] | nu
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
+// Preview d'un fichier local (avant ou pendant envoi)
+function FilePreview({ file, onRemove, uploading }: { file: File; onRemove?: () => void; uploading?: boolean }) {
   const isImg = file.type.startsWith('image/')
   const [url, setUrl] = useState<string | null>(null)
   useEffect(() => {
@@ -82,29 +83,46 @@ function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
     setUrl(u)
     return () => URL.revokeObjectURL(u)
   }, [file, isImg])
-  return (
-    <div className="relative flex-shrink-0">
-      {isImg && url ? (
-        <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-md">
-          <img src={url} alt={file.name} className="w-full h-full object-cover" />
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm max-w-[150px]">
-          <FileText size={20} className="text-blue-500 flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-gray-800 truncate">{file.name}</p>
-            <p className="text-[10px] text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
+
+  if (isImg && url) {
+    return (
+      <div className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-md">
+        <img src={url} alt={file.name} className={`w-full h-full object-cover ${uploading ? 'opacity-60' : ''}`} />
+        {uploading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+            <Loader2 size={16} className="text-white animate-spin" />
           </div>
-        </div>
+        )}
+        {onRemove && !uploading && (
+          <button onClick={onRemove}
+            className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 shadow flex items-center justify-center">
+            <X size={10} className="text-white" />
+          </button>
+        )}
+      </div>
+    )
+  }
+  return (
+    <div className="relative flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm max-w-[160px]">
+      <FileText size={20} className="text-blue-500 flex-shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-gray-800 truncate">{file.name}</p>
+        <p className="text-[10px] text-gray-400">
+          {uploading ? 'Envoi...' : `${(file.size / 1024).toFixed(1)} KB`}
+        </p>
+      </div>
+      {uploading && <Loader2 size={12} className="text-gray-400 animate-spin flex-shrink-0" />}
+      {onRemove && !uploading && (
+        <button onClick={onRemove}
+          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 shadow flex items-center justify-center">
+          <X size={10} className="text-white" />
+        </button>
       )}
-      <button onClick={onRemove}
-        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 shadow flex items-center justify-center z-10">
-        <X size={10} className="text-white" />
-      </button>
     </div>
   )
 }
 
+// Preview d'une pièce jointe confirmée par le serveur
 function AttachmentBubble({ att, onDownload, dark }: { att: any; onDownload: () => void; dark?: boolean }) {
   const isImg = att.mimeType?.startsWith('image/')
   const [imgSrc, setImgSrc] = useState<string | null>(null)
@@ -124,23 +142,27 @@ function AttachmentBubble({ att, onDownload, dark }: { att: any; onDownload: () 
 
   if (isImg) {
     return (
-      <button onClick={onDownload} className="block rounded-xl overflow-hidden max-w-[200px] shadow-sm mt-1">
+      <button onClick={onDownload} className="block rounded-xl overflow-hidden max-w-[220px] shadow mt-1 active:opacity-80">
         {imgSrc
-          ? <img src={imgSrc} alt={att.filename} className="max-w-full max-h-48 object-cover rounded-xl" />
-          : <div className="w-32 h-20 rounded-xl animate-pulse" style={{ background: dark ? 'rgba(255,255,255,0.15)' : '#e5e7eb' }} />
+          ? <img src={imgSrc} alt={att.filename} className="max-w-full max-h-52 object-cover rounded-xl" />
+          : <div className="w-40 h-28 rounded-xl animate-pulse bg-white/30" />
         }
       </button>
     )
   }
   return (
     <button onClick={onDownload}
-      className={`flex items-center gap-2 px-3 py-2 rounded-xl mt-1 text-left transition-colors max-w-[200px] ${dark ? 'bg-white/15 hover:bg-white/25' : 'bg-black/8 hover:bg-black/12'}`}>
-      <FileText size={18} className={dark ? 'text-blue-200 flex-shrink-0' : 'text-blue-500 flex-shrink-0'} />
+      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl mt-1 text-left active:opacity-70 transition-opacity max-w-[220px] ${
+        dark
+          ? 'bg-white/25 border border-white/30'
+          : 'bg-white border border-gray-200 shadow-sm'
+      }`}>
+      <FileText size={20} className={dark ? 'text-blue-100 flex-shrink-0' : 'text-blue-500 flex-shrink-0'} />
       <div className="min-w-0 flex-1">
-        <p className={`text-xs font-medium truncate ${dark ? 'text-white' : 'text-gray-800'}`}>{att.filename}</p>
-        {att.size && <p className={`text-[10px] ${dark ? 'text-blue-200' : 'text-gray-400'}`}>{(att.size / 1024).toFixed(1)} KB</p>}
+        <p className={`text-xs font-semibold truncate ${dark ? 'text-white' : 'text-gray-800'}`}>{att.filename}</p>
+        {att.size && <p className={`text-[10px] mt-0.5 ${dark ? 'text-blue-200' : 'text-gray-400'}`}>{(att.size / 1024).toFixed(1)} KB</p>}
       </div>
-      <Download size={11} className={dark ? 'text-blue-200 flex-shrink-0' : 'text-gray-400 flex-shrink-0'} />
+      <Download size={13} className={dark ? 'text-blue-200 flex-shrink-0' : 'text-blue-400 flex-shrink-0'} />
     </button>
   )
 }
@@ -252,6 +274,20 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
     setSending(true)
     setText('')
     setClientFiles([])
+
+    // Afficher le message immédiatement avec les fichiers locaux
+    const tempId = `pending-${Date.now()}`
+    const optimistic: any = {
+      id: tempId,
+      senderType: 'CLIENT',
+      content,
+      createdAt: new Date().toISOString(),
+      sender: getUser(),
+      pending: true,
+      _localFiles: filesToSend,
+    }
+    setMessages(prev => [...prev, optimistic])
+
     try {
       const r = await apiFetch(`/api/tickets/${ticketId}/messages`, {
         method: 'POST',
@@ -259,17 +295,22 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       })
       if (r.ok) {
         const msg = await r.json()
+        // Remplacer l'optimiste par le vrai message (garder _localFiles pendant l'upload)
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...msg, _localFiles: filesToSend } : m))
         if (filesToSend.length > 0 && msg.id) {
           const fd = new FormData()
           filesToSend.forEach(f => fd.append('files', f))
           await apiUpload(`/api/tickets/${ticketId}/attachments?message_id=${msg.id}`, fd).catch(() => {})
           const tk = await apiFetch(`/api/tickets/${ticketId}`).then(res => res.json()).catch(() => null)
-          if (tk) setTicket(tk)
+          if (tk) {
+            setTicket(tk)
+            // Retirer les fichiers locaux — les pièces jointes serveur prennent le relais
+            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, _localFiles: [] } : m))
+          }
         }
-        setMessages(prev => [...prev, msg])
       }
     } catch {
-      // Offline — queue the message and show optimistically
+      // Offline — garder l'optimiste, mettre en file d'attente
       const storedFiles = filesToSend.length > 0
         ? await Promise.all(filesToSend.map(f => fileToStored(f)))
         : undefined
@@ -278,16 +319,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
         payload: { ticketId, content },
         files: storedFiles,
       })
-      const optimistic: any = {
-        id: `pending-${Date.now()}`,
-        senderType: 'CLIENT',
-        content,
-        createdAt: new Date().toISOString(),
-        sender: getUser(),
-        pending: true,
-        _pendingFileCount: filesToSend.length,
-      }
-      setMessages(prev => [...prev, optimistic])
     } finally {
       setSending(false)
     }
@@ -868,7 +899,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                 const canDelete = isClient && withinLimit
 
                 const msgAtts = (ticket.attachments ?? []).filter((a: any) => a.messageId === msg.id)
-                const pendingFileCount = (msg as any)._pendingFileCount ?? 0
+                const localFiles: File[] = (msg as any)._localFiles ?? []
+                const showLocal = localFiles.length > 0 && msgAtts.length === 0
                 return (
                   <div key={msg.id} className={`flex items-end gap-1.5 ${isClient ? 'justify-end' : 'justify-start'}`}>
                     {canDelete && (
@@ -906,8 +938,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                           ))}
                         </div>
                       )}
-                      {msg.pending && pendingFileCount > 0 && (
-                        <p className="text-[10px] text-blue-200 mt-1">📎 {pendingFileCount} fichier(s) en attente</p>
+                      {showLocal && (
+                        <div className={`flex flex-wrap gap-2 ${msg.content.trim() && msg.content !== ' ' ? 'mt-1.5' : ''}`}>
+                          {localFiles.map((f, i) => (
+                            <FilePreview key={i} file={f} uploading />
+                          ))}
+                        </div>
                       )}
                       <p className={`text-[10px] mt-1 ${isClient ? 'text-blue-200' : 'text-gray-500'}`}>
                         {msg.pending
