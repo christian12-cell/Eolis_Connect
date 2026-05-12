@@ -238,10 +238,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [pendingOffline, setPendingOffline]   = useState(false)
   const [pendingHadFiles, setPendingHadFiles] = useState(false)
 
+  const [pageMode, setPageMode]         = useState<null | 'manual' | 'bl'>(null)
+  const [blStep, setBlStep]             = useState<'upload' | 'category' | 'recap'>('upload')
   const [blUploading, setBlUploading]   = useState(false)
   const [blExtracted, setBlExtracted]   = useState(false)
   const [blDisplay, setBlDisplay]       = useState<any>(null)
   const [blVesselData, setBlVesselData] = useState<string | null>(null)
+  const [blError, setBlError]           = useState<string | null>(null)
 
   const [openRecap, setOpenRecap] = useState<Record<string, boolean>>({
     cat: true, equip: true, log: true, desc: true,
@@ -387,6 +390,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
+    setBlError(null)
     setBlUploading(true)
     try {
       const fd = new FormData()
@@ -397,18 +401,25 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         const f = data.form_data
         setForm(prev => ({
           ...prev,
-          shipName:      f.shipName     || prev.shipName,
-          voyageNumber:  f.voyageNumber || prev.voyageNumber,
-          shipDate:      f.shipDate     || prev.shipDate,
-          code:          f.code         || prev.code,
-          description:   f.description  || prev.description,
+          shipName:       f.shipName      || '',
+          voyageNumber:   f.voyageNumber  || '',
+          shipDate:       f.shipDate      || '',
+          code:           f.code          || '',
+          equipmentType:  isFr ? 'Autre' : 'Other',
+          equipmentOther: f.sizeType      || '',
         }))
         setMode('simple')
         setBlDisplay(data.display)
         setBlVesselData(data.vesselData)
         setBlExtracted(true)
+        setBlStep('category')
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setBlError(err.detail || (isFr ? "Erreur lors de l'extraction." : 'Extraction error.'))
       }
-    } catch { /* ignore */ }
+    } catch {
+      setBlError(isFr ? 'Erreur réseau. Vérifiez votre connexion.' : 'Network error. Check your connection.')
+    }
     setBlUploading(false)
   }
 
@@ -416,7 +427,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     setBlExtracted(false)
     setBlDisplay(null)
     setBlVesselData(null)
-    setForm(prev => ({ ...prev, shipName: '', voyageNumber: '', shipDate: '', code: '', description: '' }))
+    setBlStep('upload')
+    setBlError(null)
+    setForm(prev => ({
+      ...prev,
+      shipName: '', voyageNumber: '', shipDate: '', code: '',
+      equipmentType: '', equipmentOther: '', description: '',
+    }))
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────────
@@ -716,6 +733,279 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     )
   }
 
+  // ── Mode selection ────────────────────────────────────────────────────────────
+
+  if (!pageMode) {
+    return (
+      <MobileLayout locale={locale} title={t.title} showBack>
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-blue-100 text-center mb-2">
+            {isFr ? 'Comment souhaitez-vous créer votre demande ?' : 'How would you like to create your request?'}
+          </p>
+          <button onClick={() => setPageMode('manual')}
+            className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <FileText size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-base font-bold text-white mb-1">
+                  {isFr ? 'Saisie manuelle' : 'Manual entry'}
+                </p>
+                <p className="text-sm text-blue-100 leading-relaxed">
+                  {isFr ? 'Remplissez le formulaire étape par étape' : 'Fill in the form step by step'}
+                </p>
+              </div>
+            </div>
+          </button>
+          <button onClick={() => setPageMode('bl')}
+            className="w-full bg-white/10 border-2 border-[#4A8FC4]/60 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#4A8FC4]/30 flex items-center justify-center flex-shrink-0">
+                <Upload size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-base font-bold text-white mb-1">
+                  {isFr ? 'Upload BL Eagle' : 'Upload Eagle BL'}
+                </p>
+                <p className="text-sm text-blue-100 leading-relaxed">
+                  {isFr
+                    ? 'Importez votre Booking Confirmation pour remplissage automatique par IA'
+                    : 'Import your Booking Confirmation for AI auto-fill'}
+                </p>
+                <span className="inline-block mt-2 text-[10px] font-bold text-[#4A8FC4] bg-[#4A8FC4]/20 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  ⚡ {isFr ? 'Rapide' : 'Fast'}
+                </span>
+              </div>
+            </div>
+          </button>
+        </div>
+      </MobileLayout>
+    )
+  }
+
+  // ── BL flow ───────────────────────────────────────────────────────────────────
+
+  if (pageMode === 'bl') {
+    // Step 1 : Upload
+    if (blStep === 'upload') {
+      return (
+        <MobileLayout locale={locale} title={isFr ? 'Upload BL' : 'Upload BL'} showBack>
+          <div className="space-y-4">
+            <div className="bg-white/10 rounded-2xl px-4 py-4 border border-white/20">
+              <p className="text-sm font-bold text-white mb-2">
+                {isFr ? '📄 Importez votre Booking Confirmation Eagle' : '📄 Import your Eagle Booking Confirmation'}
+              </p>
+              <ul className="space-y-1.5">
+                {(isFr ? ['Format PDF uniquement', 'Émis par Eagle (Europe Africa Global Line Express)', "Le formulaire sera pré-rempli automatiquement par IA"]
+                       : ['PDF format only', 'Issued by Eagle (Europe Africa Global Line Express)', 'The form will be auto-filled by AI']
+                ).map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-blue-100">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#4A8FC4] flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {!blUploading && !blError && (
+              <label className="flex flex-col items-center justify-center w-full py-12 rounded-2xl border-2 border-dashed border-white/40 bg-white/5 cursor-pointer active:bg-white/10 transition-colors gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-[#4A8FC4]/20 flex items-center justify-center">
+                  <Upload size={32} className="text-[#4A8FC4]" />
+                </div>
+                <div className="text-center">
+                  <p className="text-white font-semibold text-sm mb-1">
+                    {isFr ? 'Appuyez pour sélectionner votre BL' : 'Tap to select your BL'}
+                  </p>
+                  <p className="text-blue-200 text-xs">PDF · max 10 MB</p>
+                </div>
+                <input type="file" className="sr-only" accept="application/pdf" onChange={handleBLUpload} />
+              </label>
+            )}
+
+            {blUploading && (
+              <div className="flex flex-col items-center justify-center py-14 gap-5">
+                <div className="relative w-16 h-16">
+                  <div className="absolute inset-0 rounded-full border-4 border-white/10" />
+                  <div className="absolute inset-0 rounded-full border-4 border-t-[#4A8FC4] animate-spin" />
+                </div>
+                <div className="text-center">
+                  <p className="text-white font-semibold text-sm mb-1">
+                    {isFr ? 'Extraction en cours...' : 'Extracting...'}
+                  </p>
+                  <p className="text-blue-200 text-xs">
+                    {isFr ? "L'IA analyse votre BL Eagle" : 'AI is analyzing your Eagle BL'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {blError && (
+              <div className="bg-red-500/20 border border-red-400/40 rounded-2xl px-4 py-4 space-y-3">
+                <p className="text-sm font-bold text-white">❌ {isFr ? 'Extraction échouée' : 'Extraction failed'}</p>
+                <p className="text-xs text-red-200">{blError}</p>
+                <button onClick={() => setBlError(null)}
+                  className="w-full py-2.5 rounded-xl bg-white/20 text-white text-sm font-semibold">
+                  {isFr ? 'Réessayer' : 'Try again'}
+                </button>
+              </div>
+            )}
+
+            <button onClick={() => setPageMode(null)}
+              className="w-full py-3 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
+              ← {isFr ? 'Retour' : 'Back'}
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
+    // Step 2 : Category + description
+    if (blStep === 'category') {
+      const blCanNext = !!form.category &&
+        (form.category !== 'Autre' && form.category !== 'Other' ? true : !!form.categoryOther.trim()) &&
+        form.description.trim().length >= 10
+      return (
+        <MobileLayout locale={locale} title={isFr ? 'Votre demande' : 'Your request'} showBack>
+          <div className="space-y-4">
+            {/* BL summary */}
+            {blDisplay && (
+              <div className="bg-white/10 rounded-2xl border border-emerald-400/30 overflow-hidden">
+                <div className="bg-emerald-500/20 px-4 py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Check size={14} className="text-emerald-300" />
+                    <p className="text-xs font-bold text-white uppercase tracking-wide">
+                      {isFr ? 'BL extrait automatiquement' : 'BL auto-extracted'}
+                    </p>
+                  </div>
+                  <button onClick={resetBL} className="text-white/50 hover:text-white text-xs">
+                    {isFr ? 'Changer' : 'Change'}
+                  </button>
+                </div>
+                <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2">
+                  {[
+                    { l: isFr ? 'N° Booking' : 'Booking no.', v: blDisplay.bookingNo },
+                    { l: isFr ? 'Navire' : 'Vessel',          v: blDisplay.vessel },
+                    { l: 'ETS',                                v: blDisplay.ets },
+                    { l: isFr ? 'Déchargement' : 'Discharge', v: blDisplay.portOfDischarge },
+                    { l: isFr ? 'Conteneur' : 'Container',    v: blDisplay.sizeType },
+                    { l: isFr ? 'Marchandise' : 'Goods',      v: blDisplay.goodsDescription },
+                  ].filter(f => f.v).map(f => (
+                    <div key={f.l}>
+                      <p className="text-[10px] text-blue-200 font-medium">{f.l}</p>
+                      <p className="text-xs font-semibold text-white truncate">{f.v}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Category */}
+            <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
+              <h2 className="text-sm font-bold text-white mb-0.5">{t.catTitle}<Req /></h2>
+              <p className="text-xs text-blue-100">{t.catSub}</p>
+            </div>
+            <div className="space-y-2">
+              {categories.map(cat => (
+                <button key={cat}
+                  onClick={() => { set('category', cat); set('subcategory', ''); set('categoryOther', '') }}
+                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border-2 transition-all ${
+                    form.category === cat ? 'border-white bg-white text-[#1B3A5C]' : 'border-white/20 bg-white/10 text-white'
+                  }`}>
+                  <span className="font-semibold text-sm">{cat}</span>
+                  {form.category === cat && <Check size={16} />}
+                </button>
+              ))}
+            </div>
+            {(form.category === 'Autre' || form.category === 'Other') && (
+              <input type="text" value={form.categoryOther} onChange={e => set('categoryOther', e.target.value)}
+                placeholder={t.otherLabel}
+                className="w-full px-4 py-3 rounded-2xl bg-white text-[#1B3A5C] text-sm font-medium outline-none" />
+            )}
+            {/* Description */}
+            {form.category && (
+              <>
+                <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
+                  <h2 className="text-sm font-bold text-white mb-0.5">{t.descTitle}<Req /></h2>
+                  <p className="text-xs text-blue-100">{t.descSub}</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4">
+                  <textarea value={form.description}
+                    onChange={e => set('description', e.target.value.slice(0, 10000))}
+                    placeholder={t.descPlaceholder} rows={5}
+                    className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed" />
+                  <p className="text-xs text-gray-300 text-right mt-1">{form.description.length}/10000</p>
+                </div>
+              </>
+            )}
+            <button onClick={() => setBlStep('recap')} disabled={!blCanNext}
+              className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">
+              {t.next} <ChevronRight size={18} />
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
+    // Step 3 : Recap + submit
+    if (blStep === 'recap') {
+      return (
+        <MobileLayout locale={locale} title={t.recap} showBack>
+          <div className="space-y-3">
+            <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
+              <h2 className="text-base font-bold text-white mb-0.5">{t.recap}</h2>
+              <p className="text-sm text-blue-100">{t.recapSub}</p>
+            </div>
+            {blDisplay && (
+              <RecapSection title={isFr ? 'BL / Logistique' : 'BL / Logistics'} isOpen={openRecap.log} onToggle={() => toggleRecap('log')}>
+                <div className="pt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  {[
+                    { l: isFr ? 'N° Booking' : 'Booking no.', v: blDisplay.bookingNo },
+                    { l: isFr ? 'Navire' : 'Vessel',          v: blDisplay.vessel },
+                    { l: isFr ? 'Voyage' : 'Voyage',          v: blDisplay.voyage },
+                    { l: 'ETS',                                v: blDisplay.ets },
+                    { l: 'ETA',                                v: blDisplay.eta },
+                    { l: isFr ? 'Chargement' : 'Loading',     v: blDisplay.portOfLoading },
+                    { l: isFr ? 'Déchargement' : 'Discharge', v: blDisplay.portOfDischarge },
+                    { l: isFr ? 'Conteneur' : 'Container',    v: blDisplay.sizeType },
+                    { l: isFr ? 'Marchandise' : 'Goods',      v: blDisplay.goodsDescription },
+                  ].filter(f => f.v).map(f => (
+                    <div key={f.l}>
+                      <p className="text-[10px] text-gray-400 font-medium">{f.l}</p>
+                      <p className="text-xs font-semibold text-gray-800">{f.v}</p>
+                    </div>
+                  ))}
+                </div>
+              </RecapSection>
+            )}
+            <RecapSection title={t.catLabel} isOpen={openRecap.cat} onToggle={() => toggleRecap('cat')}>
+              <div className="pt-3">
+                <p className="text-sm font-bold text-[#1B3A5C]">{finalCategory}</p>
+              </div>
+            </RecapSection>
+            <RecapSection title={t.descLabel} isOpen={openRecap.desc} onToggle={() => toggleRecap('desc')}>
+              <div className="pt-3">
+                <p className="text-sm text-gray-700 leading-relaxed">{form.description}</p>
+              </div>
+            </RecapSection>
+            <div className="flex gap-3 pb-4">
+              <button onClick={() => setBlStep('category')}
+                className="flex items-center gap-1 px-4 py-3.5 rounded-2xl border-2 border-white/30 text-white font-medium text-sm">
+                <ChevronLeft size={16} /> {t.back}
+              </button>
+              <button onClick={submit} disabled={submitting}
+                className="flex-1 py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg active:scale-[0.99] transition-transform">
+                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                {t.submit}
+              </button>
+            </div>
+          </div>
+        </MobileLayout>
+      )
+    }
+  }
+
+  // ── Manual flow ───────────────────────────────────────────────────────────────
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -763,62 +1053,6 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         {/* ── STEP 1 : Catégorie ── */}
         {step === 'categorie' && (
           <div className="space-y-4">
-
-            {/* ── BL Upload zone ── */}
-            {!blExtracted ? (
-              <div className="bg-white/10 rounded-2xl border border-white/20 px-4 py-3">
-                <p className="text-sm font-bold text-white mb-0.5">
-                  {isFr ? '📄 Vous avez un Booking Confirmation ?' : '📄 Have a Booking Confirmation?'}
-                </p>
-                <p className="text-xs text-blue-100 mb-3">
-                  {isFr
-                    ? 'Importez votre BL Eagle pour pré-remplir automatiquement le dossier.'
-                    : 'Import your Eagle BL to auto-fill the request.'}
-                </p>
-                <label className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
-                  blUploading ? 'bg-white/10 text-white/60' : 'bg-[#4A8FC4] text-white hover:bg-[#3a7eb4]'
-                }`}>
-                  {blUploading
-                    ? <><Loader2 size={15} className="animate-spin" /> {isFr ? 'Extraction en cours...' : 'Extracting...'}</>
-                    : <><Upload size={15} /> {isFr ? 'Importer mon BL (PDF)' : 'Import my BL (PDF)'}</>
-                  }
-                  <input type="file" className="sr-only" accept="application/pdf" onChange={handleBLUpload} disabled={blUploading} />
-                </label>
-              </div>
-            ) : (
-              <div className="rounded-2xl overflow-hidden border border-emerald-400/40">
-                <div className="bg-emerald-500/20 px-4 py-3 flex items-center gap-3">
-                  <Check size={18} className="text-emerald-300 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white">{isFr ? '✅ BL importé' : '✅ BL imported'}</p>
-                    <p className="text-xs text-blue-100">{isFr ? 'Données logistiques pré-remplies' : 'Logistics data pre-filled'}</p>
-                  </div>
-                  <button onClick={resetBL} className="text-white/50 hover:text-white transition-colors">
-                    <X size={16} />
-                  </button>
-                </div>
-                {blDisplay && (
-                  <div className="bg-white/10 px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2">
-                    {[
-                      { l: isFr ? 'N° Booking' : 'Booking no.', v: blDisplay.bookingNo },
-                      { l: isFr ? 'Navire' : 'Vessel',         v: blDisplay.vessel },
-                      { l: isFr ? 'Voyage' : 'Voyage',         v: blDisplay.voyage },
-                      { l: 'ETS',                               v: blDisplay.ets },
-                      { l: isFr ? 'Chargement' : 'Loading',    v: blDisplay.portOfLoading },
-                      { l: isFr ? 'Déchargement' : 'Discharge',v: blDisplay.portOfDischarge },
-                      { l: isFr ? 'Conteneur' : 'Container',   v: blDisplay.sizeType },
-                      { l: isFr ? 'Marchandise' : 'Goods',     v: blDisplay.goodsDescription },
-                    ].filter(f => f.v).map(f => (
-                      <div key={f.l}>
-                        <p className="text-[10px] text-blue-200 font-medium">{f.l}</p>
-                        <p className="text-xs font-semibold text-white truncate">{f.v}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
               <h2 className="text-base font-bold text-white mb-0.5">{t.catTitle}<Req /></h2>
               <p className="text-sm text-blue-100">{t.catSub}</p>
