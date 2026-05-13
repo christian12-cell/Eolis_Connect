@@ -60,13 +60,8 @@ function staffBubbleClass(senderRole?: string) {
 
 function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
   const isImg = file.type.startsWith('image/')
-  const [url, setUrl] = useState<string | null>(null)
-  useEffect(() => {
-    if (!isImg) return
-    const u = URL.createObjectURL(file)
-    setUrl(u)
-    return () => URL.revokeObjectURL(u)
-  }, [file, isImg])
+  const [url] = useState<string | null>(() => isImg ? URL.createObjectURL(file) : null)
+  useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
   return (
     <div className="relative flex-shrink-0">
       {isImg && url ? (

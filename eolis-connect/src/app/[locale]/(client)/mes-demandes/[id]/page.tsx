@@ -92,13 +92,8 @@ function parseBLData(raw: string | null | undefined): any | null {
 // Preview d'un fichier local (avant ou pendant envoi)
 function FilePreview({ file, onRemove, uploading }: { file: File; onRemove?: () => void; uploading?: boolean }) {
   const isImg = file.type.startsWith('image/')
-  const [url, setUrl] = useState<string | null>(null)
-  useEffect(() => {
-    if (!isImg) return
-    const u = URL.createObjectURL(file)
-    setUrl(u)
-    return () => URL.revokeObjectURL(u)
-  }, [file, isImg])
+  const [url] = useState<string | null>(() => isImg ? URL.createObjectURL(file) : null)
+  useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
 
   if (isImg && url) {
     return (
