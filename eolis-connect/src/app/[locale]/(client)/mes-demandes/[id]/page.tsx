@@ -269,8 +269,25 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   useTicketWS(ticketId, {
     onMessagesUpdated: () => {
       if (!ticketId) return
-      apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()).then(msgs => {
-        if (Array.isArray(msgs)) setMessages(msgs)
+      Promise.all([
+        apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
+        apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()),
+      ]).then(([msgs, tkt]) => {
+        if (Array.isArray(msgs)) setMessages(prev => {
+          const serverIds = new Set(msgs.map((m: any) => m.id))
+          const prevById = new Map(prev.map(m => [m.id, m]))
+          const mergedMsgs = msgs.map((m: any) => {
+            const local = prevById.get(m.id) as any
+            return local?._localFiles?.length ? { ...m, _localFiles: local._localFiles } : m
+          })
+          const stillPending = prev.filter((m: any) => {
+            if (!m.pending) return false
+            if (serverIds.has(m.id)) return false
+            return !msgs.some((s: any) => s.content === m.content && s.senderType === m.senderType && Math.abs(new Date(s.createdAt).getTime() - new Date(m.createdAt).getTime()) < 120000)
+          })
+          return [...mergedMsgs, ...stillPending]
+        })
+        if (tkt?.id) setTicket(tkt)
       }).catch(() => {})
     },
     onTicketUpdated: () => {
