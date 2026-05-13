@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MobileLayout } from '@/components/layout/MobileLayout'
-import { PlusCircle, Inbox, ChevronRight, Search, ChevronDown, X } from 'lucide-react'
+import { PlusCircle, Inbox, ChevronRight, Search, ChevronDown, X, RefreshCw } from 'lucide-react'
 import { getUser, apiFetch } from '@/lib/api-client'
 import { formatDate } from '@/lib/utils'
 
@@ -92,6 +92,8 @@ export default function MesDemandesPage({ params }: { params: Promise<{ locale: 
   const [allTickets, setAllTickets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [countdown, setCountdown] = useState(30)
+  const [refreshing, setRefreshing] = useState(false)
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string[]>([])
@@ -101,7 +103,8 @@ export default function MesDemandesPage({ params }: { params: Promise<{ locale: 
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
-  function loadData() {
+  const loadData = useCallback((silent = false) => {
+    if (!silent) setRefreshing(true)
     Promise.all([
       apiFetch('/api/tickets').then(r => r.json()),
       apiFetch('/api/notifications').then(r => r.json()),
@@ -110,7 +113,8 @@ export default function MesDemandesPage({ params }: { params: Promise<{ locale: 
       setUnreadCount(Array.isArray(notifs) ? notifs.filter((n: any) => !n.isRead).length : 0)
       setLoading(false)
     }).catch(() => setLoading(false))
-  }
+      .finally(() => setRefreshing(false))
+  }, [])
 
   useEffect(() => {
     const u = getUser()
@@ -118,9 +122,15 @@ export default function MesDemandesPage({ params }: { params: Promise<{ locale: 
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/login`); return }
     setUser(u)
     loadData()
-    window.addEventListener('eolis-sync-done', loadData)
-    return () => window.removeEventListener('eolis-sync-done', loadData)
-  }, [locale])
+    window.addEventListener('eolis-sync-done', () => loadData())
+    return () => window.removeEventListener('eolis-sync-done', () => loadData())
+  }, [locale, loadData])
+
+  useEffect(() => {
+    const refreshIv = setInterval(() => { loadData(true); setCountdown(30) }, 30000)
+    const countIv   = setInterval(() => setCountdown(p => p > 0 ? p - 1 : 30), 1000)
+    return () => { clearInterval(refreshIv); clearInterval(countIv) }
+  }, [loadData])
 
   if (loading || !user) return null
 
@@ -176,11 +186,27 @@ export default function MesDemandesPage({ params }: { params: Promise<{ locale: 
     clearAll:   isFr ? 'Effacer' : 'Clear',
   }
 
+  const circumference = 2 * Math.PI * 12
+
   return (
     <MobileLayout locale={locale} title={t.title} unreadCount={unreadCount}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-gray-400 font-medium">{filtered.length} {t.results}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-400 font-medium">{filtered.length} {t.results}</p>
+          <div className="flex items-center gap-1.5">
+            <svg width="24" height="24" className="-rotate-90">
+              <circle cx="12" cy="12" r="10" fill="none" stroke="#e5e7eb" strokeWidth="2" />
+              <circle cx="12" cy="12" r="10" fill="none" stroke="#4A8FC4" strokeWidth="2"
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference * (1 - countdown / 30)} />
+            </svg>
+            <button onClick={() => { loadData(); setCountdown(30) }}
+              className="text-gray-400 active:text-[#1B3A5C] transition-colors">
+              <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+            </button>
+          </div>
+        </div>
         <Link href={`/${locale}/nouvelle-demande`}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1B3A5C] text-white text-xs font-semibold">
           <PlusCircle size={13} /> {t.newRequest}

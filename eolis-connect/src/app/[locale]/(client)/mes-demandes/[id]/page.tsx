@@ -235,6 +235,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const chatInnerRef       = useRef<HTMLDivElement>(null)
   const prevMsgLenRef      = useRef(0)
+  const [isScrolledUp, setIsScrolledUp]           = useState(false)
+  const [unreadWhileUp, setUnreadWhileUp]         = useState(0)
+  const firstUnreadIdRef                           = useRef<string | null>(null)
 
   function toggle(k: keyof typeof open) {
     setOpen(prev => ({ ...prev, [k]: !prev[k] }))
@@ -306,15 +309,47 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   }, [ticketId])
 
   useEffect(() => {
-    const newMsgArrived = messages.length > prevMsgLenRef.current
+    const prev = prevMsgLenRef.current
+    const newCount = messages.length - prev
     prevMsgLenRef.current = messages.length
-    if (!newMsgArrived) return
-    // Scroll only the inner chat box — never the outer page
+    if (newCount <= 0) return
     const el = chatInnerRef.current
     if (!el) return
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
-    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    if (nearBottom) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+      setUnreadWhileUp(0)
+      setIsScrolledUp(false)
+    } else {
+      setIsScrolledUp(true)
+      setUnreadWhileUp(p => p + newCount)
+      if (!firstUnreadIdRef.current) {
+        const newMsgs = messages.slice(-newCount)
+        firstUnreadIdRef.current = newMsgs[0]?.id ?? null
+      }
+    }
   }, [messages])
+
+  function handleChatScroll() {
+    const el = chatInnerRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
+    if (nearBottom) {
+      setIsScrolledUp(false)
+      setUnreadWhileUp(0)
+      firstUnreadIdRef.current = null
+    } else {
+      setIsScrolledUp(true)
+    }
+  }
+
+  function scrollToBottom() {
+    const el = chatInnerRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    setIsScrolledUp(false)
+    setUnreadWhileUp(0)
+    firstUnreadIdRef.current = null
+  }
 
   async function loadData() {
     try {
@@ -939,13 +974,13 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
           })()}
 
           {/* ── Messagerie ── */}
-          <div className="rounded-2xl overflow-hidden shadow-sm flex flex-col" style={{ height: '420px' }}>
+          <div className="rounded-2xl overflow-hidden shadow-sm flex flex-col relative" style={{ height: '420px' }}>
             <div className="bg-[#1B3A5C] px-4 py-3 flex items-center gap-2 flex-shrink-0">
               <MessageCircle size={15} className="text-blue-300" />
               <p className="text-sm font-bold text-white flex-1">{isFr ? 'Échanges' : 'Messages'}</p>
               <span className="text-xs text-blue-300 font-medium">{messages.length}</span>
             </div>
-            <div ref={chatInnerRef} className="bg-[#EDF4FB] flex-1 overflow-y-auto px-3 py-3 space-y-2">
+            <div ref={chatInnerRef} onScroll={handleChatScroll} className="bg-[#EDF4FB] flex-1 overflow-y-auto px-3 py-3 space-y-2 relative">
               {/* Info banner — message deletion */}
               <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-[11px] text-blue-500">
                 <span>ℹ️</span>
@@ -1178,18 +1213,49 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                           ))}
                         </div>
                       )}
-                      <p className={`text-[10px] mt-1 ${isClient ? 'text-blue-200' : 'text-gray-500'}`}>
+                      <p className={`text-[10px] mt-1 flex items-center gap-1 ${isClient ? 'text-blue-200' : 'text-gray-500'}`}>
                         {msg.pending
                           ? (isFr ? '⏱ En attente...' : '⏱ Pending...')
                           : formatDate(msg.createdAt, locale)
                         }
+                        {isClient && !msg.pending && msg.isRead && (
+                          <span className="opacity-80 font-medium">{isFr ? '· Lu' : '· Read'}</span>
+                        )}
                       </p>
                     </div>
                   </div>
                 )
               })}
               <div ref={messagesEndRef} />
+
+              {/* Bandeau nouveaux messages */}
+              {isScrolledUp && unreadWhileUp > 0 && (
+                <button
+                  onClick={scrollToBottom}
+                  className="sticky bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1B3A5C] text-white text-xs font-semibold shadow-lg active:scale-95 transition-transform mx-auto w-fit"
+                >
+                  <span>↓</span>
+                  {unreadWhileUp} {isFr ? 'nouveau' : 'new'}{unreadWhileUp > 1 ? (isFr ? 'x' : '') : ''}
+                </button>
+              )}
             </div>
+
+            {/* Flèche scroll-to-bottom */}
+            {isScrolledUp && (
+              <button
+                onClick={scrollToBottom}
+                className="absolute bottom-20 right-3 z-20 w-9 h-9 rounded-full bg-[#1B3A5C] shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+              >
+                {unreadWhileUp > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {unreadWhileUp > 9 ? '9+' : unreadWhileUp}
+                  </span>
+                )}
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 2v10M3 8l4 4 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            )}
 
             {/* Input intégré dans le bloc chat */}
             {(ticket.status === 'PENDING' || ticket.status === 'IN_PROGRESS') && (

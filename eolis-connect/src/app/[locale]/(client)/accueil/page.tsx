@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MobileLayout } from '@/components/layout/MobileLayout'
-import { FileText, PlusCircle, ChevronRight, Inbox } from 'lucide-react'
+import { FileText, PlusCircle, ChevronRight, Inbox, RefreshCw } from 'lucide-react'
 import { getUser, apiFetch } from '@/lib/api-client'
 import { timeAgo } from '@/lib/utils'
 
@@ -29,10 +29,13 @@ export default function AccueilPage({ params }: { params: Promise<{ locale: stri
   const [tickets, setTickets] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [countdown, setCountdown] = useState(30)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
-  function loadData() {
+  const loadData = useCallback((silent = false) => {
+    if (!silent) setRefreshing(true)
     Promise.all([
       apiFetch('/api/tickets').then(r => r.json()),
       apiFetch('/api/notifications').then(r => r.json()),
@@ -42,7 +45,8 @@ export default function AccueilPage({ params }: { params: Promise<{ locale: stri
       setUnreadCount(unread)
       setLoading(false)
     }).catch(() => setLoading(false))
-  }
+      .finally(() => setRefreshing(false))
+  }, [])
 
   useEffect(() => {
     const u = getUser()
@@ -50,10 +54,15 @@ export default function AccueilPage({ params }: { params: Promise<{ locale: stri
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/login`); return }
     setUser(u)
     loadData()
-    // Refresh when offline messages are synced
-    window.addEventListener('eolis-sync-done', loadData)
-    return () => window.removeEventListener('eolis-sync-done', loadData)
-  }, [locale])
+    window.addEventListener('eolis-sync-done', () => loadData())
+    return () => window.removeEventListener('eolis-sync-done', () => loadData())
+  }, [locale, loadData])
+
+  useEffect(() => {
+    const refreshIv = setInterval(() => { loadData(true); setCountdown(30) }, 30000)
+    const countIv   = setInterval(() => setCountdown(p => p > 0 ? p - 1 : 30), 1000)
+    return () => { clearInterval(refreshIv); clearInterval(countIv) }
+  }, [loadData])
 
   if (loading || !user) return null
 
@@ -77,8 +86,28 @@ export default function AccueilPage({ params }: { params: Promise<{ locale: stri
     emptySub: isFr ? 'Créez votre première demande' : 'Create your first request',
   }
 
+  const circumference = 2 * Math.PI * 12
+
   return (
     <MobileLayout locale={locale} title={`${t.welcome}, ${user.firstName}`} unreadCount={unreadCount} showLogout>
+      {/* Auto-refresh bar */}
+      <div className="flex items-center justify-between mb-4 px-1">
+        <p className="text-xs text-gray-400">{isFr ? 'Actualisation automatique' : 'Auto-refresh'}</p>
+        <div className="flex items-center gap-2">
+          <svg width="28" height="28" className="-rotate-90">
+            <circle cx="14" cy="14" r="12" fill="none" stroke="#e5e7eb" strokeWidth="2.5" />
+            <circle cx="14" cy="14" r="12" fill="none" stroke="#4A8FC4" strokeWidth="2.5"
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference * (1 - countdown / 30)} />
+          </svg>
+          <button onClick={() => { loadData(); setCountdown(30) }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-gray-200 text-xs text-gray-600 active:bg-gray-50">
+            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+            {isFr ? 'Actualiser' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[

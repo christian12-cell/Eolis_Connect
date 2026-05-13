@@ -65,6 +65,13 @@ def mark_messages_read(
         Message.is_read == False,
     ).update({"is_read": True, "read_at": datetime.utcnow()}, synchronize_session=False)
 
+    # Also mark ticket notifications as read for this user
+    db.query(Notification).filter(
+        Notification.user_id == current_user.id,
+        Notification.ticket_id == ticket_id,
+        Notification.is_read == False,
+    ).update({"is_read": True}, synchronize_session=False)
+
     db.commit()
     return {"success": True}
 
