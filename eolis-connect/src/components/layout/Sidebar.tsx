@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Home, FileText, PlusCircle, Settings, LayoutDashboard,
-  List, Clock, BarChart2, Trophy, Users, ScrollText, X, Globe, Bell, BookOpen, Shield,
+  List, Clock, BarChart2, Trophy, Users, ScrollText, X, Globe, Bell, BookOpen, Shield, Zap,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -52,6 +52,7 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Dossiers traités' : 'Treated tickets', href: `${base}/agent/historique`,   icon: <Clock size={18} /> },
       { label: locale === 'fr' ? 'Performances' : 'Performance',       href: `${base}/ops/performances`,     icon: <BarChart2 size={18} /> },
       { label: locale === 'fr' ? 'Classement' : 'Rankings',            href: `${base}/ops/classement`,       icon: <Trophy size={18} /> },
+      { label: locale === 'fr' ? 'Coûts IA' : 'AI Costs',             href: `${base}/admin/ia-couts`,       icon: <Zap size={18} /> },
       { label: locale === 'fr' ? 'Notifications' : 'Notifications',    href: `${base}/agent/notifications`,  icon: <Bell size={18} /> },
       { label: locale === 'fr' ? 'Paramètres' : 'Settings',            href: `${base}/agent/parametres`,     icon: <Settings size={18} /> },
       { label: locale === 'fr' ? 'Aide' : 'Help',                     href: `${base}/agent/aide`,           icon: <BookOpen size={18} /> },
@@ -68,6 +69,7 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Performances' : 'Performance',        href: `${base}/ops/performances`,    icon: <BarChart2 size={18} /> },
       { label: locale === 'fr' ? 'Classement' : 'Rankings',             href: `${base}/ops/classement`,      icon: <Trophy size={18} /> },
       { label: locale === 'fr' ? 'Notifications' : 'Notifications',     href: `${base}/agent/notifications`, icon: <Bell size={18} /> },
+      { label: locale === 'fr' ? 'Coûts IA' : 'AI Costs',               href: `${base}/admin/ia-couts`,      icon: <Zap size={18} /> },
       { label: locale === 'fr' ? 'Sessions' : 'Sessions',               href: `${base}/admin/sessions`,      icon: <Shield size={18} /> },
       { label: locale === 'fr' ? 'Système' : 'System',                  href: `${base}/admin/systeme`,       icon: <Globe size={18} /> },
       { label: locale === 'fr' ? 'Paramètres' : 'Settings',             href: `${base}/agent/parametres`,    icon: <Settings size={18} /> },

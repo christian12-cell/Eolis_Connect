@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
+from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -8,25 +9,34 @@ from ..deps import get_current_user, require_roles
 router = APIRouter(prefix="/ai-usage", tags=["ai-usage"])
 
 
-def _period_filter(q, period: str):
-    now = datetime.utcnow()
-    if period == "today":
-        return q.filter(AIUsage.created_at >= now.replace(hour=0, minute=0, second=0, microsecond=0))
-    if period == "month":
-        return q.filter(AIUsage.created_at >= now.replace(day=1, hour=0, minute=0, second=0, microsecond=0))
-    if period == "year":
-        return q.filter(AIUsage.created_at >= now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0))
-    return q  # "all"
+def _apply_date_filter(q, from_date: Optional[str], to_date: Optional[str]):
+    """Filter by ISO date strings YYYY-MM-DD (inclusive on both ends)."""
+    if from_date:
+        try:
+            d = datetime.strptime(from_date, "%Y-%m-%d")
+            q = q.filter(AIUsage.created_at >= d)
+        except ValueError:
+            pass
+    if to_date:
+        try:
+            d = datetime.strptime(to_date, "%Y-%m-%d")
+            # Include the entire to_date day
+            d = d.replace(hour=23, minute=59, second=59)
+            q = q.filter(AIUsage.created_at <= d)
+        except ValueError:
+            pass
+    return q
 
 
 @router.get("/my")
 def my_usage(
-    period: str = Query("all", regex="^(today|month|year|all)$"),
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date:   Optional[str] = Query(None, alias="to"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     q = db.query(AIUsage).filter(AIUsage.client_id == current_user.id)
-    q = _period_filter(q, period)
+    q = _apply_date_filter(q, from_date, to_date)
     rows = q.order_by(AIUsage.created_at.desc()).all()
 
     total_usd  = sum(r.cost_usd  for r in rows)
@@ -58,12 +68,13 @@ def my_usage(
 
 @router.get("/admin")
 def admin_usage(
-    period: str = Query("all", regex="^(today|month|year|all)$"),
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date:   Optional[str] = Query(None, alias="to"),
     current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
     db: Session = Depends(get_db),
 ):
     q = db.query(AIUsage)
-    q = _period_filter(q, period)
+    q = _apply_date_filter(q, from_date, to_date)
     rows = q.order_by(AIUsage.created_at.desc()).all()
 
     total_usd  = sum(r.cost_usd  for r in rows)
