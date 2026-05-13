@@ -36,7 +36,11 @@ function parseMultiDescription(desc: string) {
 
 function parseVesselData(raw: string | null | undefined) {
   if (!raw) return null
-  try { return JSON.parse(raw) } catch { return null }
+  try {
+    const parsed = JSON.parse(raw)
+    // BL tickets store an object (not array) in vesselData — only arrays are multi-vessel logistics
+    return Array.isArray(parsed) ? parsed : null
+  } catch { return null }
 }
 
 function downloadFileAgent(attId: string, filename: string) {

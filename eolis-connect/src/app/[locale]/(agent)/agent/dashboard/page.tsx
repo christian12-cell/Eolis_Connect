@@ -20,9 +20,11 @@ export default function AgentDashboardPage({ params }: { params: Promise<{ local
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [countdown, setCountdown] = useState(60)
   const [urgencyFilter, setUrgencyFilter] = useState('')
   const [search, setSearch] = useState('')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -48,9 +50,22 @@ export default function AgentDashboardPage({ params }: { params: Promise<{ local
     setUser(u)
     loadTickets(false)
 
-    // Auto-refresh every 60s — silent (no loading flash, filters preserved)
-    intervalRef.current = setInterval(() => loadTickets(true), 60_000)
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+    // Auto-refresh every 60s
+    intervalRef.current = setInterval(() => {
+      loadTickets(true)
+      setCountdown(60)
+    }, 60_000)
+
+    // Countdown tick every second
+    setCountdown(60)
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => (prev <= 1 ? 60 : prev - 1))
+    }, 1_000)
+
+    return () => {
+      if (intervalRef.current)   clearInterval(intervalRef.current)
+      if (countdownRef.current) clearInterval(countdownRef.current)
+    }
   }, [locale, loadTickets])
 
   const active = allTickets.filter(t => t.status === 'PENDING' || t.status === 'IN_PROGRESS')
@@ -153,14 +168,26 @@ export default function AgentDashboardPage({ params }: { params: Promise<{ local
           <h2 className="font-semibold text-gray-900">
             {tx.queue} <span className="text-gray-400 font-normal text-sm">({filtered.length})</span>
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {lastRefresh && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 hidden sm:block">
                 {locale === 'fr' ? 'Mis à jour' : 'Updated'} {timeAgo(lastRefresh, locale)}
               </span>
             )}
+            {/* Countdown ring */}
+            <div className="relative flex items-center justify-center" title={`${locale === 'fr' ? 'Actualisation dans' : 'Refresh in'} ${countdown}s`}>
+              <svg width="32" height="32" className="-rotate-90">
+                <circle cx="16" cy="16" r="12" fill="none" stroke="#e5e7eb" strokeWidth="2.5" />
+                <circle cx="16" cy="16" r="12" fill="none" stroke="#4A8FC4" strokeWidth="2.5"
+                  strokeDasharray={`${2 * Math.PI * 12}`}
+                  strokeDashoffset={`${2 * Math.PI * 12 * (1 - countdown / 60)}`}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 0.9s linear' }} />
+              </svg>
+              <span className="absolute text-[9px] font-bold text-gray-500 tabular-nums">{countdown}</span>
+            </div>
             <button
-              onClick={() => loadTickets(true)}
+              onClick={() => { loadTickets(true); setCountdown(60) }}
               disabled={refreshing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold transition-colors disabled:opacity-50">
               <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
