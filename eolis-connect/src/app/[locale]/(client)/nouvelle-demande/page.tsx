@@ -1843,7 +1843,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   type="text"
                   value={form.code}
                   onChange={e => set('code', e.target.value)}
-                  placeholder="Ex: BL-2024-XXXX"
+                  placeholder="Ex: EA2604921DLAPME"
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C] font-mono"
                 />
               </div>
@@ -1913,7 +1913,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                           type="text"
                           value={v.code}
                           onChange={e => updateVessel(v.id, { code: e.target.value })}
-                          placeholder="Ex: BL-2024-XXXX"
+                          placeholder="Ex: EA2604921DLAPME"
                           className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C] font-mono"
                         />
                       </div>
