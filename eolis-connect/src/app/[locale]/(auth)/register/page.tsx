@@ -67,6 +67,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
   const [otpError, setOtpError] = useState('')
   const [otpResent, setOtpResent] = useState(false)
 
+  const [phoneValid, setPhoneValid] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
@@ -180,6 +181,10 @@ export default function RegisterPage({ params }: RegisterPageProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!phoneValid) {
+      setError(isFr ? 'Numéro de téléphone invalide. Vérifiez le format pour votre pays.' : 'Invalid phone number. Please check the format for your country.')
+      return
+    }
     if (form.password !== form.confirmPassword) { setError(text.mismatch); return }
     if (form.password.length < 8) { setError(text.weak); return }
     setLoading(true)
@@ -378,7 +383,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700">{text.phone}</label>
-              <PhoneInput value={form.phone} onChange={v => { setForm(f => ({ ...f, phone: v })); setError('') }} required />
+              <PhoneInput value={form.phone} onChange={v => { setForm(f => ({ ...f, phone: v })); setError('') }} onValidChange={setPhoneValid} required />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700">{text.password}</label>
