@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle, BookOpen } from 'lucide-react'
+import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle, BookOpen, Wallet } from 'lucide-react'
 import { BottomNav } from './BottomNav'
-import { clearSession, isTokenExpired } from '@/lib/api-client'
+import { clearSession, isTokenExpired, getUser } from '@/lib/api-client'
 import { syncPending } from '@/lib/offline-sync'
 import { offlineDb } from '@/lib/offline-db'
 
@@ -134,6 +134,13 @@ export function MobileLayout({
             <Globe size={13} />
             {otherLocale.toUpperCase()}
           </button>
+          {getUser()?.role === 'CLIENT' && (
+            <button onClick={() => router.push(`/${locale}/depenses`)}
+              className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/20 hover:bg-white/30 transition-colors"
+              title={isFr ? 'Mes dépenses IA' : 'My AI expenses'}>
+              <Wallet size={15} className="text-white" />
+            </button>
+          )}
           <button onClick={() => router.push(`/${locale}/aide`)}
             className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/20 hover:bg-white/30 transition-colors"
             title={isFr ? 'Aide' : 'Help'}>

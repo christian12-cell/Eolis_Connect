@@ -102,6 +102,33 @@ class CreateUserRequest(BaseModel):
 
 # ── Ticket ─────────────────────────────────────────────────────────────────────
 
+class AIUsageSummary(BaseModel):
+    id: str
+    cost_usd: float
+    cost_fcfa: float
+    fcfa_rate: float
+    model: str
+    input_tokens: int
+    output_tokens: int
+    created_at: UTCDatetime
+    model_config = camel_config()
+
+class AIUsageAdminItem(BaseModel):
+    id: str
+    client_id: str
+    client_first_name: Optional[str] = None
+    client_last_name: Optional[str] = None
+    ticket_id: Optional[str] = None
+    ticket_ref: Optional[str] = None
+    model: str
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+    cost_fcfa: float
+    fcfa_rate: float
+    created_at: UTCDatetime
+    model_config = camel_config()
+
 class TicketCreateRequest(BaseModel):
     category: str
     subcategory: Optional[str] = None
@@ -112,6 +139,7 @@ class TicketCreateRequest(BaseModel):
     ship_date: Optional[str] = None
     code: Optional[str] = None
     vessel_data: Optional[str] = None
+    bl_document_id: Optional[str] = None
     description: str
     urgency: str = "MEDIUM"
 
@@ -150,6 +178,7 @@ class TicketResponse(BaseModel):
     ship_date: Optional[str]
     code: Optional[str]
     vessel_data: Optional[str]
+    bl_document_id: Optional[str] = None
     description: str
     urgency: str
     status: str
@@ -162,6 +191,7 @@ class TicketResponse(BaseModel):
     satisfaction_rating: Optional["RatingSimpleResponse"] = None
     attachments: list[AttachmentResponse] = []
     messages: list["MessageResponse"] = []
+    ai_usage: Optional["AIUsageSummary"] = None
 
     model_config = camel_config()
 

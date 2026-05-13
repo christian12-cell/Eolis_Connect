@@ -5,7 +5,7 @@ from sqlalchemy import text
 from .config import settings
 from .database import engine
 from .models import Base
-from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions
+from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config
 
 app = FastAPI(title="Eolis Connect API", version="1.0.0")
 
@@ -29,6 +29,8 @@ app.include_router(admin_logs.router, prefix="/api")
 app.include_router(attachments.router, prefix="/api")
 app.include_router(bl.router, prefix="/api")
 app.include_router(sessions.router, prefix="/api")
+app.include_router(ai_usage.router, prefix="/api")
+app.include_router(admin_config.router, prefix="/api")
 
 
 def _ensure_system_admin():
@@ -114,6 +116,32 @@ def startup():
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """))
+        # AI usage tracking tables
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS system_config (
+                key VARCHAR(100) PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS ai_usage (
+                id VARCHAR(36) PRIMARY KEY,
+                client_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                ticket_id VARCHAR(36) REFERENCES tickets(id),
+                bl_document_id VARCHAR(36) REFERENCES bl_documents(id),
+                model VARCHAR(50) NOT NULL,
+                input_tokens INTEGER NOT NULL DEFAULT 0,
+                output_tokens INTEGER NOT NULL DEFAULT 0,
+                cost_usd DOUBLE PRECISION NOT NULL DEFAULT 0,
+                cost_fcfa DOUBLE PRECISION NOT NULL DEFAULT 0,
+                fcfa_rate DOUBLE PRECISION NOT NULL DEFAULT 600,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text(
+            "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS bl_document_id VARCHAR(36)"
+        ))
         conn.commit()
 
     _ensure_system_admin()

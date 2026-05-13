@@ -3,11 +3,19 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import User, BLDocument
+from ..models import User, BLDocument, AIUsage, SystemConfig
 from ..deps import get_current_user
 from ..config import settings
 
 router = APIRouter(prefix="/bl", tags=["bl"])
+
+# gpt-4o-mini pricing (USD per 1M tokens) — update here if OpenAI changes rates
+_INPUT_PRICE_PER_1M  = 0.150
+_OUTPUT_PRICE_PER_1M = 0.600
+
+def _get_fcfa_rate(db: Session) -> float:
+    cfg = db.query(SystemConfig).filter(SystemConfig.key == "fcfa_rate").first()
+    return float(cfg.value) if cfg else 600.0
 
 EAGLE_BL_PROMPT = """Tu es un expert en documents de transport maritime.
 Analyse ce document "Booking Confirmation" émis par Eagle (Europe Africa Global Line Express) pour Eolis Cameroun.
@@ -91,14 +99,15 @@ def _extract_pdf_text(content: bytes) -> str:
         raise HTTPException(400, f"Impossible de lire le PDF : {e}")
 
 
-def _call_gpt(text: str) -> dict:
+def _call_gpt(text: str) -> tuple[dict, int, int]:
+    """Returns (parsed_data, input_tokens, output_tokens)."""
     if not settings.OPENAI_API_KEY:
         raise HTTPException(503, "GPT non configuré — ajoutez OPENAI_API_KEY dans les variables Railway")
     try:
         from openai import OpenAI
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
         resp = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": EAGLE_BL_PROMPT},
                 {"role": "user",   "content": f"Voici le contenu extrait du document :\n\n{text}"},
@@ -107,11 +116,13 @@ def _call_gpt(text: str) -> dict:
             max_tokens=2000,
         )
         raw = resp.choices[0].message.content.strip()
-        # Nettoyer les éventuels blocs markdown ```json ... ```
         if raw.startswith("```"):
             parts = raw.split("```")
             raw = parts[1].lstrip("json").strip() if len(parts) > 1 else raw
-        return json.loads(raw)
+        data = json.loads(raw)
+        in_tok  = resp.usage.prompt_tokens     if resp.usage else 0
+        out_tok = resp.usage.completion_tokens if resp.usage else 0
+        return data, in_tok, out_tok
     except json.JSONDecodeError as e:
         raise HTTPException(422, f"Erreur de parsing GPT : {e}")
     except Exception as e:
@@ -129,7 +140,7 @@ async def extract_bl(
 
     content = await file.read()
     text = _extract_pdf_text(content)
-    data = _call_gpt(text)
+    data, in_tok, out_tok = _call_gpt(text)
 
     # Données complètes sauvegardées dans vessel_data
     extra = {
@@ -168,13 +179,34 @@ async def extract_bl(
         raw_extracted=json.dumps(data, ensure_ascii=False),
     )
     db.add(bl)
+    db.flush()  # get bl.id without committing
+
+    # Calculate cost and persist AI usage
+    fcfa_rate = _get_fcfa_rate(db)
+    cost_usd  = (in_tok * _INPUT_PRICE_PER_1M + out_tok * _OUTPUT_PRICE_PER_1M) / 1_000_000
+    cost_fcfa = cost_usd * fcfa_rate
+    ai_usage  = AIUsage(
+        client_id=current_user.id,
+        bl_document_id=bl.id,
+        model="gpt-4o-mini",
+        input_tokens=in_tok,
+        output_tokens=out_tok,
+        cost_usd=cost_usd,
+        cost_fcfa=cost_fcfa,
+        fcfa_rate=fcfa_rate,
+    )
+    db.add(ai_usage)
     db.commit()
     db.refresh(bl)
+    db.refresh(ai_usage)
 
     return {
-        "bl_id": bl.id,
-        "raw": data,  # full GPT extraction — used by frontend review step
-        "vesselData": json.dumps(extra, ensure_ascii=False),
+        "bl_id":       bl.id,
+        "ai_usage_id": ai_usage.id,
+        "cost_usd":    round(cost_usd, 8),
+        "cost_fcfa":   round(cost_fcfa, 4),
+        "raw":         data,
+        "vesselData":  json.dumps(extra, ensure_ascii=False),
     }
 
 

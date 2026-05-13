@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { StatCard } from '@/components/ui/card'
-import { Users, Shield, UserCheck, UserCog, Headphones } from 'lucide-react'
+import { Users, Shield, UserCheck, UserCog, Headphones, Zap, TrendingUp } from 'lucide-react'
 import { getUser, apiFetch } from '@/lib/api-client'
 
 export default function AdminDashboardPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -13,6 +13,7 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ local
   const [user, setUser] = useState<any>(null)
   const [users, setUsers] = useState<any[]>([])
   const [logs, setLogs] = useState<any[]>([])
+  const [aiStats, setAiStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
@@ -21,9 +22,11 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ local
     Promise.all([
       apiFetch('/api/users').then(r => r.json()),
       apiFetch('/api/admin/logs?page_size=15').then(r => r.json()),
-    ]).then(([usrs, logsData]) => {
+      apiFetch('/api/ai-usage/admin?period=month').then(r => r.json()).catch(() => null),
+    ]).then(([usrs, logsData, aiData]) => {
       setUsers(Array.isArray(usrs) ? usrs : [])
       setLogs(logsData.items ?? [])
+      setAiStats(aiData)
       setLoading(false)
     }).catch(() => setLoading(false))
   }
@@ -103,6 +106,53 @@ export default function AdminDashboardPage({ params }: { params: Promise<{ local
           )}
         </div>
       </div>
+
+      {/* ── AI Costs section ── */}
+      {aiStats && (
+        <div className="mt-6 max-w-5xl">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
+              <Zap size={18} className="text-violet-600" />
+            </div>
+            <div>
+              <h2 className="font-bold text-gray-900">{isFr ? 'Coûts IA — Ce mois' : 'AI Costs — This month'}</h2>
+              <p className="text-xs text-gray-400">{aiStats.count} {isFr ? 'extraction(s) · gpt-4o-mini' : 'extraction(s) · gpt-4o-mini'}</p>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="text-xl font-bold text-[#1B3A5C]">{aiStats.totalFcfa?.toFixed(2)} FCFA</p>
+              <p className="text-xs text-gray-400">${aiStats.totalUsd?.toFixed(6)}</p>
+            </div>
+          </div>
+
+          {/* Per-client summary */}
+          {aiStats.clientsSummary?.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100">
+                <p className="text-sm font-bold text-gray-900">{isFr ? 'Répartition par client' : 'Breakdown by client'}</p>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {aiStats.clientsSummary.map((c: any) => (
+                  <div key={c.clientId} className="flex items-center gap-4 px-5 py-3">
+                    <div className="w-8 h-8 rounded-full bg-[#1B3A5C] flex items-center justify-center flex-shrink-0">
+                      <span className="text-[10px] font-bold text-white">
+                        {c.firstName?.[0]}{c.lastName?.[0]}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{c.firstName} {c.lastName}</p>
+                      <p className="text-xs text-gray-400">{c.count} {isFr ? 'extraction(s)' : 'extraction(s)'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-[#1B3A5C]">{c.totalFcfa?.toFixed(2)} FCFA</p>
+                      <p className="text-[10px] text-gray-400">${c.totalUsd?.toFixed(6)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </DashboardLayout>
   )
 }

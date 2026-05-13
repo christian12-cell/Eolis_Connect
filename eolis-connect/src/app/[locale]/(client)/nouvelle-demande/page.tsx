@@ -250,6 +250,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   })
   const [prevBLs, setPrevBLs]           = useState<any[] | null>(null)
   const [prevBLsLoading, setPrevBLsLoading] = useState(false)
+  const [blDocumentId, setBlDocumentId] = useState<string | null>(null)
+  const [blCost, setBlCost]             = useState<{ usd: number; fcfa: number } | null>(null)
+  const [showCostPopup, setShowCostPopup] = useState(false)
+  const [blSearch, setBlSearch]         = useState('')
 
   const [openRecap, setOpenRecap] = useState<Record<string, boolean>>({
     cat: true, equip: true, log: true, desc: true,
@@ -454,6 +458,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       if (res.ok) {
         const data = await res.json()
         setBlFields(buildBlFieldsFromRaw(data.raw || {}))
+        setBlDocumentId(data.bl_id ?? null)
+        setBlCost(data.cost_usd != null ? { usd: data.cost_usd, fcfa: data.cost_fcfa } : null)
         setBlStep('review')
       } else {
         const err = await res.json().catch(() => ({}))
@@ -511,9 +517,20 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   }
 
   async function enterBLMode() {
+    // Show cost popup if client hasn't dismissed it permanently
+    const accepted = typeof window !== 'undefined' && localStorage.getItem('eolis_bl_cost_accepted') === '1'
+    if (!accepted) {
+      setShowCostPopup(true)
+      return
+    }
+    _launchBLMode()
+  }
+
+  async function _launchBLMode() {
     setPageMode('bl')
     setBlStep('pick')
     setPrevBLs(null)
+    setBlSearch('')
     try {
       const res = await apiFetch('/api/bl/my-bls')
       if (res.ok) {
@@ -558,12 +575,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         : (blVesselData || undefined)
 
       const body = {
-        category:      finalCategory,
-        subcategory:   finalSubcat || undefined,
-        equipmentType: finalEquipment || undefined,
+        category:       finalCategory,
+        subcategory:    finalSubcat || undefined,
+        equipmentType:  finalEquipment || undefined,
         shipName, voyageNumber, shipDate,
-        code:        isMultiSeparate ? undefined : (form.code.trim() || undefined),
+        code:           isMultiSeparate ? undefined : (form.code.trim() || undefined),
         vesselData,
+        blDocumentId:   blDocumentId || undefined,
         description,
         urgency: getUrgency(finalCategory, finalSubcat),
       }
@@ -827,6 +845,67 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     )
   }
 
+  // ── BL Cost popup ─────────────────────────────────────────────────────────────
+
+  if (showCostPopup) {
+    return (
+      <MobileLayout locale={locale} title={isFr ? 'Nouvelle demande' : 'New request'} showBack>
+        <div className="flex flex-col items-center text-center gap-5 pt-4">
+          <div className="w-16 h-16 rounded-2xl bg-[#4A8FC4]/20 flex items-center justify-center">
+            <span className="text-3xl">⚡</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white mb-2">
+              {isFr ? 'Mode Rapide — Service payant' : 'Fast Mode — Paid service'}
+            </h2>
+            <p className="text-sm text-blue-100 leading-relaxed max-w-xs mx-auto">
+              {isFr
+                ? "Ce mode utilise l'intelligence artificielle pour analyser votre Booking Confirmation Eagle et pré-remplir votre demande automatiquement."
+                : 'This mode uses AI to analyze your Eagle Booking Confirmation and auto-fill your request.'}
+            </p>
+          </div>
+          <div className="bg-white/10 border border-white/20 rounded-2xl px-5 py-4 w-full space-y-2">
+            <p className="text-xs text-blue-200 font-semibold uppercase tracking-wide">
+              {isFr ? 'Coût estimé par extraction' : 'Estimated cost per extraction'}
+            </p>
+            <p className="text-2xl font-bold text-white">≈ 0.30 FCFA</p>
+            <p className="text-xs text-blue-300">≈ $0.0005 · {isFr ? 'varie selon la taille du document' : 'varies with document size'}</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 w-full">
+            <p className="text-xs text-blue-200 text-left leading-relaxed">
+              ℹ️ {isFr
+                ? "Le coût exact sera visible dans votre dossier et dans la section « Dépenses » de l'application."
+                : 'The exact cost will be visible in your ticket and in the Expenses section of the app.'}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setShowCostPopup(false)
+              _launchBLMode()
+            }}
+            className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold">
+            {isFr ? 'Continuer' : 'Continue'}
+          </button>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox"
+              className="w-4 h-4 rounded"
+              onChange={e => {
+                if (e.target.checked) localStorage.setItem('eolis_bl_cost_accepted', '1')
+                else localStorage.removeItem('eolis_bl_cost_accepted')
+              }} />
+            <span className="text-xs text-blue-200">
+              {isFr ? 'Ne plus afficher ce message' : "Don't show this again"}
+            </span>
+          </label>
+          <button onClick={() => setShowCostPopup(false)}
+            className="text-white/50 text-sm">
+            ← {isFr ? 'Retour' : 'Back'}
+          </button>
+        </div>
+      </MobileLayout>
+    )
+  }
+
   // ── Mode selection ────────────────────────────────────────────────────────────
 
   if (!pageMode) {
@@ -916,32 +995,69 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               <div className="flex items-center justify-center py-10">
                 <div className="w-8 h-8 rounded-full border-4 border-white/20 border-t-[#4A8FC4] animate-spin" />
               </div>
-            ) : (
-              <div className="space-y-2">
-                {prevBLs.map(bl => (
-                  <button key={bl.id}
-                    onClick={() => handleBLReuse(bl.id)}
-                    disabled={prevBLsLoading}
-                    className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-left active:bg-white/20 transition-all disabled:opacity-50">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-white font-mono">{bl.bookingNo || '—'}</p>
-                        <p className="text-xs text-[#4A8FC4] font-semibold mt-0.5 truncate">{bl.vessel || '—'}</p>
-                        <p className="text-[10px] text-blue-200 mt-1">
-                          {bl.portOfLoading} → {bl.portOfDischarge}
-                          {bl.ets ? ` · ETS ${bl.ets}` : ''}
-                        </p>
-                      </div>
-                      {prevBLsLoading ? (
-                        <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin flex-shrink-0 mt-1" />
-                      ) : (
-                        <ChevronRight size={18} className="text-white/50 flex-shrink-0 mt-1" />
-                      )}
+            ) : (() => {
+              const filtered = prevBLs.filter(bl => {
+                const q = blSearch.toLowerCase()
+                if (!q) return true
+                return (
+                  (bl.bookingNo  || '').toLowerCase().includes(q) ||
+                  (bl.vessel     || '').toLowerCase().includes(q) ||
+                  (bl.voyage     || '').toLowerCase().includes(q) ||
+                  (bl.ets        || '').toLowerCase().includes(q)
+                )
+              })
+              return (
+                <div className="space-y-3">
+                  {/* Search bar */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={blSearch}
+                      onChange={e => setBlSearch(e.target.value)}
+                      placeholder={isFr ? 'Rechercher par Booking, Navire, Voyage, ETS…' : 'Search by Booking, Vessel, Voyage, ETS…'}
+                      className="w-full px-4 py-3 rounded-2xl bg-white/15 border border-white/25 text-white text-sm placeholder-white/40 focus:outline-none focus:border-[#4A8FC4]"
+                    />
+                    {blSearch && (
+                      <button onClick={() => setBlSearch('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70">
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filtered results */}
+                  {filtered.length === 0 ? (
+                    <p className="text-center text-blue-200 text-sm py-4">
+                      {isFr ? 'Aucun résultat.' : 'No results.'}
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                      {filtered.map(bl => (
+                        <button key={bl.id}
+                          onClick={() => handleBLReuse(bl.id)}
+                          disabled={prevBLsLoading}
+                          className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-left active:bg-white/20 transition-all disabled:opacity-50">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-white font-mono">{bl.bookingNo || '—'}</p>
+                              <p className="text-xs text-[#4A8FC4] font-semibold mt-0.5 truncate">{bl.vessel || '—'}</p>
+                              <p className="text-[10px] text-blue-200 mt-1">
+                                {[bl.voyage && `Voyage ${bl.voyage}`, bl.portOfLoading && `${bl.portOfLoading} → ${bl.portOfDischarge}`, bl.ets && `ETS ${bl.ets}`].filter(Boolean).join(' · ')}
+                              </p>
+                            </div>
+                            {prevBLsLoading ? (
+                              <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin flex-shrink-0 mt-1" />
+                            ) : (
+                              <ChevronRight size={18} className="text-white/50 flex-shrink-0 mt-1" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                  )}
+                </div>
+              )
+            })()}
 
             <button onClick={() => setBlStep('upload')}
               className="w-full py-3.5 rounded-2xl border-2 border-white/30 text-white font-semibold text-sm flex items-center justify-center gap-2">

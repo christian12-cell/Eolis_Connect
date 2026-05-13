@@ -2,7 +2,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from ..database import get_db
-from ..models import User, Ticket, Message, Notification, Log
+from ..models import User, Ticket, Message, Notification, Log, AIUsage
 from ..schemas import TicketCreateRequest, TicketUpdateRequest, TicketResponse
 from ..deps import get_current_user
 from ..config import settings
@@ -47,12 +47,21 @@ def create_ticket(body: TicketCreateRequest, current_user: User = Depends(get_cu
         ship_date=body.ship_date,
         code=body.code,
         vessel_data=body.vessel_data,
+        bl_document_id=body.bl_document_id,
         description=body.description,
         urgency=body.urgency,
         status="PENDING",
     )
     db.add(ticket)
     db.flush()
+    # Link any pending AIUsage record for this BL to the new ticket
+    if body.bl_document_id:
+        pending = db.query(AIUsage).filter(
+            AIUsage.bl_document_id == body.bl_document_id,
+            AIUsage.ticket_id == None,
+        ).first()
+        if pending:
+            pending.ticket_id = ticket.id
     db.add(Log(user_id=current_user.id, action="CREATE_TICKET", entity="Ticket", entity_id=ticket.id, details=ticket.ref))
     db.commit()
     db.refresh(ticket)
@@ -66,6 +75,9 @@ def get_ticket(ticket_id: str, current_user: User = Depends(get_current_user), d
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
     if current_user.role == "CLIENT" and ticket.client_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    # Attach AI usage summary if available
+    ai = db.query(AIUsage).filter(AIUsage.ticket_id == ticket.id).first()
+    ticket.__dict__["ai_usage"] = ai
     return ticket
 
 

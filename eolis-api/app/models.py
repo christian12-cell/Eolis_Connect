@@ -49,6 +49,7 @@ class Ticket(Base):
     ship_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
     code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     vessel_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+    bl_document_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("bl_documents.id"), nullable=True)
     description: Mapped[str] = mapped_column(Text)
     urgency: Mapped[str] = mapped_column(String(10), default="MEDIUM")
     status: Mapped[str] = mapped_column(String(20), default="PENDING")
@@ -211,3 +212,32 @@ class BLDocument(Base):
     vessel_data: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw_extracted: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SystemConfig(Base):
+    """Key-value store for admin-configurable settings (e.g. fcfa_rate)."""
+    __tablename__ = "system_config"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AIUsage(Base):
+    """Tracks every GPT call: tokens consumed, exact cost in USD and FCFA."""
+    __tablename__ = "ai_usage"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_id)
+    client_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"))
+    ticket_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("tickets.id"), nullable=True)
+    bl_document_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("bl_documents.id"), nullable=True)
+    model: Mapped[str] = mapped_column(String(50))
+    input_tokens: Mapped[int] = mapped_column(Integer)
+    output_tokens: Mapped[int] = mapped_column(Integer)
+    cost_usd: Mapped[float] = mapped_column(nullable=False)
+    cost_fcfa: Mapped[float] = mapped_column(nullable=False)
+    fcfa_rate: Mapped[float] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    client: Mapped["User"] = relationship("User", foreign_keys=[client_id])
+    ticket: Mapped["Ticket | None"] = relationship("Ticket", foreign_keys=[ticket_id])
