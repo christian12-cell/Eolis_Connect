@@ -171,7 +171,7 @@ function CreateModal({ locale, onClose, onDone }: { locale: string; onClose: () 
           </Field>
 
           <Field label="Email *">
-            <Input value={email} onChange={setEmail} type="email" placeholder="jean.mbarga@eoliscameroun.com" />
+            <Input value={email} onChange={setEmail} type="email" placeholder="jean.mbarga@eolisgroup.com" />
           </Field>
 
           <Field label={isFr ? 'Téléphone *' : 'Phone *'}>

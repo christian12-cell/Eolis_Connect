@@ -44,7 +44,7 @@ export default function LanguageSelectPage() {
             <Image src="/logo.png" alt="Eolis Connect" width={56} height={56} className="object-contain" priority />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-lg">Eolis Connect</h1>
-          <p className="text-blue-200 text-sm mt-1">Eolis Cameroun</p>
+          <p className="text-blue-200 text-sm mt-1">Global Logistics Platform</p>
         </div>
 
         {/* Card */}
@@ -106,7 +106,7 @@ export default function LanguageSelectPage() {
             &ldquo;Ensemble, tissons des liens...&rdquo;
           </p>
           <p className="text-white/40 text-xs mt-2">
-            &copy; {new Date().getFullYear()} Eolis Cameroun. Tous droits réservés.
+            &copy; {new Date().getFullYear()} Eolis Connect. Tous droits réservés.
           </p>
         </div>
       </div>

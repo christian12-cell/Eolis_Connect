@@ -1,7 +1,7 @@
 {
   "name": "Eolis Connect",
   "short_name": "Eolis",
-  "description": "Eolis Cameroun — Gestion des demandes clients",
+  "description": "Plateforme de gestion des demandes clients",
   "start_url": "/fr/accueil",
   "scope": "/",
   "display": "standalone",

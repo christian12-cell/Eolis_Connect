@@ -329,7 +329,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
           </div>
           <div>
             <p className="font-bold text-[#1B3A5C] leading-tight">Eolis Connect</p>
-            <p className="text-xs text-gray-400">Eolis Cameroun</p>
+            <p className="text-xs text-gray-400">Global Logistics Platform</p>
           </div>
         </div>
 

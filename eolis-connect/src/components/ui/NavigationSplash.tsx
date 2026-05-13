@@ -44,7 +44,7 @@ export function NavigationSplash() {
         Eolis Connect
       </div>
       <div style={{ color: '#93c5fd', fontSize: '.8rem', letterSpacing: '.2em', textTransform: 'uppercase', marginTop: '.4rem', animation: 'splashUp .6s ease .1s both' }}>
-        Eolis Cameroun
+        Global Logistics Platform
       </div>
       <div style={{ display: 'flex', gap: '.5rem', marginTop: '1.5rem' }}>
         {[0, 0.2, 0.4].map((delay, i) => (

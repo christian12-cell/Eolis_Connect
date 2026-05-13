@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Eolis Connect",
-  description: "Plateforme de gestion des demandes clients — Eolis Cameroun",
+  description: "Plateforme de gestion des demandes clients",
   icons: { icon: "/logo.png", apple: "/logo.png" },
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Eolis Connect" },
@@ -34,7 +34,7 @@ const splashCSS = `
 const splashHTML = `
 <div id="eolis-splash" style="position:fixed;inset:0;z-index:9999;background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
   <div style="color:#fff;font-size:1.875rem;font-weight:700;letter-spacing:.05em;animation:splashUp .6s ease forwards;">Eolis Connect</div>
-  <div style="color:#93c5fd;font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;margin-top:.4rem;animation:splashUp .6s ease .1s both;">Eolis Cameroun</div>
+  <div style="color:#93c5fd;font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;margin-top:.4rem;animation:splashUp .6s ease .1s both;">Global Logistics Platform</div>
   <div style="display:flex;gap:.5rem;margin-top:1.5rem;">
     <div style="width:8px;height:8px;border-radius:50%;background:#60a5fa;animation:sdBounce 1.2s ease-in-out 0s infinite;"></div>
     <div style="width:8px;height:8px;border-radius:50%;background:#60a5fa;animation:sdBounce 1.2s ease-in-out .2s infinite;"></div>

@@ -21,7 +21,7 @@ export default function LoadingScreen() {
         </svg>
 
         <h1 className="text-3xl font-bold text-white tracking-wide">Eolis Connect</h1>
-        <p className="text-blue-300 text-sm tracking-widest uppercase">Eolis Cameroun</p>
+        <p className="text-blue-300 text-sm tracking-widest uppercase">Global Logistics Platform</p>
 
         {/* Dots de chargement */}
         <div className="flex gap-2 mt-6">
