@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from ..database import get_db
-from ..models import User, Ticket, Message, Notification, Attachment, SatisfactionRating, OtpCode, PasswordReset, Log, AccountSetupToken
+from ..models import User, Ticket, Message, Notification, Attachment, SatisfactionRating, OtpCode, PasswordReset, Log, AccountSetupToken, AIUsage, BLDocument
 from ..schemas import UserResponse, UserUpdateRequest, CreateUserRequest
 from ..deps import get_current_user, require_roles
 from ..security import hash_password, verify_password
@@ -248,7 +248,7 @@ def reset_database(
     db: Session = Depends(get_db),
 ):
     """Delete all operational data (tickets, messages, logs…). Never deletes user accounts. SYSTEM_ADMIN only."""
-    # Delete operational data only — never users
+    # Delete in dependency order (children before parents)
     db.query(SatisfactionRating).delete()
     db.query(Attachment).delete()
     db.query(Message).delete()
@@ -256,6 +256,8 @@ def reset_database(
     db.query(OtpCode).delete()
     db.query(PasswordReset).delete()
     db.query(Log).delete()
+    db.query(AIUsage).delete()
+    db.query(BLDocument).delete()
     db.query(Ticket).delete()
     db.commit()
 
