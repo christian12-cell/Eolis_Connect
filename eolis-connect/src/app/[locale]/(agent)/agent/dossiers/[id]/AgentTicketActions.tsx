@@ -85,10 +85,11 @@ function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
   )
 }
 
-function AttachmentBubble({ att, onDownload, dark }: { att: any; onDownload: () => void; dark?: boolean }) {
+function AttachmentBubble({ att, onDownload, dark, locale }: { att: any; onDownload: () => void; dark?: boolean; locale?: string }) {
   const isImg = att.mimeType?.startsWith('image/')
   const [imgSrc, setImgSrc] = useState<string | null>(null)
   const blobRef = useRef<string | null>(null)
+  const isFr = locale !== 'en'
   useEffect(() => {
     if (!isImg) return
     const token = getToken()
@@ -107,7 +108,22 @@ function AttachmentBubble({ att, onDownload, dark }: { att: any; onDownload: () 
       <button onClick={onDownload} className="block rounded-xl overflow-hidden max-w-[200px] shadow-sm mt-1">
         {imgSrc
           ? <img src={imgSrc} alt={att.filename} className="max-w-full max-h-48 object-cover rounded-xl" />
-          : <div className="w-32 h-20 rounded-xl animate-pulse" style={{ background: dark ? 'rgba(255,255,255,0.15)' : '#e5e7eb' }} />
+          : (
+            <div className={`rounded-xl overflow-hidden ${dark ? 'bg-white/20' : 'bg-gray-100'}`}>
+              <div className="flex items-center gap-2 px-3 py-2">
+                <Loader2 size={13} className={`animate-spin flex-shrink-0 ${dark ? 'text-blue-200' : 'text-blue-400'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-medium truncate ${dark ? 'text-white' : 'text-gray-700'}`}>{att.filename}</p>
+                  <p className={`text-[10px] ${dark ? 'text-blue-200' : 'text-gray-400'}`}>
+                    {isFr ? 'Image · chargement...' : 'Image · loading...'}
+                  </p>
+                </div>
+              </div>
+              <div className={`h-1 ${dark ? 'bg-white/10' : 'bg-gray-200'}`}>
+                <div className={`h-full w-2/5 ${dark ? 'bg-blue-300' : 'bg-blue-400'} animate-pulse rounded-full`} />
+              </div>
+            </div>
+          )
         }
       </button>
     )
@@ -195,7 +211,10 @@ export default function AgentTicketActions({
 
   useEffect(() => {
     apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()).then(msgs => {
-      if (Array.isArray(msgs)) setMessages(msgs)
+      if (Array.isArray(msgs)) {
+        setMessages(msgs)
+        prevLenRef.current = msgs.length
+      }
     }).catch(() => {})
     apiFetch('/api/users/staff/mentions').then(r => r.json()).then(staff => {
       if (Array.isArray(staff)) setAllStaff(staff)
@@ -639,7 +658,7 @@ export default function AgentTicketActions({
               {msgAtts.length > 0 && (
                 <div className="flex flex-col gap-0.5">
                   {msgAtts.map((att: any) => (
-                    <AttachmentBubble key={att.id} att={att} onDownload={() => downloadFile(att)} dark={!isClient} />
+                    <AttachmentBubble key={att.id} att={att} onDownload={() => downloadFile(att)} dark={!isClient} locale={locale} />
                   ))}
                 </div>
               )}
