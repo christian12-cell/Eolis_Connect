@@ -8,48 +8,49 @@ interface CountryCode {
   flag: string
   name: string
   iso: string
-  min: number  // min local digits
-  max: number  // max local digits
+  min: number
+  max: number
+  placeholder: string  // example local number format
 }
 
 // 9 Eolis locations — always shown first
 const EOLIS_COUNTRIES: CountryCode[] = [
-  { code: '+237', flag: '🇨🇲', name: 'Cameroun',        iso: 'CM', min: 9,  max: 9  },
-  { code: '+225', flag: '🇨🇮', name: "Côte d'Ivoire",   iso: 'CI', min: 10, max: 10 },
-  { code: '+221', flag: '🇸🇳', name: 'Sénégal',         iso: 'SN', min: 9,  max: 9  },
-  { code: '+233', flag: '🇬🇭', name: 'Ghana',           iso: 'GH', min: 9,  max: 9  },
-  { code: '+212', flag: '🇲🇦', name: 'Maroc',           iso: 'MA', min: 9,  max: 9  },
-  { code: '+32',  flag: '🇧🇪', name: 'Belgique',        iso: 'BE', min: 8,  max: 9  },
-  { code: '+33',  flag: '🇫🇷', name: 'France',          iso: 'FR', min: 9,  max: 9  },
-  { code: '+39',  flag: '🇮🇹', name: 'Italie',          iso: 'IT', min: 9,  max: 10 },
-  { code: '+44',  flag: '🇬🇧', name: 'Royaume-Uni',     iso: 'GB', min: 10, max: 10 },
+  { code: '+237', flag: '🇨🇲', name: 'Cameroun',        iso: 'CM', min: 9,  max: 9,  placeholder: '6 XX XX XX XX' },
+  { code: '+225', flag: '🇨🇮', name: "Côte d'Ivoire",   iso: 'CI', min: 10, max: 10, placeholder: '07 XX XX XX XX' },
+  { code: '+221', flag: '🇸🇳', name: 'Sénégal',         iso: 'SN', min: 9,  max: 9,  placeholder: '7X XXX XX XX' },
+  { code: '+233', flag: '🇬🇭', name: 'Ghana',           iso: 'GH', min: 9,  max: 9,  placeholder: '24X XXX XXX' },
+  { code: '+212', flag: '🇲🇦', name: 'Maroc',           iso: 'MA', min: 9,  max: 9,  placeholder: '6XX XXX XXX' },
+  { code: '+32',  flag: '🇧🇪', name: 'Belgique',        iso: 'BE', min: 8,  max: 9,  placeholder: '4XX XX XX XX' },
+  { code: '+33',  flag: '🇫🇷', name: 'France',          iso: 'FR', min: 9,  max: 9,  placeholder: '6XX XXX XXX' },
+  { code: '+39',  flag: '🇮🇹', name: 'Italie',          iso: 'IT', min: 9,  max: 10, placeholder: '3XX XXX XXXX' },
+  { code: '+44',  flag: '🇬🇧', name: 'Royaume-Uni',     iso: 'GB', min: 10, max: 10, placeholder: '7XXX XXXXXX' },
 ]
 
 const OTHER_COUNTRIES: CountryCode[] = [
-  { code: '+223', flag: '🇲🇱', name: 'Mali',              iso: 'ML', min: 8, max: 8  },
-  { code: '+226', flag: '🇧🇫', name: 'Burkina Faso',      iso: 'BF', min: 8, max: 8  },
-  { code: '+227', flag: '🇳🇪', name: 'Niger',             iso: 'NE', min: 8, max: 8  },
-  { code: '+228', flag: '🇹🇬', name: 'Togo',              iso: 'TG', min: 8, max: 8  },
-  { code: '+229', flag: '🇧🇯', name: 'Bénin',             iso: 'BJ', min: 8, max: 8  },
-  { code: '+241', flag: '🇬🇦', name: 'Gabon',             iso: 'GA', min: 7, max: 7  },
-  { code: '+242', flag: '🇨🇬', name: 'Congo',             iso: 'CG', min: 9, max: 9  },
-  { code: '+243', flag: '🇨🇩', name: 'RD Congo',          iso: 'CD', min: 9, max: 9  },
-  { code: '+234', flag: '🇳🇬', name: 'Nigeria',           iso: 'NG', min: 10, max: 10 },
-  { code: '+254', flag: '🇰🇪', name: 'Kenya',             iso: 'KE', min: 9, max: 9  },
-  { code: '+255', flag: '🇹🇿', name: 'Tanzanie',          iso: 'TZ', min: 9, max: 9  },
-  { code: '+256', flag: '🇺🇬', name: 'Ouganda',           iso: 'UG', min: 9, max: 9  },
-  { code: '+27',  flag: '🇿🇦', name: 'Afrique du Sud',    iso: 'ZA', min: 9, max: 9  },
-  { code: '+213', flag: '🇩🇿', name: 'Algérie',           iso: 'DZ', min: 9, max: 9  },
-  { code: '+216', flag: '🇹🇳', name: 'Tunisie',           iso: 'TN', min: 8, max: 8  },
-  { code: '+20',  flag: '🇪🇬', name: 'Égypte',            iso: 'EG', min: 10, max: 10 },
-  { code: '+41',  flag: '🇨🇭', name: 'Suisse',            iso: 'CH', min: 9, max: 9  },
-  { code: '+34',  flag: '🇪🇸', name: 'Espagne',           iso: 'ES', min: 9, max: 9  },
-  { code: '+351', flag: '🇵🇹', name: 'Portugal',          iso: 'PT', min: 9, max: 9  },
-  { code: '+49',  flag: '🇩🇪', name: 'Allemagne',         iso: 'DE', min: 10, max: 11 },
-  { code: '+1',   flag: '🇺🇸', name: 'États-Unis / Canada', iso: 'US', min: 10, max: 10 },
-  { code: '+86',  flag: '🇨🇳', name: 'Chine',             iso: 'CN', min: 11, max: 11 },
-  { code: '+91',  flag: '🇮🇳', name: 'Inde',              iso: 'IN', min: 10, max: 10 },
-  { code: '+971', flag: '🇦🇪', name: 'Émirats arabes',    iso: 'AE', min: 9, max: 9  },
+  { code: '+223', flag: '🇲🇱', name: 'Mali',              iso: 'ML', min: 8, max: 8,  placeholder: 'XX XX XX XX' },
+  { code: '+226', flag: '🇧🇫', name: 'Burkina Faso',      iso: 'BF', min: 8, max: 8,  placeholder: 'XX XX XX XX' },
+  { code: '+227', flag: '🇳🇪', name: 'Niger',             iso: 'NE', min: 8, max: 8,  placeholder: 'XX XX XX XX' },
+  { code: '+228', flag: '🇹🇬', name: 'Togo',              iso: 'TG', min: 8, max: 8,  placeholder: 'XX XX XX XX' },
+  { code: '+229', flag: '🇧🇯', name: 'Bénin',             iso: 'BJ', min: 8, max: 8,  placeholder: 'XX XX XX XX' },
+  { code: '+241', flag: '🇬🇦', name: 'Gabon',             iso: 'GA', min: 7, max: 7,  placeholder: 'X XX XX XX' },
+  { code: '+242', flag: '🇨🇬', name: 'Congo',             iso: 'CG', min: 9, max: 9,  placeholder: 'XX XXX XXXX' },
+  { code: '+243', flag: '🇨🇩', name: 'RD Congo',          iso: 'CD', min: 9,  max: 9,  placeholder: 'XX XXX XXXX' },
+  { code: '+234', flag: '🇳🇬', name: 'Nigeria',           iso: 'NG', min: 10, max: 10, placeholder: '80X XXX XXXX' },
+  { code: '+254', flag: '🇰🇪', name: 'Kenya',             iso: 'KE', min: 9,  max: 9,  placeholder: '7XX XXX XXX' },
+  { code: '+255', flag: '🇹🇿', name: 'Tanzanie',          iso: 'TZ', min: 9,  max: 9,  placeholder: '7XX XXX XXX' },
+  { code: '+256', flag: '🇺🇬', name: 'Ouganda',           iso: 'UG', min: 9,  max: 9,  placeholder: '7XX XXX XXX' },
+  { code: '+27',  flag: '🇿🇦', name: 'Afrique du Sud',    iso: 'ZA', min: 9,  max: 9,  placeholder: '8X XXX XXXX' },
+  { code: '+213', flag: '🇩🇿', name: 'Algérie',           iso: 'DZ', min: 9,  max: 9,  placeholder: '5XX XXX XXX' },
+  { code: '+216', flag: '🇹🇳', name: 'Tunisie',           iso: 'TN', min: 8,  max: 8,  placeholder: '2X XXX XXX' },
+  { code: '+20',  flag: '🇪🇬', name: 'Égypte',            iso: 'EG', min: 10, max: 10, placeholder: '1XX XXX XXXX' },
+  { code: '+41',  flag: '🇨🇭', name: 'Suisse',            iso: 'CH', min: 9,  max: 9,  placeholder: '7X XXX XX XX' },
+  { code: '+34',  flag: '🇪🇸', name: 'Espagne',           iso: 'ES', min: 9,  max: 9,  placeholder: '6XX XXX XXX' },
+  { code: '+351', flag: '🇵🇹', name: 'Portugal',          iso: 'PT', min: 9,  max: 9,  placeholder: '9XX XXX XXX' },
+  { code: '+49',  flag: '🇩🇪', name: 'Allemagne',         iso: 'DE', min: 10, max: 11, placeholder: '1XX XXXXXXXX' },
+  { code: '+1',   flag: '🇺🇸', name: 'États-Unis / Canada', iso: 'US', min: 10, max: 10, placeholder: '2XX XXX XXXX' },
+  { code: '+86',  flag: '🇨🇳', name: 'Chine',             iso: 'CN', min: 11, max: 11, placeholder: '138 XXXX XXXX' },
+  { code: '+91',  flag: '🇮🇳', name: 'Inde',              iso: 'IN', min: 10, max: 10, placeholder: '98XX XXX XXX' },
+  { code: '+971', flag: '🇦🇪', name: 'Émirats arabes',    iso: 'AE', min: 9,  max: 9,  placeholder: '5X XXX XXXX' },
 ]
 
 const ALL_COUNTRIES = [...EOLIS_COUNTRIES, ...OTHER_COUNTRIES]
@@ -78,7 +79,7 @@ function isLocalValid(local: string, country: CountryCode): boolean {
   return digits.length >= country.min && digits.length <= country.max
 }
 
-export function PhoneInput({ value, onChange, onValidChange, placeholder = '6XX XXX XXX', required, className = '', inputClassName = '' }: Props) {
+export function PhoneInput({ value, onChange, onValidChange, placeholder, required, className = '', inputClassName = '' }: Props) {
   const { dialCode: initDial, local: initLocal } = parsePhone(value)
   const [dialCode, setDialCode] = useState(initDial)
   const [local, setLocal]       = useState(initLocal)
@@ -88,6 +89,7 @@ export function PhoneInput({ value, onChange, onValidChange, placeholder = '6XX 
   const dropRef = useRef<HTMLDivElement>(null)
 
   const selected = ALL_COUNTRIES.find(c => c.code === dialCode) ?? EOLIS_COUNTRIES[0]
+  const activePlaceholder = placeholder ?? selected.placeholder
   const valid = isLocalValid(local, selected)
 
   useEffect(() => {
@@ -228,7 +230,7 @@ export function PhoneInput({ value, onChange, onValidChange, placeholder = '6XX 
             value={local}
             onChange={e => handleLocal(e.target.value)}
             onBlur={() => setTouched(true)}
-            placeholder={placeholder}
+            placeholder={activePlaceholder}
             required={required}
             inputMode="numeric"
             className={`w-full px-3 py-2.5 pr-9 rounded-r-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white transition-colors ${
