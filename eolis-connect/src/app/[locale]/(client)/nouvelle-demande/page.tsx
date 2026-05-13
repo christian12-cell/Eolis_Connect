@@ -1183,6 +1183,18 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     if (blStep === 'describe') {
       const descCanNext = form.description.trim().length >= 10
       return (
+        <>
+        {showScanner && (
+          <ScannerModal
+            isFr={isFr}
+            onScan={file => {
+              setFiles(prev => [...prev, file])
+              setPreviews(prev => [...prev, 'pdf:' + file.name])
+              setShowScanner(false)
+            }}
+            onClose={() => setShowScanner(false)}
+          />
+        )}
         <MobileLayout locale={locale} title={t.descTitle} showBack>
           <div className="space-y-4">
             {BLProgress}
@@ -1203,10 +1215,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 <p className="text-xs text-blue-100">{t.uploadHint}</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => uploadRef.current?.click()}
-                  className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
+                <label className="relative flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70 cursor-pointer overflow-hidden">
                   <Upload size={16} /> {t.addFile}
-                </button>
+                  <input type="file" multiple
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    accept="image/*,application/pdf,.doc,.docx"
+                    onChange={e => { addFiles(e.target.files); (e.target as HTMLInputElement).value = '' }} />
+                </label>
                 <button onClick={() => { setScanVesselId(null); setShowScanner(true) }}
                   className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
                   <Camera size={16} /> {t.scan}
@@ -1225,6 +1240,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             </button>
           </div>
         </MobileLayout>
+        </>
       )
     }
 

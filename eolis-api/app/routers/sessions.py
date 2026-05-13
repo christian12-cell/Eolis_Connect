@@ -18,10 +18,11 @@ def get_sessions(
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
+    from sqlalchemy import text
     users = (
         db.query(User)
         .filter(User.status.in_(["ACTIVE", "PENDING"]))
-        .order_by(User.last_active_at.desc().nullslast())
+        .order_by(text("last_active_at DESC NULLS LAST"))
         .all()
     )
     now = datetime.utcnow()

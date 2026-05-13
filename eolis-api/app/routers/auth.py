@@ -39,7 +39,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    token = create_access_token({"sub": user.id, "role": user.role, "username": user.username})
+    token = create_access_token({"sub": user.id, "role": user.role, "username": user.username}, role=user.role)
     return {"access_token": token, "token_type": "bearer", "user": user}
 
 

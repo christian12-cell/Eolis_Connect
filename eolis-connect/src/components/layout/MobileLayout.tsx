@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle, BookOpen } from 'lucide-react'
 import { BottomNav } from './BottomNav'
-import { clearSession } from '@/lib/api-client'
+import { clearSession, isTokenExpired } from '@/lib/api-client'
 import { syncPending } from '@/lib/offline-sync'
 import { offlineDb } from '@/lib/offline-db'
 
@@ -44,6 +44,14 @@ export function MobileLayout({
   }
 
   useEffect(() => {
+    // Periodic session check — auto-logout when token expires
+    const sessionCheck = setInterval(() => {
+      if (isTokenExpired()) {
+        clearSession()
+        window.location.href = `/${locale}/login`
+      }
+    }, 60_000)
+
     // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {})
@@ -63,6 +71,7 @@ export function MobileLayout({
     window.addEventListener('online',  handleOnline)
     window.addEventListener('offline', handleOffline)
     return () => {
+      clearInterval(sessionCheck)
       window.removeEventListener('online',  handleOnline)
       window.removeEventListener('offline', handleOffline)
     }

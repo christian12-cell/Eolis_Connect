@@ -1,19 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Navbar } from './Navbar'
 import { Sidebar } from './Sidebar'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
+import { isTokenExpired, clearSession } from '@/lib/api-client'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
   locale: string
-  userName: string
+  userName?: string
   role: string
 }
 
-export function DashboardLayout({ children, locale, userName, role }: DashboardLayoutProps) {
+export function DashboardLayout({ children, locale, userName = '', role }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    const sessionCheck = setInterval(() => {
+      if (isTokenExpired()) {
+        clearSession()
+        window.location.href = `/${locale}/login`
+      }
+    }, 60_000)
+    return () => clearInterval(sessionCheck)
+  }, [locale])
 
   return (
     <div className="flex flex-col h-screen">

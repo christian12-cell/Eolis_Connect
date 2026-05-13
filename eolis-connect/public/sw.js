@@ -1,6 +1,13 @@
-const CACHE = 'eolis-v2'
+const CACHE = 'eolis-v3'
+const SHELL_URLS = ['/', '/fr/accueil', '/en/accueil']
 
-self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(cache => cache.addAll(SHELL_URLS).catch(() => {}))
+      .then(() => self.skipWaiting())
+  )
+})
 
 self.addEventListener('activate', e => {
   // Delete old cache versions
@@ -29,9 +36,11 @@ self.addEventListener('fetch', e => {
           })
           .catch(() => null)
 
-        // Navigation (page loads): network first, cache fallback
+        // Navigation (page loads): network first, cache fallback, then app shell
         if (e.request.mode === 'navigate') {
-          return network.then(r => r ?? cached ?? new Response('Offline', { status: 503 }))
+          return network.then(r => r ?? cached)
+            .then(r => r ?? caches.open(CACHE).then(c => c.match('/')))
+            .then(r => r ?? new Response('Offline', { status: 503 }))
         }
 
         // Assets (_next/static, images, fonts): cache first for speed

@@ -9,8 +9,12 @@ export function getToken(): string | null {
   return localStorage.getItem('eolis_token')
 }
 
+// sessionStorage is cleared when the app process is killed (RAM release, app close on mobile).
+// getUser() returns null without the session marker → page redirects to /login.
+// This forces re-authentication after app close even if the JWT hasn't expired yet.
 export function getUser(): any | null {
   if (typeof window === 'undefined') return null
+  if (!sessionStorage.getItem('eolis_session')) return null
   const raw = localStorage.getItem('eolis_user')
   return raw ? JSON.parse(raw) : null
 }
@@ -18,6 +22,7 @@ export function getUser(): any | null {
 export function saveSession(token: string, user: any) {
   localStorage.setItem('eolis_token', token)
   localStorage.setItem('eolis_user', JSON.stringify(user))
+  sessionStorage.setItem('eolis_session', '1')
 }
 
 export function isTokenExpired(): boolean {
@@ -44,6 +49,7 @@ export function checkSessionAndRedirect(locale = 'fr'): boolean {
 export function clearSession() {
   localStorage.removeItem('eolis_token')
   localStorage.removeItem('eolis_user')
+  sessionStorage.removeItem('eolis_session')
   // Clear IndexedDB API cache so next login sees fresh data
   try {
     indexedDB.deleteDatabase('eolis-offline')
@@ -67,6 +73,15 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     // Cache successful GET responses for offline use
     if (res.ok && method === 'GET') {
       res.clone().json().then(data => offlineDb.set(path, data)).catch(() => {})
+    }
+
+    // Auto-logout on 401 (token expired or revoked)
+    if (res.status === 401 && typeof window !== 'undefined') {
+      clearSession()
+      // Detect current locale from the URL
+      const localeSeg = window.location.pathname.split('/')[1]
+      const locale = ['fr', 'en'].includes(localeSeg) ? localeSeg : 'fr'
+      window.location.href = `/${locale}/login`
     }
 
     return res

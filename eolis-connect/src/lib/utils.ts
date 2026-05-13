@@ -88,7 +88,8 @@ export function getBrowserTimezone(): string {
 }
 
 // Treat bare ISO strings (no tz info) as UTC by appending 'Z'
-function normalizeDate(date: Date | string): Date {
+function normalizeDate(date: Date | string | null | undefined): Date {
+  if (!date) return new Date()
   if (date instanceof Date) return date
   if (!date.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(date)) {
     return new Date(date + 'Z')
@@ -102,7 +103,7 @@ export function startOfTodayWAT(): number {
   return new Date(dateStr + 'T00:00:00+01:00').getTime()
 }
 
-export function formatDate(date: Date | string, locale = 'fr') {
+export function formatDate(date: Date | string | null | undefined, locale = 'fr') {
   const d = normalizeDate(date)
   return d.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-GB', {
     day: '2-digit',
@@ -114,7 +115,7 @@ export function formatDate(date: Date | string, locale = 'fr') {
   })
 }
 
-export function timeAgo(date: Date | string, locale = 'fr') {
+export function timeAgo(date: Date | string | null | undefined, locale = 'fr') {
   const now = new Date()
   const d = normalizeDate(date)
   const diff = now.getTime() - d.getTime()

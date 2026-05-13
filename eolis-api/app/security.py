@@ -11,8 +11,12 @@ def hash_password(password: str) -> str:
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
-def create_access_token(data: dict) -> str:
-    expire = datetime.utcnow() + timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
+CLIENT_TOKEN_HOURS = 4
+STAFF_TOKEN_HOURS  = 7
+
+def create_access_token(data: dict, role: str = "CLIENT") -> str:
+    hours = CLIENT_TOKEN_HOURS if role == "CLIENT" else STAFF_TOKEN_HOURS
+    expire = datetime.utcnow() + timedelta(hours=hours)
     return jwt.encode({**data, "exp": expire}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def decode_token(token: str) -> dict:
