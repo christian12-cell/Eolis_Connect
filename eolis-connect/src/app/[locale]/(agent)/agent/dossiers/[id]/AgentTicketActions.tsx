@@ -161,6 +161,8 @@ export default function AgentTicketActions({
   const chatScrollRef   = useRef<HTMLDivElement>(null)
   const fileRef         = useRef<HTMLInputElement>(null)
   const prevLenRef      = useRef(0)
+  const [isScrolledUp, setIsScrolledUp]   = useState(false)
+  const [unreadWhileUp, setUnreadWhileUp] = useState(0)
 
   const t = {
     reopen:        isFr ? 'Réouvrir le dossier' : 'Reopen ticket',
@@ -253,13 +255,37 @@ export default function AgentTicketActions({
   }, [ticketId, takenByOther, currentAgentId, localAgentId])
 
   useEffect(() => {
-    if (messages.length > prevLenRef.current) {
-      const el = chatScrollRef.current
-      const nearBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 150
-      if (nearBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
+    const prev = prevLenRef.current
+    const newCount = messages.length - prev
     prevLenRef.current = messages.length
+    if (newCount <= 0) return
+    const el = chatScrollRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
+    if (nearBottom) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+      setUnreadWhileUp(0)
+      setIsScrolledUp(false)
+    } else {
+      setIsScrolledUp(true)
+      setUnreadWhileUp(p => p + newCount)
+    }
   }, [messages])
+
+  function handleAgentChatScroll() {
+    const el = chatScrollRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
+    if (nearBottom) { setIsScrolledUp(false); setUnreadWhileUp(0) }
+    else setIsScrolledUp(true)
+  }
+
+  function scrollAgentToBottom() {
+    const el = chatScrollRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    setIsScrolledUp(false)
+    setUnreadWhileUp(0)
+  }
 
   // ── Derived data ──────────────────────────────────────────────────────────
 
@@ -652,7 +678,7 @@ export default function AgentTicketActions({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col" style={{ height: '650px' }}>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col relative" style={{ height: '650px' }}>
 
       {/* ── Popup double prise en charge ── */}
       {takenByOther && (
@@ -759,7 +785,7 @@ export default function AgentTicketActions({
       )}
 
       {/* ── Messages ── */}
-      <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#F5F7FA]">
+      <div ref={chatScrollRef} onScroll={handleAgentChatScroll} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#F5F7FA] relative">
         {/* Info banner — message deletion */}
         <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-[11px] text-blue-500">
           <span>ℹ️</span>
@@ -777,7 +803,31 @@ export default function AgentTicketActions({
           </div>
         ) : displayMessages.map(renderMessage)}
         <div ref={bottomRef} />
+
+        {/* Bandeau nouveaux messages */}
+        {isScrolledUp && unreadWhileUp > 0 && (
+          <button onClick={scrollAgentToBottom}
+            className="sticky bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1B3A5C] text-white text-xs font-semibold shadow-lg mx-auto w-fit">
+            <span>↓</span>
+            {unreadWhileUp} {isFr ? 'nouveau' : 'new'}{unreadWhileUp > 1 && isFr ? 'x' : ''}
+          </button>
+        )}
       </div>
+
+      {/* Flèche scroll-to-bottom */}
+      {isScrolledUp && (
+        <button onClick={scrollAgentToBottom}
+          className="absolute bottom-24 right-4 z-20 w-9 h-9 rounded-full bg-[#1B3A5C] shadow-lg flex items-center justify-center">
+          {unreadWhileUp > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+              {unreadWhileUp > 9 ? '9+' : unreadWhileUp}
+            </span>
+          )}
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 2v10M3 8l4 4 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      )}
 
       {/* ── Input panels ── */}
       <div className="flex-shrink-0 border-t border-gray-100">

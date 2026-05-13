@@ -6,7 +6,7 @@ from .config import settings
 
 # Logo hosted on Imgur — replace with your own CDN URL for production
 LOGO_URL = "https://i.imgur.com/TdBWHcp.png"
-SUPPORT_PHONE = "+237 689 506 319"
+SUPPORT_EMAIL = "support@eolisconnect.online"
 
 
 def _send(to: str, subject: str, html: str):
@@ -81,7 +81,7 @@ def _template(content: str) -> str:
           <td colspan="2" style="padding-top:12px;">
             <table cellpadding="0" cellspacing="0">
               <tr>
-                <td style="padding-right:20px;font-size:11px;color:#6b7280;">📞 {SUPPORT_PHONE}</td>
+                <td style="padding-right:20px;font-size:11px;color:#6b7280;">📞 {SUPPORT_EMAIL}</td>
                 <td style="font-size:11px;color:#6b7280;">📧 <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;text-decoration:none;">{settings.MAIL_SUPPORT_FROM}</a></td>
               </tr>
             </table>
@@ -135,7 +135,7 @@ def send_welcome_client(to_email: str, first_name: str, username: str):
         </tr>
       </table>
 
-      <p style="margin:20px 0 0;font-size:13px;color:#9ca3af;">Des questions ? Notre équipe est disponible à <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a> ou au {SUPPORT_PHONE}.</p>
+      <p style="margin:20px 0 0;font-size:13px;color:#9ca3af;">Des questions ? Notre équipe est disponible à <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a> ou au {SUPPORT_EMAIL}.</p>
     """
     _send(to_email, subject, _template(content))
 
@@ -186,7 +186,7 @@ def send_account_approved(to_email: str, first_name: str, username: str):
         </tr>
       </table>
 
-      <p style="margin:0;font-size:13px;color:#9ca3af;">Des questions ? <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a> — {SUPPORT_PHONE}</p>
+      <p style="margin:0;font-size:13px;color:#9ca3af;">Des questions ? <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a> — {SUPPORT_EMAIL}</p>
     """
     _send(to_email, subject, _template(content))
 
@@ -202,7 +202,7 @@ def send_account_rejected(to_email: str, first_name: str):
         <tr>
           <td style="padding:18px 24px;">
             <p style="margin:0;font-size:14px;color:#7f1d1d;">Si vous pensez qu'il s'agit d'une erreur ou souhaitez plus d'informations, n'hésitez pas à nous contacter :</p>
-            <p style="margin:10px 0 0;font-size:14px;"><a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;font-weight:600;">{settings.MAIL_SUPPORT_FROM}</a> &nbsp;|&nbsp; <span style="color:#1B3A5C;font-weight:600;">{SUPPORT_PHONE}</span></p>
+            <p style="margin:10px 0 0;font-size:14px;"><a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;font-weight:600;">{settings.MAIL_SUPPORT_FROM}</a> &nbsp;|&nbsp; <span style="color:#1B3A5C;font-weight:600;">{SUPPORT_EMAIL}</span></p>
           </td>
         </tr>
       </table>
@@ -270,7 +270,7 @@ def send_account_created_by_admin(to_email: str, first_name: str, username: str,
         </tr>
       </table>
 
-      <p style="margin:0;font-size:13px;color:#9ca3af;">Besoin d'aide ? <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a> — {SUPPORT_PHONE}</p>
+      <p style="margin:0;font-size:13px;color:#9ca3af;">Besoin d'aide ? <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a> — {SUPPORT_EMAIL}</p>
     """
     _send(to_email, subject, _template(content))
 
@@ -292,7 +292,7 @@ def send_account_deleted(to_email: str, first_name: str):
             <p style="margin:10px 0 0;font-size:14px;">
               <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;font-weight:600;">{settings.MAIL_SUPPORT_FROM}</a>
               &nbsp;|&nbsp;
-              <span style="color:#1B3A5C;font-weight:600;">{SUPPORT_PHONE}</span>
+              <span style="color:#1B3A5C;font-weight:600;">{SUPPORT_EMAIL}</span>
             </p>
           </td>
         </tr>

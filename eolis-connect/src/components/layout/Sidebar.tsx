@@ -97,7 +97,7 @@ export function Sidebar({ locale, role, isOpen = true, onClose }: SidebarProps) 
       )}
 
       {/* Nav items */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {items.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (

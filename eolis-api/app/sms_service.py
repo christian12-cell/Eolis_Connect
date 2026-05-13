@@ -117,7 +117,7 @@ def sms_document_requested(client_phone: str, client_first_name: str, ticket_ref
 def sms_account_deleted(to: str, first_name: str):
     body = (
         f"Eolis Connect : Bonjour {first_name}, votre compte a ete supprime par l'administration. "
-        f"Contactez le support si necessaire : {'+237 689 506 319'}"
+        f"Contactez le support si necessaire : support@eolisconnect.online"
     )
     send_sms(to, body)
 

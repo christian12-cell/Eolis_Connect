@@ -358,8 +358,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
         apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
       ])
       setTicket(tk)
-      setMessages(Array.isArray(msgs) ? msgs : [])
-      // Mark agent messages as read (so agent's "not viewed" card disappears)
+      const msgArray = Array.isArray(msgs) ? msgs : []
+      setMessages(msgArray)
+      prevMsgLenRef.current = msgArray.length
       apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' }).catch(() => {})
     } catch {}
     setLoading(false)
