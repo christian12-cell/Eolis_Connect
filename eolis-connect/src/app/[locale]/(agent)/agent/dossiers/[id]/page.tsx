@@ -38,8 +38,19 @@ function parseVesselData(raw: string | null | undefined) {
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw)
-    // BL tickets store an object (not array) in vesselData — only arrays are multi-vessel logistics
     return Array.isArray(parsed) ? parsed : null
+  } catch { return null }
+}
+
+function parseBLData(raw: string | null | undefined): any | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed) && typeof parsed === 'object' &&
+        ('pickup' in parsed || 'turnIn' in parsed || 'bookingItems' in parsed || 'bookingNo' in parsed)) {
+      return parsed
+    }
+    return null
   } catch { return null }
 }
 
@@ -171,6 +182,7 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
         const parsedEquip = ticket.equipmentType ? parseEquipmentType(ticket.equipmentType) : null
         const parsedDesc  = ticket.description ? parseMultiDescription(ticket.description) : null
         const vesselLog   = parseVesselData(ticket.vesselData)
+        const blData      = parseBLData(ticket.vesselData)
         const hasLog      = ticket.shipLine || ticket.shipName || ticket.voyageNumber || ticket.shipDate || ticket.code || vesselLog
         const isFr        = locale === 'fr'
         const clientLang  = ticket.client?.language === 'en' ? 'en' : 'fr'
@@ -452,6 +464,157 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
                     )}
                   </div>
                 </CollapseCard>
+              )}
+
+              {/* BL / Booking Confirmation Eagle */}
+              {blData && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Paperclip size={15} className="text-[#4A8FC4]" />
+                      <h3 className="font-semibold text-gray-900 text-sm">Booking Confirmation Eagle</h3>
+                    </div>
+                  </CardHeader>
+                  <CardBody className="space-y-3 text-sm">
+                    {/* Références */}
+                    {(blData.bookingNo || blData.date || blData.customerRef || blData.service) && (
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Références</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                          {[
+                            { l: 'Booking no.', v: ticket.code || blData.bookingNo },
+                            { l: 'Date',         v: blData.date },
+                            { l: 'Customer ref', v: blData.customerRef },
+                            { l: 'Service',      v: blData.service },
+                          ].filter(f => f.v).map(f => (
+                            <div key={f.l}>
+                              <p className="text-[10px] text-gray-400">{f.l}</p>
+                              <p className="text-xs font-semibold text-gray-800">{f.v}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Navire */}
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">{isFr ? 'Navire & Voyage' : 'Vessel & Voyage'}</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                        {[
+                          { l: isFr ? 'Navire' : 'Vessel', v: ticket.shipName },
+                          { l: 'Voyage', v: ticket.voyageNumber },
+                          { l: 'ETS', v: ticket.shipDate },
+                          { l: 'ETA', v: blData.eta },
+                          { l: isFr ? 'Chargement' : 'Loading', v: blData.portOfLoading },
+                          { l: isFr ? 'Déchargement' : 'Discharge', v: blData.portOfDischarge },
+                          { l: isFr ? 'Lieu réception' : 'Place of receipt', v: blData.placeOfReceipt },
+                          { l: isFr ? 'Lieu livraison' : 'Place of delivery', v: blData.placeOfDelivery },
+                        ].filter(f => f.v).map(f => (
+                          <div key={f.l}>
+                            <p className="text-[10px] text-gray-400">{f.l}</p>
+                            <p className="text-xs font-semibold text-gray-800">{f.v}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Pickup */}
+                    {blData.pickup && (
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Pickup / Dépôt</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                          {[
+                            { l: 'Pickup ref', v: blData.pickup.reference },
+                            { l: isFr ? 'Qté' : 'Qty', v: blData.pickup.quantity != null ? String(blData.pickup.quantity) : null },
+                            { l: 'Size type', v: blData.pickup.sizeType },
+                            { l: 'Dépôt', v: blData.pickup.depot },
+                            { l: 'Container usage', v: blData.pickup.containerUsage },
+                            { l: 'Release date', v: blData.pickup.releaseDate },
+                          ].filter(f => f.v).map(f => (
+                            <div key={f.l}>
+                              <p className="text-[10px] text-gray-400">{f.l}</p>
+                              <p className="text-xs font-semibold text-gray-800">{f.v}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Turn in */}
+                    {blData.turnIn && (
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Turn in location</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                          {[
+                            { l: 'Turn in ref', v: blData.turnIn.reference },
+                            { l: 'Terminal', v: blData.turnIn.terminal },
+                            { l: 'Terminal closing', v: blData.turnIn.terminalClosing },
+                            { l: 'VGM closing', v: blData.turnIn.vgmClosing },
+                            { l: 'Customs closing', v: blData.turnIn.customsClosing },
+                          ].filter(f => f.v).map(f => (
+                            <div key={f.l}>
+                              <p className="text-[10px] text-gray-400">{f.l}</p>
+                              <p className="text-xs font-semibold text-gray-800">{f.v}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Booking items */}
+                    {blData.bookingItems?.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Booking items</p>
+                        {blData.bookingItems.map((it: any, i: number) => (
+                          <div key={i} className="rounded-xl bg-gray-50 border border-gray-100 p-3 mb-2">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                              {[
+                                { l: isFr ? 'Nb colis' : 'No. packs', v: it.noOfPacks != null ? String(it.noOfPacks) : null },
+                                { l: isFr ? 'Type colis' : 'Kind', v: it.kindOfPack },
+                                { l: isFr ? 'Marchandises' : 'Goods', v: it.descriptionOfGoods },
+                                { l: 'Liner terms', v: it.linerTerms },
+                                { l: isFr ? 'Poids (t)' : 'Weight (t)', v: it.grossWeightTons != null ? String(it.grossWeightTons) : null },
+                                { l: 'Mesure (cbm)', v: it.measurementCbm != null ? String(it.measurementCbm) : null },
+                              ].filter(f => f.v).map(f => (
+                                <div key={f.l} className={f.l === (isFr ? 'Marchandises' : 'Goods') ? 'col-span-2' : ''}>
+                                  <p className="text-[10px] text-gray-400">{f.l}</p>
+                                  <p className="text-xs font-semibold text-gray-800">{f.v}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Container details */}
+                    {blData.containerDetails?.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Container details</p>
+                        {blData.containerDetails.map((cd: any, i: number) => (
+                          <div key={i} className="rounded-xl bg-gray-50 border border-gray-100 p-3 mb-2">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                              {[
+                                { l: 'Container no', v: cd.containerNo },
+                                { l: 'Set point', v: cd.setPoint },
+                                { l: 'Vent', v: cd.vent },
+                                { l: 'Drains', v: cd.drains },
+                                { l: 'Humidity', v: cd.humidity },
+                                { l: isFr ? 'Remarques' : 'Remarks', v: cd.remarks },
+                              ].filter(f => f.v).map(f => (
+                                <div key={f.l}>
+                                  <p className="text-[10px] text-gray-400">{f.l}</p>
+                                  <p className="text-xs font-semibold text-gray-800">{f.v}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {blData.remarks && (
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">{isFr ? 'Remarques' : 'Remarks'}</p>
+                        <p className="text-xs text-gray-700">{blData.remarks}</p>
+                      </div>
+                    )}
+                  </CardBody>
+                </Card>
               )}
 
               {/* Description */}

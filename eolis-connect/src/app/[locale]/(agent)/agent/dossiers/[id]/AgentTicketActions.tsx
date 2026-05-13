@@ -211,7 +211,14 @@ export default function AgentTicketActions({
         apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
         apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()),
       ]).then(([msgs, tkt]) => {
-        if (Array.isArray(msgs)) setMessages(msgs)
+        // Preserve optimistic (pending) messages during poll
+        if (Array.isArray(msgs)) {
+          setMessages(prev => {
+            const serverIds = new Set(msgs.map((m: any) => m.id))
+            const stillPending = prev.filter(m => (m as any).pending && !serverIds.has(m.id))
+            return [...msgs, ...stillPending]
+          })
+        }
         if (tkt?.attachments) setAttachments(tkt.attachments)
         // Detect if ticket was taken by another agent while we were on the page
         if (tkt?.agentId && tkt.agentId !== currentAgentId && localAgentId !== tkt.agentId && !takenByOther) {

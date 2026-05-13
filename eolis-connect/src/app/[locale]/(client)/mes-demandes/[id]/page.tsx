@@ -251,11 +251,24 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
 
   useEffect(() => {
     if (!ticketId) return
-    const interval = setInterval(() => {
-      apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()).then(msgs => {
-        if (Array.isArray(msgs)) setMessages(msgs)
-      }).catch(() => {})
-    }, 6000)
+    const interval = setInterval(async () => {
+      try {
+        const [msgs, tkt] = await Promise.all([
+          apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
+          apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()),
+        ])
+        // Merge: preserve optimistic (pending) messages until server confirms them
+        if (Array.isArray(msgs)) {
+          setMessages(prev => {
+            const serverIds = new Set(msgs.map((m: any) => m.id))
+            const stillPending = prev.filter(m => (m as any).pending && !serverIds.has(m.id))
+            return [...msgs, ...stillPending]
+          })
+        }
+        // Update ticket status in real-time (agent assignment, closure, etc.)
+        if (tkt?.id) setTicket(tkt)
+      } catch {}
+    }, 3000)
     return () => clearInterval(interval)
   }, [ticketId])
 
