@@ -122,10 +122,18 @@ def download_attachment(
     if current_user.role == "CLIENT" and ticket and ticket.client_id != current_user.id:
         raise HTTPException(403, "Access denied")
 
-    # S3 — redirect to presigned URL
+    # S3 — stream through API (avoids CORS issues with direct S3 redirect)
     if attachment.url and attachment.url.startswith("s3://"):
-        presigned = _s3_presigned_url(attachment.url)
-        return RedirectResponse(url=presigned)
+        from fastapi.responses import Response as FastAPIResponse
+        key = attachment.url.replace(f"s3://{settings.AWS_S3_BUCKET}/", "")
+        s3 = _s3_client()
+        obj = s3.get_object(Bucket=settings.AWS_S3_BUCKET, Key=key)
+        content = obj["Body"].read()
+        return FastAPIResponse(
+            content=content,
+            media_type=attachment.mime_type or "application/octet-stream",
+            headers={"Content-Disposition": f'attachment; filename="{attachment.filename}"'},
+        )
 
     # Local disk
     if not attachment.url or not os.path.exists(attachment.url):

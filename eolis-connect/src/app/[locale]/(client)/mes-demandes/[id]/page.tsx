@@ -278,7 +278,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
         if (Array.isArray(msgs)) {
           setMessages(prev => {
             const serverIds = new Set(msgs.map((m: any) => m.id))
-            const stillPending = prev.filter(m => (m as any).pending && !serverIds.has(m.id))
+            const stillPending = prev.filter(m => {
+              if (!(m as any).pending) return false
+              if (serverIds.has(m.id)) return false
+              // Drop if server already has a message with same content (offline sync completed)
+              const confirmed = msgs.some((s: any) =>
+                s.content === m.content &&
+                s.senderType === m.senderType &&
+                Math.abs(new Date(s.createdAt).getTime() - new Date(m.createdAt).getTime()) < 120000
+              )
+              return !confirmed
+            })
             return [...msgs, ...stillPending]
           })
         }
@@ -489,7 +499,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       </div>
 
       {/* Header */}
-      <header className="flex-shrink-0 bg-white/15 backdrop-blur-md border-b border-white/10"
+      <header className="flex-shrink-0 sticky top-0 z-20 bg-white/15 backdrop-blur-md border-b border-white/10"
         style={{ boxShadow: '0 1px 12px rgba(0,0,0,0.15)' }}>
         <div className="flex items-center h-14 px-4 gap-3 max-w-lg mx-auto">
           <button onClick={() => router.back()}

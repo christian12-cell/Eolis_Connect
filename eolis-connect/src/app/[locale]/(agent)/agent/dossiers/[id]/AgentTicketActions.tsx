@@ -158,6 +158,7 @@ export default function AgentTicketActions({
   const [replyFiles, setReplyFiles]       = useState<File[]>([])
 
   const bottomRef       = useRef<HTMLDivElement>(null)
+  const chatScrollRef   = useRef<HTMLDivElement>(null)
   const fileRef         = useRef<HTMLInputElement>(null)
   const prevLenRef      = useRef(0)
 
@@ -249,7 +250,9 @@ export default function AgentTicketActions({
 
   useEffect(() => {
     if (messages.length > prevLenRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      const el = chatScrollRef.current
+      const nearBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 150
+      if (nearBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
     prevLenRef.current = messages.length
   }, [messages])
@@ -399,7 +402,7 @@ export default function AgentTicketActions({
         }
       }
     } catch {
-      // Offline — queue and show optimistically
+      // Offline — queue and keep the existing optimistic (tempId) — don't add another
       const storedFiles = filesToSend.length > 0
         ? await Promise.all(filesToSend.map(f => fileToStored(f)))
         : undefined
@@ -408,18 +411,9 @@ export default function AgentTicketActions({
         payload: { ticketId, content, senderType },
         files: storedFiles,
       })
-      const optimistic: any = {
-        id: `pending-${Date.now()}`,
-        senderId: currentAgentId,
-        senderType,
-        content,
-        sender: null,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        pending: true,
-        _pendingFileCount: filesToSend.length,
-      }
-      setMessages(prev => [...prev, optimistic])
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, _pendingFileCount: filesToSend.length } : m
+      ))
     }
 
     setText('')
@@ -758,7 +752,7 @@ export default function AgentTicketActions({
       )}
 
       {/* ── Messages ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#F5F7FA]">
+      <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#F5F7FA]">
         {/* Info banner — message deletion */}
         <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-[11px] text-blue-500">
           <span>ℹ️</span>

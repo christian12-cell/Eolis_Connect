@@ -84,7 +84,7 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
   const [ticket, setTicket] = useState<any>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState({ equip: true, log: true, desc: true, docs: true })
+  const [open, setOpen] = useState({ equip: true, log: true, desc: true, docs: true, bl: false })
   const [unreadCount, setUnreadCount] = useState(0)
   function tog(k: keyof typeof open) { setOpen(p => ({ ...p, [k]: !p[k] })) }
 
@@ -468,14 +468,8 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
 
               {/* BL / Booking Confirmation Eagle */}
               {blData && (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <Paperclip size={15} className="text-[#4A8FC4]" />
-                      <h3 className="font-semibold text-gray-900 text-sm">Booking Confirmation Eagle</h3>
-                    </div>
-                  </CardHeader>
-                  <CardBody className="space-y-3 text-sm">
+                <CollapseCard title="Booking Confirmation Eagle" icon={<Paperclip size={15} className="text-[#4A8FC4]" />} k="bl">
+                  <div className="space-y-3 text-sm">
                     {/* Références */}
                     {(blData.bookingNo || blData.date || blData.customerRef || blData.service) && (
                       <div>
@@ -613,8 +607,8 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
                         <p className="text-xs text-gray-700">{blData.remarks}</p>
                       </div>
                     )}
-                  </CardBody>
-                </Card>
+                  </div>
+                </CollapseCard>
               )}
 
               {/* Description */}
