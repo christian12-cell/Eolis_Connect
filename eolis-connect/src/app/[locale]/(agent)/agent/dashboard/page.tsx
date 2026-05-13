@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { StatusBadge, UrgencyBadge } from '@/components/ui/badge'
 import { StatCard } from '@/components/ui/card'
 import { timeAgo, startOfTodayWAT } from '@/lib/utils'
-import { AlertTriangle, FileText, Clock, CheckCircle, Search } from 'lucide-react'
+import { AlertTriangle, FileText, Clock, CheckCircle, Search, RefreshCw } from 'lucide-react'
 import { getUser, apiFetch } from '@/lib/api-client'
 
 const URGENCY_PRIORITY: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
@@ -18,24 +18,40 @@ export default function AgentDashboardPage({ params }: { params: Promise<{ local
   const [user, setUser] = useState<any>(null)
   const [allTickets, setAllTickets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [urgencyFilter, setUrgencyFilter] = useState('')
   const [search, setSearch] = useState('')
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
+
+  const loadTickets = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
+    try {
+      const [data] = await Promise.all([
+        apiFetch('/api/tickets').then(r => r.json()),
+        apiFetch('/api/notifications/check-final-unread', { method: 'POST' }).catch(() => {}),
+      ])
+      if (Array.isArray(data)) setAllTickets(data)
+      setLastRefresh(new Date())
+    } catch {}
+    setLoading(false)
+    setRefreshing(false)
+  }, [])
 
   useEffect(() => {
     const u = getUser()
     if (!u) { router.replace(`/${locale}/login`); return }
     if (!['AGENT', 'OPS_ADMIN', 'SYSTEM_ADMIN'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
     setUser(u)
-    Promise.all([
-      apiFetch('/api/tickets').then(r => r.json()),
-      apiFetch('/api/notifications/check-final-unread', { method: 'POST' }).catch(() => {}),
-    ]).then(([data]) => {
-      setAllTickets(data)
-      setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [locale])
+    loadTickets(false)
+
+    // Auto-refresh every 60s — silent (no loading flash, filters preserved)
+    intervalRef.current = setInterval(() => loadTickets(true), 60_000)
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+  }, [locale, loadTickets])
 
   const active = allTickets.filter(t => t.status === 'PENDING' || t.status === 'IN_PROGRESS')
 
@@ -133,8 +149,24 @@ export default function AgentDashboardPage({ params }: { params: Promise<{ local
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 card-shadow overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">{tx.queue} <span className="text-gray-400 font-normal text-sm">({filtered.length})</span></h2>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+          <h2 className="font-semibold text-gray-900">
+            {tx.queue} <span className="text-gray-400 font-normal text-sm">({filtered.length})</span>
+          </h2>
+          <div className="flex items-center gap-2">
+            {lastRefresh && (
+              <span className="text-xs text-gray-400">
+                {locale === 'fr' ? 'Mis à jour' : 'Updated'} {timeAgo(lastRefresh, locale)}
+              </span>
+            )}
+            <button
+              onClick={() => loadTickets(true)}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold transition-colors disabled:opacity-50">
+              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+              {locale === 'fr' ? 'Actualiser' : 'Refresh'}
+            </button>
+          </div>
         </div>
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center">
