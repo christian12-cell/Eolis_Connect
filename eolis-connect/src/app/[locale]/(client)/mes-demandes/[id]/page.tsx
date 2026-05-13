@@ -11,6 +11,7 @@ import {
 import { DocCardRow } from '@/components/ui/DocCard'
 import { ScannerModal } from '@/components/scanner/ScannerModal'
 import { getUser, apiFetch, apiUpload, getToken, apiUrl } from '@/lib/api-client'
+import { useTicketWS } from '@/lib/useTicketWS'
 import { offlineDb, fileToStored } from '@/lib/offline-db'
 import { formatDate } from '@/lib/utils'
 
@@ -248,6 +249,22 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
     setUser(u)
     loadData()
   }, [ticketId, locale])
+
+  // WebSocket — real-time updates (messages + ticket status)
+  useTicketWS(ticketId, {
+    onMessagesUpdated: () => {
+      if (!ticketId) return
+      apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()).then(msgs => {
+        if (Array.isArray(msgs)) setMessages(msgs)
+      }).catch(() => {})
+    },
+    onTicketUpdated: () => {
+      if (!ticketId) return
+      apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()).then(tkt => {
+        if (tkt?.id) setTicket(tkt)
+      }).catch(() => {})
+    },
+  })
 
   useEffect(() => {
     if (!ticketId) return

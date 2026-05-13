@@ -6,6 +6,7 @@ import {
   X, FileText, Download, Loader2, Plus, MessageSquare, Trash2,
 } from 'lucide-react'
 import { apiFetch, apiUpload, getToken, apiUrl } from '@/lib/api-client'
+import { useTicketWS } from '@/lib/useTicketWS'
 import { offlineDb, fileToStored } from '@/lib/offline-db'
 import { formatDate } from '@/lib/utils'
 import { DocCardRow } from '@/components/ui/DocCard'
@@ -201,9 +202,24 @@ export default function AgentTicketActions({
     apiFetch('/api/users/staff/mentions').then(r => r.json()).then(staff => {
       if (Array.isArray(staff)) setAllStaff(staff)
     }).catch(() => {})
-    // Mark client messages as read (clears unread indicator)
     apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' }).catch(() => {})
   }, [ticketId])
+
+  // WebSocket — real-time updates
+  useTicketWS(ticketId, {
+    onMessagesUpdated: () => {
+      apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()).then(msgs => {
+        if (Array.isArray(msgs)) setMessages(msgs)
+      }).catch(() => {})
+    },
+    onTicketUpdated: () => {
+      apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()).then(tkt => {
+        if (tkt?.attachments) setAttachments(tkt.attachments)
+        if (tkt?.status) setLocalStatus(tkt.status)
+        if (tkt?.agentId && tkt.agentId !== currentAgentId) setTakenByOther(true)
+      }).catch(() => {})
+    },
+  })
 
   useEffect(() => {
     const iv = setInterval(() => {

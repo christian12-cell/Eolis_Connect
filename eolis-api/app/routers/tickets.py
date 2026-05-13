@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from ..database import get_db
 from ..models import User, Ticket, Message, Notification, Log, AIUsage
+from ..ws_manager import ws_manager
 from ..schemas import TicketCreateRequest, TicketUpdateRequest, TicketResponse
 from ..deps import get_current_user
 from ..config import settings
@@ -118,6 +119,7 @@ def take_ticket(ticket_id: str, background_tasks: BackgroundTasks, current_user:
     db.add(Log(user_id=current_user.id, action="TAKE_TICKET", entity="Ticket", entity_id=ticket.id))
     db.commit()
     db.refresh(ticket)
+    background_tasks.add_task(ws_manager.broadcast, ticket_id, {"type": "ticket_updated", "ticketId": ticket_id})
     return ticket
 
 
@@ -133,4 +135,5 @@ def close_ticket(ticket_id: str, background_tasks: BackgroundTasks, current_user
     db.add(Log(user_id=current_user.id, action="CLOSE_TICKET", entity="Ticket", entity_id=ticket.id))
     db.commit()
     db.refresh(ticket)
+    background_tasks.add_task(ws_manager.broadcast, ticket_id, {"type": "ticket_updated", "ticketId": ticket_id})
     return ticket

@@ -7,6 +7,7 @@ from ..schemas import MessageCreateRequest, MessageResponse
 from ..deps import get_current_user
 from ..config import settings
 from ..sms_service import sms_final_response, sms_document_requested, sms_docs_submitted
+from ..ws_manager import ws_manager
 
 router = APIRouter(prefix="/tickets/{ticket_id}/messages", tags=["messages"])
 
@@ -247,6 +248,22 @@ def send_message(
 
     db.commit()
     db.refresh(msg)
+
+    # Broadcast real-time events to all WebSocket connections watching this ticket
+    event_type = "ticket_updated" if sender_type == "FINAL_RESPONSE" else "messages_updated"
+    background_tasks.add_task(ws_manager.broadcast, ticket_id, {
+        "type": event_type,
+        "ticketId": ticket_id,
+        "senderType": sender_type,
+    })
+    # Always also signal messages_updated so both sides refresh the list
+    if sender_type == "FINAL_RESPONSE":
+        background_tasks.add_task(ws_manager.broadcast, ticket_id, {
+            "type": "messages_updated",
+            "ticketId": ticket_id,
+            "senderType": sender_type,
+        })
+
     return msg
 
 
