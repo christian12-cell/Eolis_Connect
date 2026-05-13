@@ -638,8 +638,11 @@ export default function AgentTicketActions({
               </button>
             )}
           </div>
-          <span className="text-[10px] text-gray-400 px-1">
+          <span className="text-[10px] text-gray-400 px-1 flex items-center gap-1">
             {isPending ? '⏱ En attente...' : formatDate(msg.createdAt, locale)}
+            {isMine && !isPending && msg.isRead && (
+              <span className="font-medium">{isFr ? '· Lu' : '· Read'}</span>
+            )}
           </span>
         </div>
       </div>
