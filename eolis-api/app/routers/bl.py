@@ -178,6 +178,19 @@ async def extract_bl(
     }
 
 
+@router.get("/{bl_id}/raw")
+def get_bl_raw(
+    bl_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    bl = db.query(BLDocument).filter(BLDocument.id == bl_id, BLDocument.client_id == current_user.id).first()
+    if not bl:
+        raise HTTPException(404, "BL non trouvé")
+    raw = json.loads(bl.raw_extracted) if bl.raw_extracted else {}
+    return {"bl_id": bl.id, "raw": raw}
+
+
 @router.get("/my-bls")
 def list_my_bls(
     current_user: User = Depends(get_current_user),

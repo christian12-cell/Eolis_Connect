@@ -239,7 +239,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [pendingHadFiles, setPendingHadFiles] = useState(false)
 
   const [pageMode, setPageMode]         = useState<null | 'manual' | 'bl'>(null)
-  const [blStep, setBlStep]             = useState<'upload' | 'review' | 'category' | 'describe' | 'recap'>('upload')
+  const [blStep, setBlStep]             = useState<'pick' | 'upload' | 'review' | 'category' | 'describe' | 'recap'>('pick')
   const [blScanMode, setBlScanMode]     = useState(false)
   const [blUploading, setBlUploading]   = useState(false)
   const [blFields, setBlFields]         = useState<any>(null)
@@ -248,6 +248,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [blOpenSection, setBlOpenSection] = useState<Record<string,boolean>>({
     ref: true, vessel: true, pickup: true, turnin: false, items: true, containers: true, remarks: false,
   })
+  const [prevBLs, setPrevBLs]           = useState<any[] | null>(null)
+  const [prevBLsLoading, setPrevBLsLoading] = useState(false)
 
   const [openRecap, setOpenRecap] = useState<Record<string, boolean>>({
     cat: true, equip: true, log: true, desc: true,
@@ -389,6 +391,59 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
   // ── BL Upload ─────────────────────────────────────────────────────────────────
 
+  function buildBlFieldsFromRaw(r: any) {
+    const p  = r.pickup   || {}
+    const ti = r.turn_in  || {}
+    return {
+      bookingNo:       r.booking_no        || '',
+      date:            r.date              || '',
+      customerRef:     r.customer_ref      || '',
+      service:         r.service           || '',
+      vessel:          r.vessel            || '',
+      voyage:          r.voyage            || '',
+      ets:             r.ets               || '',
+      eta:             r.eta               || '',
+      portOfLoading:   r.port_of_loading   || '',
+      portOfDischarge: r.port_of_discharge || '',
+      placeOfReceipt:  r.place_of_receipt  || '',
+      placeOfDelivery: r.place_of_delivery || '',
+      pickup: {
+        reference:      p.reference       || '',
+        quantity:       String(p.quantity ?? ''),
+        sizeType:       p.size_type       || '',
+        depot:          p.depot           || '',
+        containerUsage: p.container_usage || '',
+        releaseDate:    p.release_date    || '',
+      },
+      turnIn: {
+        reference:       ti.reference        || '',
+        terminal:        ti.terminal         || '',
+        terminalClosing: ti.terminal_closing || '',
+        vgmClosing:      ti.vgm_closing      || '',
+        customsClosing:  ti.customs_closing  || '',
+      },
+      bookingItems: (r.booking_items || []).map((it: any) => ({
+        item:               String(it.item ?? ''),
+        noOfPacks:          String(it.no_of_packs ?? ''),
+        kindOfPack:         it.kind_of_pack         || '',
+        descriptionOfGoods: it.description_of_goods || '',
+        linerTerms:         it.liner_terms          || '',
+        imo:                it.imo                  || '',
+        grossWeightTons:    String(it.gross_weight_tons ?? ''),
+        measurementCbm:     String(it.measurement_cbm  ?? ''),
+      })),
+      containerDetails: (r.container_details || []).map((cd: any) => ({
+        containerNo: cd.container_no || '',
+        setPoint:    cd.set_point    || '',
+        vent:        cd.vent         || '',
+        drains:      cd.drains       || '',
+        humidity:    cd.humidity     || '',
+        remarks:     cd.remarks      || '',
+      })),
+      remarks: r.remarks || '',
+    }
+  }
+
   async function handleBLFile(file: File) {
     setBlError(null)
     setBlUploading(true)
@@ -398,57 +453,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       const res = await apiUpload('/api/bl/extract', fd)
       if (res.ok) {
         const data = await res.json()
-        const r = data.raw || {}
-        const p = r.pickup || {}
-        const ti = r.turn_in || {}
-        setBlFields({
-          bookingNo:       r.booking_no    || '',
-          date:            r.date          || '',
-          customerRef:     r.customer_ref  || '',
-          service:         r.service       || '',
-          vessel:          r.vessel        || '',
-          voyage:          r.voyage        || '',
-          ets:             r.ets           || '',
-          eta:             r.eta           || '',
-          portOfLoading:   r.port_of_loading   || '',
-          portOfDischarge: r.port_of_discharge || '',
-          placeOfReceipt:  r.place_of_receipt  || '',
-          placeOfDelivery: r.place_of_delivery || '',
-          pickup: {
-            reference:      p.reference       || '',
-            quantity:       String(p.quantity ?? ''),
-            sizeType:       p.size_type       || '',
-            depot:          p.depot           || '',
-            containerUsage: p.container_usage || '',
-            releaseDate:    p.release_date    || '',
-          },
-          turnIn: {
-            reference:       ti.reference        || '',
-            terminal:        ti.terminal         || '',
-            terminalClosing: ti.terminal_closing || '',
-            vgmClosing:      ti.vgm_closing      || '',
-            customsClosing:  ti.customs_closing  || '',
-          },
-          bookingItems: (r.booking_items || []).map((it: any) => ({
-            item:               String(it.item ?? ''),
-            noOfPacks:          String(it.no_of_packs ?? ''),
-            kindOfPack:         it.kind_of_pack         || '',
-            descriptionOfGoods: it.description_of_goods || '',
-            linerTerms:         it.liner_terms          || '',
-            imo:                it.imo                  || '',
-            grossWeightTons:    String(it.gross_weight_tons ?? ''),
-            measurementCbm:     String(it.measurement_cbm ?? ''),
-          })),
-          containerDetails: (r.container_details || []).map((cd: any) => ({
-            containerNo: cd.container_no || '',
-            setPoint:    cd.set_point    || '',
-            vent:        cd.vent         || '',
-            drains:      cd.drains       || '',
-            humidity:    cd.humidity     || '',
-            remarks:     cd.remarks      || '',
-          })),
-          remarks: r.remarks || '',
-        })
+        setBlFields(buildBlFieldsFromRaw(data.raw || {}))
         setBlStep('review')
       } else {
         const err = await res.json().catch(() => ({}))
@@ -458,6 +463,19 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       setBlError(isFr ? 'Erreur réseau. Vérifiez votre connexion.' : 'Network error. Check your connection.')
     }
     setBlUploading(false)
+  }
+
+  async function handleBLReuse(blId: string) {
+    setPrevBLsLoading(true)
+    try {
+      const res = await apiFetch(`/api/bl/${blId}/raw`)
+      if (res.ok) {
+        const data = await res.json()
+        setBlFields(buildBlFieldsFromRaw(data.raw || {}))
+        setBlStep('review')
+      }
+    } catch {}
+    setPrevBLsLoading(false)
   }
 
   async function handleBLUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -483,13 +501,33 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   function resetBL() {
     setBlFields(null)
     setBlVesselData(null)
-    setBlStep('upload')
+    setBlStep(prevBLs && prevBLs.length > 0 ? 'pick' : 'upload')
     setBlError(null)
     setForm(prev => ({
       ...prev,
       shipName: '', voyageNumber: '', shipDate: '', code: '',
       equipmentType: '', equipmentOther: '', description: '',
     }))
+  }
+
+  async function enterBLMode() {
+    setPageMode('bl')
+    setBlStep('pick')
+    setPrevBLs(null)
+    try {
+      const res = await apiFetch('/api/bl/my-bls')
+      if (res.ok) {
+        const data = await res.json()
+        setPrevBLs(Array.isArray(data) ? data : [])
+        if (!Array.isArray(data) || data.length === 0) setBlStep('upload')
+      } else {
+        setPrevBLs([])
+        setBlStep('upload')
+      }
+    } catch {
+      setPrevBLs([])
+      setBlStep('upload')
+    }
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────────
@@ -814,7 +852,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               </div>
             </div>
           </button>
-          <button onClick={() => setPageMode('bl')}
+          <button onClick={enterBLMode}
             className="w-full bg-white/10 border-2 border-[#4A8FC4]/60 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-[#4A8FC4]/30 flex items-center justify-center flex-shrink-0">
@@ -848,6 +886,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       ? ['Vérification', 'Catégorie', 'Description', 'Récap']
       : ['Review', 'Category', 'Description', 'Recap']
     const blStepIdx = blStep === 'review' ? 0 : blStep === 'category' ? 1 : blStep === 'describe' ? 2 : blStep === 'recap' ? 3 : -1
+    // 'pick' and 'upload' are pre-flow steps — no progress bar
     const BLProgress = blStepIdx >= 0 ? (
       <div className="flex gap-1 mb-5">
         {BL_STEPS.map((label, i) => (
@@ -859,9 +898,80 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       </div>
     ) : null
 
+    // Step 0 : Pick previous BL or start fresh
+    if (blStep === 'pick') {
+      return (
+        <MobileLayout locale={locale} title={isFr ? 'Upload BL Eagle' : 'Upload Eagle BL'} showBack>
+          <div className="space-y-4">
+            <div className="bg-white/10 rounded-2xl px-4 py-4 border border-white/20 text-center">
+              <p className="text-sm font-bold text-white mb-1">
+                {isFr ? 'Votre demande est-elle liée à l\'un de vos Booking ?' : 'Is your request related to one of your previous Bookings?'}
+              </p>
+              <p className="text-xs text-blue-200">
+                {isFr ? 'Sélectionnez le BL concerné pour un remplissage automatique instantané' : 'Select the relevant BL for instant auto-fill'}
+              </p>
+            </div>
+
+            {prevBLs === null ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="w-8 h-8 rounded-full border-4 border-white/20 border-t-[#4A8FC4] animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {prevBLs.map(bl => (
+                  <button key={bl.id}
+                    onClick={() => handleBLReuse(bl.id)}
+                    disabled={prevBLsLoading}
+                    className="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-left active:bg-white/20 transition-all disabled:opacity-50">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-white font-mono">{bl.bookingNo || '—'}</p>
+                        <p className="text-xs text-[#4A8FC4] font-semibold mt-0.5 truncate">{bl.vessel || '—'}</p>
+                        <p className="text-[10px] text-blue-200 mt-1">
+                          {bl.portOfLoading} → {bl.portOfDischarge}
+                          {bl.ets ? ` · ETS ${bl.ets}` : ''}
+                        </p>
+                      </div>
+                      {prevBLsLoading ? (
+                        <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin flex-shrink-0 mt-1" />
+                      ) : (
+                        <ChevronRight size={18} className="text-white/50 flex-shrink-0 mt-1" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button onClick={() => setBlStep('upload')}
+              className="w-full py-3.5 rounded-2xl border-2 border-white/30 text-white font-semibold text-sm flex items-center justify-center gap-2">
+              <Upload size={16} />
+              {isFr ? 'Non, importer un nouveau BL' : 'No, import a new BL'}
+            </button>
+            <button onClick={() => setPageMode(null)}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
+              ← {isFr ? 'Retour' : 'Back'}
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
     // Step 1 : Upload
     if (blStep === 'upload') {
       return (
+        <>
+        {showScanner && (
+          <ScannerModal
+            isFr={isFr}
+            onScan={file => {
+              handleBLFile(file)
+              setBlScanMode(false)
+              setShowScanner(false)
+            }}
+            onClose={() => { setShowScanner(false); setBlScanMode(false) }}
+          />
+        )}
         <MobileLayout locale={locale} title={isFr ? 'Upload BL' : 'Upload BL'} showBack>
           <div className="space-y-4">
             <div className="bg-white/10 rounded-2xl px-4 py-4 border border-white/20">
@@ -883,7 +993,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
             {!blUploading && !blError && (
               <>
-                <label className="flex flex-col items-center justify-center w-full py-10 rounded-2xl border-2 border-dashed border-white/40 bg-white/5 cursor-pointer active:bg-white/10 transition-colors gap-3">
+                <label className="relative flex flex-col items-center justify-center w-full py-10 rounded-2xl border-2 border-dashed border-white/40 bg-white/5 active:bg-white/10 transition-colors gap-3 overflow-hidden cursor-pointer">
                   <div className="w-14 h-14 rounded-2xl bg-[#4A8FC4]/20 flex items-center justify-center">
                     <Upload size={28} className="text-[#4A8FC4]" />
                   </div>
@@ -891,7 +1001,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     <p className="text-white font-semibold text-sm mb-0.5">{isFr ? 'Importer un PDF' : 'Import a PDF'}</p>
                     <p className="text-blue-200 text-xs">PDF · max 10 MB</p>
                   </div>
-                  <input type="file" className="sr-only" accept="application/pdf" onChange={handleBLUpload} />
+                  <input type="file"
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    accept="application/pdf"
+                    onChange={e => { handleBLUpload(e); (e.target as HTMLInputElement).value = '' }} />
                 </label>
                 <button onClick={() => { setBlScanMode(true); setShowScanner(true) }}
                   className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border-2 border-white/40 bg-white/5 active:bg-white/10 transition-colors">
@@ -930,12 +1043,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               </div>
             )}
 
-            <button onClick={() => setPageMode(null)}
+            <button onClick={() => prevBLs && prevBLs.length > 0 ? setBlStep('pick') : setPageMode(null)}
               className="w-full py-3 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
               ← {isFr ? 'Retour' : 'Back'}
             </button>
           </div>
         </MobileLayout>
+        </>
       )
     }
 
