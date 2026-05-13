@@ -228,12 +228,16 @@ export default function AgentTicketActions({
         apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
         apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()),
       ]).then(([msgs, tkt]) => {
-        // Preserve optimistic (pending) messages during poll
         if (Array.isArray(msgs)) {
           setMessages(prev => {
             const serverIds = new Set(msgs.map((m: any) => m.id))
+            const prevById = new Map(prev.map(m => [m.id, m]))
+            const mergedMsgs = msgs.map((m: any) => {
+              const local = prevById.get(m.id) as any
+              return local?._localFiles?.length ? { ...m, _localFiles: local._localFiles } : m
+            })
             const stillPending = prev.filter(m => (m as any).pending && !serverIds.has(m.id))
-            return [...msgs, ...stillPending]
+            return [...mergedMsgs, ...stillPending]
           })
         }
         if (tkt?.attachments) setAttachments(tkt.attachments)

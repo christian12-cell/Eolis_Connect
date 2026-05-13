@@ -231,9 +231,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const [scanTarget, setScanTarget] = useState<{ msgId: string; slotIdx: number } | null>(null)
   const [clientFiles, setClientFiles] = useState<File[]>([])
   const [open, setOpen] = useState({ equip: true, log: true, desc: true, docs: true, bl: true })
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef     = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const prevMsgLenRef = useRef(0)
+  const chatInnerRef       = useRef<HTMLDivElement>(null)
+  const prevMsgLenRef      = useRef(0)
 
   function toggle(k: keyof typeof open) {
     setOpen(prev => ({ ...prev, [k]: !prev[k] }))
@@ -278,10 +279,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
         if (Array.isArray(msgs)) {
           setMessages(prev => {
             const serverIds = new Set(msgs.map((m: any) => m.id))
-            const stillPending = prev.filter(m => {
-              if (!(m as any).pending) return false
+            const prevById = new Map(prev.map(m => [m.id, m]))
+            // Preserve _localFiles on server messages still uploading
+            const mergedMsgs = msgs.map((m: any) => {
+              const local = prevById.get(m.id) as any
+              return local?._localFiles?.length ? { ...m, _localFiles: local._localFiles } : m
+            })
+            const stillPending = prev.filter((m: any) => {
+              if (!m.pending) return false
               if (serverIds.has(m.id)) return false
-              // Drop if server already has a message with same content (offline sync completed)
               const confirmed = msgs.some((s: any) =>
                 s.content === m.content &&
                 s.senderType === m.senderType &&
@@ -289,7 +295,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
               )
               return !confirmed
             })
-            return [...msgs, ...stillPending]
+            return [...mergedMsgs, ...stillPending]
           })
         }
         // Update ticket status in real-time (agent assignment, closure, etc.)
@@ -303,9 +309,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
     const newMsgArrived = messages.length > prevMsgLenRef.current
     prevMsgLenRef.current = messages.length
     if (!newMsgArrived) return
-    const el = scrollContainerRef.current
-    const nearBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 150
-    if (nearBottom) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Scroll only the inner chat box — never the outer page
+    const el = chatInnerRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
+    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
   async function loadData() {
@@ -937,7 +945,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
               <p className="text-sm font-bold text-white flex-1">{isFr ? 'Échanges' : 'Messages'}</p>
               <span className="text-xs text-blue-300 font-medium">{messages.length}</span>
             </div>
-            <div className="bg-[#EDF4FB] flex-1 overflow-y-auto px-3 py-3 space-y-2">
+            <div ref={chatInnerRef} className="bg-[#EDF4FB] flex-1 overflow-y-auto px-3 py-3 space-y-2">
               {/* Info banner — message deletion */}
               <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-[11px] text-blue-500">
                 <span>ℹ️</span>
