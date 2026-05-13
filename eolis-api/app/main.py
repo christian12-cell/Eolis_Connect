@@ -1,6 +1,10 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from .limiter import limiter
 from sqlalchemy import text
 from .config import settings
 from .database import engine
@@ -8,6 +12,10 @@ from .models import Base
 from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config, ws
 
 app = FastAPI(title="Eolis Connect API", version="1.0.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,6 +24,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(otp.router, prefix="/api")
@@ -159,7 +178,5 @@ def root():
 def debug_config():
     return {
         "openai_configured": bool(settings.OPENAI_API_KEY),
-        "openai_key_prefix": settings.OPENAI_API_KEY[:8] + "..." if settings.OPENAI_API_KEY else "EMPTY",
         "openai_model": settings.OPENAI_MODEL,
-        "allowed_origins": settings.ALLOWED_ORIGINS,
     }
