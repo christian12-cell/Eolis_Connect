@@ -11,7 +11,7 @@ import {
 
 // ── ProofViewer: fetch avec auth, affiche image ou PDF ─────────────────────────
 
-function ProofViewer({ requestId, filename }: { requestId: string; filename?: string }) {
+function ProofViewer({ requestId, filename, isFr }: { requestId: string; filename?: string; isFr?: boolean }) {
   const [blobUrl, setBlobUrl]   = useState<string | null>(null)
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState(false)
@@ -24,6 +24,7 @@ function ProofViewer({ requestId, filename }: { requestId: string; filename?: st
       headers: { Authorization: `Bearer ${token ?? ''}` },
     })
       .then(r => {
+        if (!r.ok) throw new Error('not_found')
         const ct = r.headers.get('content-type') || ''
         setIsPdf(ct.includes('pdf'))
         return r.blob()
@@ -47,7 +48,7 @@ function ProofViewer({ requestId, filename }: { requestId: string; filename?: st
 
   if (error || !blobUrl) return (
     <div className="flex items-center justify-center h-16 bg-gray-50 rounded-xl text-xs text-gray-400">
-      Fichier introuvable
+      {isFr ? 'Fichier introuvable' : 'File not found'}
     </div>
   )
 
@@ -72,7 +73,7 @@ function ProofViewer({ requestId, filename }: { requestId: string; filename?: st
         className="w-full max-h-64 object-contain rounded-xl border border-gray-100 bg-gray-50" />
       <a href={blobUrl} target="_blank" rel="noreferrer"
         className="absolute top-2 right-2 flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">
-        <ExternalLink size={11} /> Agrandir
+        <ExternalLink size={11} /> {isFr ? 'Agrandir' : 'Expand'}
       </a>
     </div>
   )
@@ -266,7 +267,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                         {proofOpen === r.id ? '▲' : '▼'} {isFr ? 'Justificatif' : 'Proof'}
                       </button>
                       {proofOpen === r.id && (
-                        <ProofViewer requestId={r.id} filename={r.photoUrl?.split('/').pop()} />
+                        <ProofViewer requestId={r.id} filename={r.photoUrl?.split('/').pop()} isFr={isFr} />
                       )}
                     </div>
 

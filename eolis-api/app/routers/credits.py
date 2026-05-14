@@ -2,6 +2,7 @@ import io
 import os
 import uuid
 import mimetypes
+import boto3
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -19,20 +20,42 @@ ORANGE_NUMBER = "689 506 319"
 MTN_NUMBER    = "676 652 945"
 ACCOUNT_NAME  = "Blandine Denmeko"
 
-# ── Upload helper (reuse S3/local pattern from attachments) ────────────────────
+# ── S3 helpers (mirror attachments.py) ────────────────────────────────────────
 
-def _save_photo(content: bytes, filename: str) -> str:
-    if getattr(settings, "USE_S3", False):
-        import boto3, io
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_REGION,
-        )
+def _s3_client():
+    return boto3.client(
+        "s3",
+        region_name=settings.AWS_REGION,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    )
+
+
+def _upload_proof(content: bytes, key: str, mime_type: str) -> str:
+    s3 = _s3_client()
+    s3.put_object(
+        Bucket=settings.AWS_S3_BUCKET,
+        Key=key,
+        Body=content,
+        ContentType=mime_type or "application/octet-stream",
+    )
+    return f"s3://{settings.AWS_S3_BUCKET}/{key}"
+
+
+def _proof_presigned_url(s3_uri: str) -> str:
+    key = s3_uri.replace(f"s3://{settings.AWS_S3_BUCKET}/", "")
+    s3  = _s3_client()
+    return s3.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.AWS_S3_BUCKET, "Key": key},
+        ExpiresIn=3600,
+    )
+
+
+def _save_photo(content: bytes, filename: str, mime_type: str = "") -> str:
+    if settings.USE_S3:
         key = f"credit-proofs/{uuid.uuid4()}-{filename}"
-        s3.upload_fileobj(io.BytesIO(content), settings.AWS_S3_BUCKET, key)
-        return f"s3://{settings.AWS_S3_BUCKET}/{key}"
+        return _upload_proof(content, key, mime_type)
     os.makedirs("uploads/credit-proofs", exist_ok=True)
     path = f"uploads/credit-proofs/{uuid.uuid4()}-{filename}"
     with open(path, "wb") as f:
@@ -72,7 +95,7 @@ async def submit_request(
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(413, "Photo trop volumineuse (max 10 Mo)")
 
-    photo_url = _save_photo(content, photo.filename or "proof.jpg")
+    photo_url = _save_photo(content, photo.filename or "proof.jpg", photo.content_type or "")
 
     req = CreditRequest(
         client_id=current_user.id,
@@ -81,6 +104,19 @@ async def submit_request(
         status="pending",
     )
     db.add(req)
+    db.flush()
+
+    # Notify all admins
+    client_name = f"{current_user.first_name} {current_user.last_name}"
+    admins = db.query(User).filter(User.role.in_(["SYSTEM_ADMIN", "OPS_ADMIN"])).all()
+    for admin in admins:
+        db.add(Notification(
+            user_id=admin.id,
+            type="CREDIT_REQUEST_NEW",
+            title="Nouvelle demande de recharge",
+            message=f"{client_name} a soumis une demande de {int(amount_declared)} FCFA.",
+        ))
+
     db.commit()
     db.refresh(req)
     return {"id": req.id, "status": "pending"}
@@ -217,26 +253,16 @@ def get_proof_photo(
 ):
     req = db.query(CreditRequest).filter(CreditRequest.id == request_id).first()
     if not req:
-        raise HTTPException(404)
+        raise HTTPException(404, "Request not found")
 
     photo_url = req.photo_url
 
     if photo_url.startswith("s3://"):
-        import boto3
-        parts  = photo_url[5:].split("/", 1)
-        bucket = parts[0]
-        key    = parts[1] if len(parts) > 1 else ""
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=getattr(settings, "AWS_ACCESS_KEY_ID", ""),
-            aws_secret_access_key=getattr(settings, "AWS_SECRET_ACCESS_KEY", ""),
-            region_name=getattr(settings, "AWS_REGION", "eu-west-3"),
-        )
-        url = s3.generate_presigned_url("get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=300)
+        url = _proof_presigned_url(photo_url)
         return RedirectResponse(url)
 
     if not os.path.exists(photo_url):
-        raise HTTPException(404, "Fichier introuvable")
+        raise HTTPException(404, "File not found")
 
     content_type = mimetypes.guess_type(photo_url)[0] or "application/octet-stream"
     with open(photo_url, "rb") as f:
