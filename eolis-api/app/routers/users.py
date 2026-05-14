@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from ..database import get_db
-from ..models import User, Ticket, Message, Notification, Attachment, SatisfactionRating, OtpCode, PasswordReset, Log, AccountSetupToken, AIUsage, BLDocument
+from ..models import User, Ticket, Message, Notification, Attachment, SatisfactionRating, OtpCode, PasswordReset, Log, AccountSetupToken, AIUsage, BLDocument, CreditBalance, CreditRequest
+from ..credit_service import FREE_CREDITS_ON_SIGNUP
 from ..schemas import UserResponse, UserUpdateRequest, CreateUserRequest
 from ..deps import get_current_user, require_roles
 from ..security import hash_password, verify_password
@@ -247,7 +248,7 @@ def reset_database(
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
-    """Delete all operational data (tickets, messages, logs…). Never deletes user accounts. SYSTEM_ADMIN only."""
+    """Delete all operational + financial data. Resets credit balances to FREE_CREDITS_ON_SIGNUP. Never deletes user accounts. SYSTEM_ADMIN only."""
     # Delete in dependency order (children before parents)
     db.query(SatisfactionRating).delete()
     db.query(Attachment).delete()
@@ -259,6 +260,12 @@ def reset_database(
     db.query(AIUsage).delete()
     db.query(BLDocument).delete()
     db.query(Ticket).delete()
+
+    # Reset financial data
+    db.query(CreditRequest).delete()
+    for bal in db.query(CreditBalance).all():
+        bal.credits_total = FREE_CREDITS_ON_SIGNUP
+        bal.credits_used  = 0.0
     db.commit()
 
-    return {"reset": True, "deleted": "operational_data_only"}
+    return {"reset": True, "deleted": "all_data_credits_reset_to_free"}
