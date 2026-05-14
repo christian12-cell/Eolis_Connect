@@ -217,6 +217,7 @@ class MessageResponse(BaseModel):
     deleted_at: Optional[UTCDatetime] = None
     created_at: UTCDatetime
     sender: Optional[UserResponse] = None
+    attachment_count: int = 0
 
     model_config = camel_config()
 

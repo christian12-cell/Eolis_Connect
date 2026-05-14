@@ -658,6 +658,7 @@ export default function AgentTicketActions({
     const msgAtts = attachments.filter((a: any) => a.messageId === msg.id)
     const localFiles: File[] = (msg as any)._localFiles ?? []
     const showLocal = localFiles.length > 0 && msgAtts.length === 0
+    const showAttachmentPlaceholder = !showLocal && msgAtts.length === 0 && (msg as any).attachmentCount > 0
 
     return (
       <div key={msg.id} className={`flex ${isClient ? 'justify-start' : 'justify-end'}`}>
@@ -680,6 +681,24 @@ export default function AgentTicketActions({
                   {localFiles.map((f, i) => (
                     <FilePreview key={i} file={f} uploading />
                   ))}
+                </div>
+              )}
+              {showAttachmentPlaceholder && (
+                <div className={`rounded-xl overflow-hidden mt-1 ${isClient ? 'bg-white/20' : 'bg-gray-100'}`}>
+                  <div className="flex items-center gap-2 px-3 py-2">
+                    <Loader2 size={13} className={`animate-spin flex-shrink-0 ${isClient ? 'text-blue-200' : 'text-blue-400'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-medium ${isClient ? 'text-white' : 'text-gray-700'}`}>
+                        {isFr ? 'Document joint' : 'Attached file'}
+                      </p>
+                      <p className={`text-[10px] ${isClient ? 'text-blue-200' : 'text-gray-400'}`}>
+                        {isFr ? 'Chargement...' : 'Loading...'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`h-1 ${isClient ? 'bg-white/10' : 'bg-gray-200'}`}>
+                    <div className={`h-full w-2/5 rounded-full animate-pulse ${isClient ? 'bg-blue-300' : 'bg-blue-400'}`} />
+                  </div>
                 </div>
               )}
             </div>

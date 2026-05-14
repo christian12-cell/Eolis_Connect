@@ -2,7 +2,8 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from ..database import get_db
-from ..models import User, Ticket, Message, Notification
+from sqlalchemy import func
+from ..models import User, Ticket, Message, Notification, Attachment
 from ..schemas import MessageCreateRequest, MessageResponse
 from ..deps import get_current_user
 from ..config import settings
@@ -34,7 +35,17 @@ def list_messages(
     if current_user.role == "CLIENT":
         q = q.filter(Message.sender_type != "INTERNAL_NOTE")
 
-    return q.order_by(Message.created_at.asc()).all()
+    msgs = q.order_by(Message.created_at.asc()).all()
+
+    if msgs:
+        counts = db.query(Attachment.message_id, func.count(Attachment.id))\
+            .filter(Attachment.message_id.in_([m.id for m in msgs]))\
+            .group_by(Attachment.message_id).all()
+        att_counts = {msg_id: count for msg_id, count in counts}
+        for m in msgs:
+            m.__dict__['attachment_count'] = att_counts.get(m.id, 0)
+
+    return msgs
 
 
 @router.post("/mark-read", status_code=200)
