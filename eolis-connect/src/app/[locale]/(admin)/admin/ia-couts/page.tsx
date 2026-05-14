@@ -11,9 +11,11 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
   const router = useRouter()
   const [locale, setLocale] = useState('fr')
   const [user, setUser]     = useState<any>(null)
-  const [data, setData]     = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [view, setView]     = useState<'client' | 'ticket'>('ticket')
+  const [data, setData]       = useState<any>(null)
+  const [benefits, setBenefits] = useState<any>(null)
+  const [loading, setLoading]   = useState(true)
+  const [tab, setTab]           = useState<'costs' | 'benefits'>('costs')
+  const [view, setView]         = useState<'client' | 'ticket'>('ticket')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [periodLabel, setPeriodLabel] = useState('')
 
@@ -35,6 +37,14 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
       .catch(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    if (!user) return
+    apiFetch('/api/credits/admin/benefits')
+      .then(r => r.json())
+      .then(setBenefits)
+      .catch(() => {})
+  }, [user])
+
   function handleRange(range: DateRange | null, label: string) {
     setPeriodLabel(label)
     load(range)
@@ -55,16 +65,120 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Zap size={22} className="text-violet-600" />
-              {isFr ? 'Coûts Premium' : 'Premium Costs'}
+              {isFr ? 'Coûts & Bénéfices Premium' : 'Premium Costs & Benefits'}
             </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {isFr ? 'Extractions BL + Dictées vocales' : 'BL extractions + Voice dictations'}
-            </p>
           </div>
           <PeriodFilter onChange={handleRange} isFr={isFr} />
         </div>
 
-        {loading ? (
+        {/* Tabs */}
+        <div className="flex gap-2">
+          {([
+            { v: 'costs',    label: isFr ? 'Coûts & opérations' : 'Costs & operations' },
+            { v: 'benefits', label: isFr ? 'Bénéfices' : 'Benefits' },
+          ] as { v: typeof tab; label: string }[]).map(t => (
+            <button key={t.v} onClick={() => setTab(t.v)}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                tab === t.v ? 'bg-[#1B3A5C] text-white' : 'bg-white border border-gray-200 text-gray-600'
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── ONGLET BÉNÉFICES ──────────────────────────────────────── */}
+        {tab === 'benefits' && benefits && (
+          <div className="space-y-4">
+            {/* KPIs bénéfices */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                {
+                  label: isFr ? 'Revenus recharges' : 'Top-up revenue',
+                  value: `${benefits.totalRevenue.toFixed(0)} FCFA`,
+                  sub: `${benefits.approvedRequestsCount} ${isFr ? 'recharge(s) validée(s)' : 'approved top-up(s)'}`,
+                  color: 'bg-emerald-50 text-emerald-700',
+                },
+                {
+                  label: isFr ? 'Coûts réels services' : 'Actual service costs',
+                  value: `${benefits.totalApiCost.toFixed(2)} FCFA`,
+                  sub: `${benefits.blCreditsConsumed} cr. BL · ${benefits.voiceCreditsConsumed} cr. voix`,
+                  color: 'bg-red-50 text-red-600',
+                },
+                {
+                  label: isFr ? 'Bénéfice net' : 'Net profit',
+                  value: `${benefits.grossProfit.toFixed(0)} FCFA`,
+                  sub: benefits.totalRevenue > 0
+                    ? `${((benefits.grossProfit / benefits.totalRevenue) * 100).toFixed(1)}% ${isFr ? 'de marge' : 'margin'}`
+                    : isFr ? 'Aucune recharge encore' : 'No top-ups yet',
+                  color: 'bg-violet-50 text-violet-700',
+                },
+              ].map(card => (
+                <div key={card.label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                  <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{card.label}</p>
+                  <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-2 ${card.color}`}>
+                    {card.sub}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Crédits offerts */}
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-amber-800">
+                  🎁 {isFr ? 'Crédits de bienvenue offerts' : 'Welcome credits given'}
+                </p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  {isFr
+                    ? `${benefits.freeCreditsGiven} crédits au total (100 × ${benefits.freeCreditsGiven / 100} clients)`
+                    : `${benefits.freeCreditsGiven} credits total (100 × ${benefits.freeCreditsGiven / 100} clients)`}
+                </p>
+              </div>
+              <p className="text-sm font-bold text-amber-700 font-mono">{benefits.freeCreditsGiven} FCFA</p>
+            </div>
+
+            {/* Détail recharges */}
+            {benefits.revenueDetails?.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <p className="font-bold text-gray-900">{isFr ? 'Recharges validées' : 'Approved top-ups'}</p>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {benefits.revenueDetails.map((r: any, i: number) => (
+                    <div key={i} className="flex items-center gap-4 px-5 py-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{r.clientName}</p>
+                        <p className="text-xs text-gray-400">
+                          {r.validatedAt ? new Date(r.validatedAt).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB') : ''}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-gray-900">{r.amountValidated} FCFA</p>
+                        <p className="text-xs text-emerald-600">+{r.creditsAdded} crédits</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {benefits.pendingRequestsCount > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm text-amber-700">
+                ⏳ {benefits.pendingRequestsCount} {isFr ? 'demande(s) en attente de validation' : 'request(s) pending validation'}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'benefits' && !benefits && (
+          <div className="flex justify-center py-16">
+            <Loader2 size={28} className="animate-spin text-violet-500" />
+          </div>
+        )}
+
+        {/* ── ONGLET COÛTS ─────────────────────────────────────────── */}
+        {tab === 'costs' && (loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 size={28} className="animate-spin text-violet-500" />
           </div>
@@ -270,7 +384,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
               </div>
             )}
           </>
-        )}
+        ))}
       </div>
     </DashboardLayout>
   )

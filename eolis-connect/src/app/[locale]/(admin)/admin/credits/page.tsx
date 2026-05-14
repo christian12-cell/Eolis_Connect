@@ -1,21 +1,97 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { apiFetch, apiUrl, getToken, getUser } from '@/lib/api-client'
-import { Zap, Check, X, Clock, CheckCircle, XCircle, Loader2, ChevronDown } from 'lucide-react'
+import {
+  Zap, Check, X, Clock, CheckCircle, XCircle, Loader2,
+  ChevronDown, Users, FileText, ExternalLink,
+} from 'lucide-react'
+
+// ── ProofViewer: fetch avec auth, affiche image ou PDF ─────────────────────────
+
+function ProofViewer({ requestId, filename }: { requestId: string; filename?: string }) {
+  const [blobUrl, setBlobUrl]   = useState<string | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState(false)
+  const [isPdf, setIsPdf]       = useState(false)
+  const blobRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const token = getToken()
+    fetch(apiUrl(`/api/credits/photo/${requestId}`), {
+      headers: { Authorization: `Bearer ${token ?? ''}` },
+    })
+      .then(r => {
+        const ct = r.headers.get('content-type') || ''
+        setIsPdf(ct.includes('pdf'))
+        return r.blob()
+      })
+      .then(b => {
+        const url = URL.createObjectURL(b)
+        blobRef.current = url
+        setBlobUrl(url)
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+
+    return () => { if (blobRef.current) URL.revokeObjectURL(blobRef.current) }
+  }, [requestId])
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-24 bg-gray-50 rounded-xl">
+      <Loader2 size={20} className="animate-spin text-gray-400" />
+    </div>
+  )
+
+  if (error || !blobUrl) return (
+    <div className="flex items-center justify-center h-16 bg-gray-50 rounded-xl text-xs text-gray-400">
+      Fichier introuvable
+    </div>
+  )
+
+  if (isPdf) return (
+    <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+      <FileText size={20} className="text-red-400 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-800 truncate">{filename || 'justificatif.pdf'}</p>
+        <p className="text-xs text-gray-400">PDF</p>
+      </div>
+      <a href={blobUrl} target="_blank" rel="noreferrer"
+        className="flex items-center gap-1 text-xs text-[#4A8FC4] font-semibold hover:underline flex-shrink-0">
+        <ExternalLink size={13} /> Ouvrir
+      </a>
+    </div>
+  )
+
+  return (
+    <div className="relative">
+      <img src={blobUrl} alt="justificatif"
+        className="w-full max-h-64 object-contain rounded-xl border border-gray-100 bg-gray-50" />
+      <a href={blobUrl} target="_blank" rel="noreferrer"
+        className="absolute top-2 right-2 flex items-center gap-1 bg-black/50 text-white text-xs px-2 py-1 rounded-lg">
+        <ExternalLink size={11} /> Agrandir
+      </a>
+    </div>
+  )
+}
+
+// ── Page principale ────────────────────────────────────────────────────────────
 
 export default function AdminCreditsPage({ params }: { params: Promise<{ locale: string }> }) {
   const router = useRouter()
-  const [locale, setLocale] = useState('fr')
-  const [user, setUser]     = useState<any>(null)
-  const [requests, setRequests] = useState<any[]>([])
-  const [loading, setLoading]  = useState(true)
-  const [filter, setFilter]    = useState<'pending' | 'approved' | 'rejected' | ''>('pending')
+  const [locale, setLocale]       = useState('fr')
+  const [user, setUser]           = useState<any>(null)
+  const [tab, setTab]             = useState<'requests' | 'balances'>('requests')
+  const [requests, setRequests]   = useState<any[]>([])
+  const [balances, setBalances]   = useState<any[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [filter, setFilter]       = useState<'pending' | 'approved' | 'rejected' | ''>('pending')
   const [validating, setValidating] = useState<string | null>(null)
   const [amountInputs, setAmountInputs] = useState<Record<string, string>>({})
-  const [photoOpen, setPhotoOpen] = useState<string | null>(null)
+  const [proofOpen, setProofOpen] = useState<string | null>(null)
+  const [searchBalance, setSearchBalance] = useState('')
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   useEffect(() => {
@@ -25,7 +101,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     setUser(u)
   }, [locale])
 
-  const load = useCallback(() => {
+  const loadRequests = useCallback(() => {
     setLoading(true)
     const qs = filter ? `?status=${filter}` : ''
     apiFetch(`/api/credits/admin/requests${qs}`)
@@ -34,9 +110,21 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
       .catch(() => setLoading(false))
   }, [filter])
 
-  useEffect(() => { if (user) load() }, [user, load])
+  const loadBalances = useCallback(() => {
+    setLoading(true)
+    apiFetch('/api/credits/admin/balances')
+      .then(r => r.json())
+      .then(d => { setBalances(Array.isArray(d) ? d : []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    tab === 'requests' ? loadRequests() : loadBalances()
+  }, [user, tab, loadRequests, loadBalances])
 
   const isFr = locale === 'fr'
+  const pendingCount = requests.filter(r => r.status === 'pending').length
 
   async function approve(id: string) {
     const amt = parseFloat(amountInputs[id] || '')
@@ -46,7 +134,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     fd.append('amount_received', String(amt))
     await apiFetch(`/api/credits/admin/requests/${id}/approve`, { method: 'POST', body: fd })
     setValidating(null)
-    load()
+    loadRequests()
   }
 
   async function reject(id: string) {
@@ -56,12 +144,14 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     fd.append('reason', reason)
     await apiFetch(`/api/credits/admin/requests/${id}/reject`, { method: 'POST', body: fd })
     setValidating(null)
-    load()
+    loadRequests()
   }
 
   if (!user) return null
 
-  const pendingCount = requests.filter(r => r.status === 'pending').length
+  const filteredBalances = balances.filter(b =>
+    !searchBalance || b.clientName?.toLowerCase().includes(searchBalance.toLowerCase()) || b.username?.toLowerCase().includes(searchBalance.toLowerCase())
+  )
 
   return (
     <DashboardLayout locale={locale} userName={`${user.firstName} ${user.lastName}`} role={user.role}>
@@ -75,122 +165,189 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
               {isFr ? 'Crédits Premium' : 'Premium Credits'}
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {isFr ? 'Validation des demandes de recharge' : 'Top-up request validation'}
+              {isFr ? 'Recharges et soldes des clients' : 'Top-ups and client balances'}
             </p>
           </div>
           {pendingCount > 0 && (
-            <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-sm font-bold rounded-full">
+            <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-sm font-bold rounded-full animate-pulse">
               {pendingCount} {isFr ? 'en attente' : 'pending'}
             </span>
           )}
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 flex-wrap">
-          {([
-            { v: 'pending',  label: isFr ? 'En attente' : 'Pending' },
-            { v: 'approved', label: isFr ? 'Approuvées' : 'Approved' },
-            { v: 'rejected', label: isFr ? 'Refusées' : 'Rejected' },
-            { v: '',         label: isFr ? 'Toutes' : 'All' },
-          ] as { v: typeof filter; label: string }[]).map(f => (
-            <button key={f.v} onClick={() => setFilter(f.v)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                filter === f.v ? 'bg-[#1B3A5C] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}>
-              {f.label}
-            </button>
-          ))}
+        {/* Tabs */}
+        <div className="flex gap-2">
+          <button onClick={() => setTab('requests')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              tab === 'requests' ? 'bg-[#1B3A5C] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+            <Clock size={15} />
+            {isFr ? 'Demandes de recharge' : 'Top-up requests'}
+            {pendingCount > 0 && (
+              <span className="bg-amber-400 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+          <button onClick={() => setTab('balances')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              tab === 'balances' ? 'bg-[#1B3A5C] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+            <Users size={15} />
+            {isFr ? 'Soldes clients' : 'Client balances'}
+          </button>
         </div>
 
-        {/* List */}
-        {loading ? (
-          <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-gray-400" /></div>
-        ) : requests.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
-            <Zap size={32} className="text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-400 text-sm">{isFr ? 'Aucune demande.' : 'No requests.'}</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {requests.map((r: any) => (
-              <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {/* Header row */}
-                <div className="flex items-center gap-4 px-5 py-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900">{r.clientName}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(r.createdAt).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-base font-bold text-gray-900">{r.amountDeclared} FCFA</p>
-                    <p className="text-xs text-gray-400">{isFr ? 'déclaré' : 'declared'}</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    {r.status === 'pending'  && <Clock size={18} className="text-amber-500" />}
-                    {r.status === 'approved' && <CheckCircle size={18} className="text-emerald-500" />}
-                    {r.status === 'rejected' && <XCircle size={18} className="text-red-500" />}
-                  </div>
-                </div>
+        {/* ── ONGLET DEMANDES ─────────────────────────────────────────── */}
+        {tab === 'requests' && (
+          <>
+            <div className="flex gap-2 flex-wrap">
+              {([
+                { v: 'pending',  label: isFr ? 'En attente' : 'Pending' },
+                { v: 'approved', label: isFr ? 'Approuvées' : 'Approved' },
+                { v: 'rejected', label: isFr ? 'Refusées' : 'Rejected' },
+                { v: '',         label: isFr ? 'Toutes' : 'All' },
+              ] as { v: typeof filter; label: string }[]).map(f => (
+                <button key={f.v} onClick={() => setFilter(f.v)}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                    filter === f.v ? 'bg-[#1B3A5C] text-white' : 'bg-white border border-gray-200 text-gray-600'
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
 
-                {/* Photo */}
-                <div className="px-5 pb-3">
-                  <button onClick={() => setPhotoOpen(photoOpen === r.id ? null : r.id)}
-                    className="flex items-center gap-1.5 text-xs text-[#4A8FC4] font-medium">
-                    {isFr ? 'Voir la capture' : 'View proof'}
-                    <ChevronDown size={12} className={`transition-transform ${photoOpen === r.id ? 'rotate-180' : ''}`} />
-                  </button>
-                  {photoOpen === r.id && (
-                    <img
-                      src={r.photoUrl?.startsWith('s3://')
-                        ? apiUrl(`/api/credits/photo/${r.id}`)
-                        : apiUrl(`/static/${r.photoUrl}`)}
-                      alt="proof"
-                      className="mt-2 w-full max-h-64 object-contain rounded-xl border border-gray-100"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
+            {loading ? (
+              <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-gray-400" /></div>
+            ) : requests.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
+                <Zap size={32} className="text-gray-200 mx-auto mb-3" />
+                <p className="text-gray-400 text-sm">{isFr ? 'Aucune demande.' : 'No requests.'}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {requests.map((r: any) => (
+                  <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-4 px-5 py-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900">{r.clientName}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {new Date(r.createdAt).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', {
+                            day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-base font-bold text-gray-900">{r.amountDeclared} FCFA</p>
+                        <p className="text-xs text-gray-400">{isFr ? 'déclaré' : 'declared'}</p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {r.status === 'pending'  && <Clock size={18} className="text-amber-500" />}
+                        {r.status === 'approved' && <CheckCircle size={18} className="text-emerald-500" />}
+                        {r.status === 'rejected' && <XCircle size={18} className="text-red-500" />}
+                      </div>
+                    </div>
+
+                    {/* Justificatif */}
+                    <div className="px-5 pb-3">
+                      <button onClick={() => setProofOpen(proofOpen === r.id ? null : r.id)}
+                        className="flex items-center gap-1.5 text-xs text-[#4A8FC4] font-medium mb-2">
+                        {proofOpen === r.id ? '▲' : '▼'} {isFr ? 'Justificatif' : 'Proof'}
+                      </button>
+                      {proofOpen === r.id && (
+                        <ProofViewer requestId={r.id} filename={r.photoUrl?.split('/').pop()} />
+                      )}
+                    </div>
+
+                    {/* Actions pending */}
+                    {r.status === 'pending' && (
+                      <div className="border-t border-gray-100 px-5 py-3 flex items-center gap-3">
+                        <input
+                          type="number"
+                          placeholder={isFr ? 'Montant reçu (FCFA)' : 'Amount received (FCFA)'}
+                          defaultValue={r.amountDeclared}
+                          onChange={e => setAmountInputs(prev => ({ ...prev, [r.id]: e.target.value }))}
+                          className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]"
+                        />
+                        <button onClick={() => approve(r.id)} disabled={validating === r.id}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50">
+                          <Check size={14} /> {isFr ? 'Valider' : 'Approve'}
+                        </button>
+                        <button onClick={() => reject(r.id)} disabled={validating === r.id}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-100 text-red-600 text-sm font-semibold disabled:opacity-50">
+                          <X size={14} /> {isFr ? 'Refuser' : 'Reject'}
+                        </button>
+                      </div>
+                    )}
+
+                    {r.status === 'approved' && (
+                      <div className="border-t border-gray-100 px-5 py-3 bg-emerald-50">
+                        <p className="text-xs text-emerald-700 font-semibold">
+                          ✓ {r.creditsAdded} {isFr ? 'crédits ajoutés' : 'credits added'} · {r.amountValidated} FCFA {isFr ? 'validés' : 'validated'}
+                        </p>
+                      </div>
+                    )}
+                    {r.status === 'rejected' && (
+                      <div className="border-t border-gray-100 px-5 py-3 bg-red-50">
+                        <p className="text-xs text-red-600">{r.rejectionReason || (isFr ? 'Refusé' : 'Rejected')}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── ONGLET SOLDES ───────────────────────────────────────────── */}
+        {tab === 'balances' && (
+          <>
+            <input
+              type="text" placeholder={isFr ? 'Rechercher un client...' : 'Search client...'}
+              value={searchBalance} onChange={e => setSearchBalance(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]"
+            />
+
+            {loading ? (
+              <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-gray-400" /></div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="grid grid-cols-4 gap-4 px-5 py-3 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wide">
+                  <span className="col-span-2">{isFr ? 'Client' : 'Client'}</span>
+                  <span className="text-right">{isFr ? 'Achetés' : 'Purchased'}</span>
+                  <span className="text-right">{isFr ? 'Restants' : 'Remaining'}</span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {filteredBalances.map((b: any) => (
+                    <div key={b.clientId} className="grid grid-cols-4 gap-4 px-5 py-3.5 items-center hover:bg-gray-50 transition-colors">
+                      <div className="col-span-2 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{b.clientName}</p>
+                        <p className="text-xs text-gray-400">@{b.username}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-gray-700 font-mono">{b.creditsTotal}</p>
+                        <p className="text-[10px] text-gray-400">{isFr ? 'utilisés' : 'used'}: {b.creditsUsed}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-bold font-mono ${
+                          b.creditsRemaining <= 0 ? 'text-red-500' :
+                          b.creditsRemaining <= 50 ? 'text-amber-500' : 'text-emerald-600'
+                        }`}>
+                          {b.creditsRemaining}
+                        </p>
+                        <p className="text-[10px] text-gray-400">crédits</p>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredBalances.length === 0 && (
+                    <div className="py-10 text-center text-sm text-gray-400">
+                      {isFr ? 'Aucun résultat.' : 'No results.'}
+                    </div>
                   )}
                 </div>
-
-                {/* Actions for pending */}
-                {r.status === 'pending' && (
-                  <div className="border-t border-gray-100 px-5 py-3 flex items-center gap-3">
-                    <input
-                      type="number"
-                      placeholder={isFr ? 'Montant reçu (FCFA)' : 'Amount received (FCFA)'}
-                      value={amountInputs[r.id] ?? r.amountDeclared}
-                      onChange={e => setAmountInputs(prev => ({ ...prev, [r.id]: e.target.value }))}
-                      className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]"
-                    />
-                    <button onClick={() => approve(r.id)} disabled={validating === r.id}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50">
-                      <Check size={14} />
-                      {isFr ? 'Valider' : 'Approve'}
-                    </button>
-                    <button onClick={() => reject(r.id)} disabled={validating === r.id}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-100 text-red-600 text-sm font-semibold disabled:opacity-50">
-                      <X size={14} />
-                      {isFr ? 'Refuser' : 'Reject'}
-                    </button>
-                  </div>
-                )}
-
-                {/* Result info for approved/rejected */}
-                {r.status === 'approved' && (
-                  <div className="border-t border-gray-100 px-5 py-3 bg-emerald-50">
-                    <p className="text-xs text-emerald-700 font-semibold">
-                      ✓ {r.creditsAdded} {isFr ? 'crédits ajoutés' : 'credits added'} · {r.amountValidated} FCFA {isFr ? 'validés' : 'validated'}
-                    </p>
-                  </div>
-                )}
-                {r.status === 'rejected' && (
-                  <div className="border-t border-gray-100 px-5 py-3 bg-red-50">
-                    <p className="text-xs text-red-600">{r.rejectionReason || (isFr ? 'Refusé' : 'Rejected')}</p>
-                  </div>
-                )}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </DashboardLayout>

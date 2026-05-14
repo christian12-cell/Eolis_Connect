@@ -1,11 +1,14 @@
+import io
 import os
 import uuid
+import mimetypes
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import StreamingResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import CreditBalance, CreditRequest, User, Notification
+from ..models import CreditBalance, CreditRequest, User, Notification, AIUsage
 from ..deps import get_current_user, require_roles
 from ..credit_service import get_or_create_balance, FREE_CREDITS_ON_SIGNUP
 from ..config import settings
@@ -201,4 +204,107 @@ def _fmt_request(r: CreditRequest) -> dict:
         "rejectionReason": r.rejection_reason,
         "createdAt":       r.created_at.isoformat() + "Z",
         "validatedAt":     r.validated_at.isoformat() + "Z" if r.validated_at else None,
+    }
+
+
+# ── Proof file viewer ──────────────────────────────────────────────────────────
+
+@router.get("/photo/{request_id}")
+def get_proof_photo(
+    request_id: str,
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    req = db.query(CreditRequest).filter(CreditRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(404)
+
+    photo_url = req.photo_url
+
+    if photo_url.startswith("s3://"):
+        import boto3
+        parts  = photo_url[5:].split("/", 1)
+        bucket = parts[0]
+        key    = parts[1] if len(parts) > 1 else ""
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=getattr(settings, "AWS_ACCESS_KEY_ID", ""),
+            aws_secret_access_key=getattr(settings, "AWS_SECRET_ACCESS_KEY", ""),
+            region_name=getattr(settings, "AWS_REGION", "eu-west-3"),
+        )
+        url = s3.generate_presigned_url("get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=300)
+        return RedirectResponse(url)
+
+    if not os.path.exists(photo_url):
+        raise HTTPException(404, "Fichier introuvable")
+
+    content_type = mimetypes.guess_type(photo_url)[0] or "application/octet-stream"
+    with open(photo_url, "rb") as f:
+        data = f.read()
+    return StreamingResponse(io.BytesIO(data), media_type=content_type)
+
+
+# ── Admin: credit balances per client ─────────────────────────────────────────
+
+@router.get("/admin/balances")
+def admin_balances(
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    rows = db.query(CreditBalance).order_by(CreditBalance.updated_at.desc()).all()
+    result = []
+    for b in rows:
+        client = db.query(User).filter(User.id == b.client_id).first()
+        result.append({
+            "clientId":         b.client_id,
+            "clientName":       f"{client.first_name} {client.last_name}" if client else b.client_id,
+            "username":         client.username if client else None,
+            "creditsTotal":     round(b.credits_total, 2),
+            "creditsUsed":      round(b.credits_used,  2),
+            "creditsRemaining": round(max(0.0, b.credits_total - b.credits_used), 2),
+            "updatedAt":        b.updated_at.isoformat() + "Z" if b.updated_at else None,
+        })
+    return result
+
+
+# ── Admin: benefits calculation ────────────────────────────────────────────────
+
+@router.get("/admin/benefits")
+def admin_benefits(
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    approved     = db.query(CreditRequest).filter(CreditRequest.status == "approved").all()
+    pending_count= db.query(CreditRequest).filter(CreditRequest.status == "pending").count()
+    total_revenue= sum(r.amount_validated or 0 for r in approved)
+
+    usages       = db.query(AIUsage).all()
+    total_api    = sum(u.cost_fcfa for u in usages)
+
+    bl_credits   = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "bl_extraction")
+    voice_credits= sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "voice_transcription")
+
+    nb_clients   = db.query(CreditBalance).count()
+    free_credits = nb_clients * FREE_CREDITS_ON_SIGNUP
+
+    per_request  = []
+    for req in approved:
+        client = db.query(User).filter(User.id == req.client_id).first()
+        per_request.append({
+            "clientName":      f"{client.first_name} {client.last_name}" if client else req.client_id,
+            "amountValidated": req.amount_validated,
+            "creditsAdded":    req.credits_added,
+            "validatedAt":     req.validated_at.isoformat() + "Z" if req.validated_at else None,
+        })
+
+    return {
+        "totalRevenue":      round(total_revenue, 2),
+        "totalApiCost":      round(total_api, 4),
+        "grossProfit":       round(total_revenue - total_api, 2),
+        "freeCreditsGiven":  free_credits,
+        "blCreditsConsumed": round(bl_credits, 2),
+        "voiceCreditsConsumed": round(voice_credits, 2),
+        "approvedRequestsCount": len(approved),
+        "pendingRequestsCount":  pending_count,
+        "revenueDetails":    per_request,
     }
