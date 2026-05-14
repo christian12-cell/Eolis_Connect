@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { apiFetch, apiUrl, getToken, getUser } from '@/lib/api-client'
@@ -23,23 +23,16 @@ function ProofViewer({ requestId, filename, isFr }: { requestId: string; filenam
     fetch(apiUrl(`/api/credits/photo/${requestId}`), {
       headers: { Authorization: `Bearer ${token ?? ''}` },
     })
-      .then(async r => {
+      .then(r => {
         if (!r.ok) throw new Error('not_found')
         const ct = r.headers.get('content-type') || ''
-        if (ct.includes('application/json')) {
-          // S3 path: backend returns { url, isPdf } — use URL directly in img/iframe
-          // (no CORS issue with <img src> / <iframe src> unlike fetch())
-          const data = await r.json()
-          setIsPdf(!!data.isPdf)
-          setBlobUrl(data.url)
-        } else {
-          // Local file path: stream as blob
-          setIsPdf(ct.includes('pdf'))
-          const b = await r.blob()
-          const url = URL.createObjectURL(b)
-          blobRef.current = url
-          setBlobUrl(url)
-        }
+        setIsPdf(ct.includes('pdf'))
+        return r.blob()
+      })
+      .then(b => {
+        const url = URL.createObjectURL(b)
+        blobRef.current = url
+        setBlobUrl(url)
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false))
@@ -105,6 +98,10 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   const [clientUsage, setClientUsage]     = useState<Record<string, any[]>>({})
   const [rejectingId, setRejectingId]     = useState<string | null>(null)
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({})
+  const [refreshing, setRefreshing]       = useState(false)
+  const [countdown, setCountdown]         = useState(30)
+  const autoRef    = useRef<ReturnType<typeof setInterval> | null>(null)
+  const countRef   = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   useEffect(() => {
@@ -114,21 +111,23 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     setUser(u)
   }, [locale])
 
-  const loadRequests = useCallback(() => {
-    setLoading(true)
+  const loadRequests = useCallback((silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
     const qs = filter ? `?status=${filter}` : ''
     apiFetch(`/api/credits/admin/requests${qs}`)
       .then(r => r.json())
-      .then(d => { setRequests(Array.isArray(d) ? d : []); setLoading(false) })
-      .catch(() => setLoading(false))
+      .then(d => { setRequests(Array.isArray(d) ? d : []); setLoading(false); setRefreshing(false) })
+      .catch(() => { setLoading(false); setRefreshing(false) })
   }, [filter])
 
-  const loadBalances = useCallback(() => {
-    setLoading(true)
+  const loadBalances = useCallback((silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
     apiFetch('/api/credits/admin/balances')
       .then(r => r.json())
-      .then(d => { setBalances(Array.isArray(d) ? d : []); setLoading(false) })
-      .catch(() => setLoading(false))
+      .then(d => { setBalances(Array.isArray(d) ? d : []); setLoading(false); setRefreshing(false) })
+      .catch(() => { setLoading(false); setRefreshing(false) })
   }, [])
 
   useEffect(() => {
@@ -136,11 +135,18 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     tab === 'requests' ? loadRequests() : loadBalances()
   }, [user, tab, loadRequests, loadBalances])
 
-  // Auto-refresh toutes les 30s sur l'onglet demandes
+  // Auto-refresh 30s avec countdown ring (comme agent dashboard)
   useEffect(() => {
     if (!user || tab !== 'requests') return
-    const interval = setInterval(loadRequests, 30_000)
-    return () => clearInterval(interval)
+    setCountdown(30)
+    if (autoRef.current)  clearInterval(autoRef.current)
+    if (countRef.current) clearInterval(countRef.current)
+    autoRef.current = setInterval(() => { loadRequests(true); setCountdown(30) }, 30_000)
+    countRef.current = setInterval(() => setCountdown(c => c <= 1 ? 30 : c - 1), 1_000)
+    return () => {
+      if (autoRef.current)  clearInterval(autoRef.current)
+      if (countRef.current) clearInterval(countRef.current)
+    }
   }, [user, tab, loadRequests])
 
   const isFr = locale === 'fr'
@@ -154,7 +160,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     fd.append('amount_received', String(amt))
     await apiFetch(`/api/credits/admin/requests/${id}/approve`, { method: 'POST', body: fd })
     setValidating(null)
-    loadRequests()
+    loadRequests(true)
   }
 
   async function loadClientUsage(cid: string) {
@@ -173,7 +179,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     await apiFetch(`/api/credits/admin/requests/${id}/reject`, { method: 'POST', body: fd })
     setValidating(null)
     setRejectingId(null)
-    loadRequests()
+    loadRequests(true)
   }
 
   if (!user) return null
@@ -203,10 +209,29 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                 {pendingCount} {isFr ? 'en attente' : 'pending'}
               </span>
             )}
+            {/* Countdown ring — visible uniquement sur l'onglet demandes */}
+            {tab === 'requests' && (
+              <div className="relative flex items-center justify-center"
+                title={`${isFr ? 'Actualisation dans' : 'Refresh in'} ${countdown}s`}>
+                <svg width="32" height="32" className="-rotate-90">
+                  <circle cx="16" cy="16" r="12" fill="none" stroke="#e5e7eb" strokeWidth="2.5" />
+                  <circle cx="16" cy="16" r="12" fill="none" stroke="#4A8FC4" strokeWidth="2.5"
+                    strokeDasharray={`${2 * Math.PI * 12}`}
+                    strokeDashoffset={`${2 * Math.PI * 12 * (1 - countdown / 30)}`}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 0.9s linear' }} />
+                </svg>
+                <span className="absolute text-[9px] font-bold text-gray-500 tabular-nums">{countdown}</span>
+              </div>
+            )}
             <button
-              onClick={() => { setLoading(true); tab === 'requests' ? loadRequests() : loadBalances() }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-500 text-xs font-semibold hover:bg-gray-50 transition-colors">
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              onClick={() => {
+                setCountdown(30)
+                tab === 'requests' ? loadRequests(true) : loadBalances(true)
+              }}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-500 text-xs font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
+              <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
               {isFr ? 'Actualiser' : 'Refresh'}
             </button>
           </div>
