@@ -283,6 +283,11 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                       <button onClick={() => setProofOpen(proofOpen === r.id ? null : r.id)}
                         className="flex items-center gap-1.5 text-xs text-[#4A8FC4] font-medium mb-2">
                         {proofOpen === r.id ? '▲' : '▼'} {isFr ? 'Justificatif' : 'Proof'}
+                        {r.status === 'pending' && proofOpen !== r.id && (
+                          <span className="ml-1 text-[10px] text-amber-500 font-semibold">
+                            {isFr ? '← ouvrir avant de valider' : '← open before approving'}
+                          </span>
+                        )}
                       </button>
                       {proofOpen === r.id && (
                         <ProofViewer requestId={r.id} filename={r.photoUrl?.split('/').pop()} isFr={isFr} />
@@ -300,8 +305,11 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                             onChange={e => setAmountInputs(prev => ({ ...prev, [r.id]: e.target.value }))}
                             className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]"
                           />
-                          <button onClick={() => approve(r.id)} disabled={validating === r.id}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50">
+                          <button
+                            onClick={() => approve(r.id)}
+                            disabled={validating === r.id || proofOpen !== r.id}
+                            title={proofOpen !== r.id ? (isFr ? 'Ouvrez d\'abord le justificatif' : 'Open proof first') : undefined}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
                             {validating === r.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                             {isFr ? 'Valider' : 'Approve'}
                           </button>
