@@ -115,12 +115,23 @@ def ticket_ai_cost(
     if not ticket:
         raise HTTPException(404, "Dossier non trouvé")
 
-    # Only count voice transcription credits used IN this specific ticket's chat
-    # (BL extraction is a one-time shared cost, not per-ticket)
-    rows: list[AIUsage] = db.query(AIUsage).filter(
+    rows: list[AIUsage] = []
+
+    # Voice used in this ticket's chat (description step + chat)
+    rows += db.query(AIUsage).filter(
         AIUsage.ticket_id == ticket_id,
         AIUsage.type == "voice_transcription",
     ).all()
+
+    # BL extraction — only if it was done specifically for this ticket
+    # (created within 2h before ticket creation, not a reused BL)
+    if ticket.bl_document_id:
+        cutoff = ticket.created_at - timedelta(hours=2)
+        rows += db.query(AIUsage).filter(
+            AIUsage.bl_document_id == ticket.bl_document_id,
+            AIUsage.type == "bl_extraction",
+            AIUsage.created_at >= cutoff,
+        ).all()
 
     total_credits = sum(int(getattr(r, "credits_cost", 0) or 0) for r in rows)
 
