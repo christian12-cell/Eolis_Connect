@@ -73,12 +73,7 @@ def _template(content: str) -> str:
         </tr>
         <tr>
           <td colspan="2" style="padding-top:12px;">
-            <table cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="padding-right:20px;font-size:11px;color:#6b7280;">📞 {SUPPORT_EMAIL}</td>
-                <td style="font-size:11px;color:#6b7280;">📧 <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;text-decoration:none;">{settings.MAIL_SUPPORT_FROM}</a></td>
-              </tr>
-            </table>
+            <p style="margin:0;font-size:11px;color:#6b7280;">📧 <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;text-decoration:none;">{settings.MAIL_SUPPORT_FROM}</a></p>
           </td>
         </tr>
       </table>
