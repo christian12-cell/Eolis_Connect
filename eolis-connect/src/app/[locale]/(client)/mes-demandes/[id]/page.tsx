@@ -236,7 +236,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const [sending, setSending] = useState(false)
   const [premiumAccepted, setPremiumAccepted] = useState(false)
   const [showPremiumPopup, setShowPremiumPopup] = useState(false)
-  const [aiCostFcfa, setAiCostFcfa] = useState<number | null>(null)
+  const [creditsConsumed, setCreditsConsumed] = useState<number | null>(null)
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null)
   const [isOnline, setIsOnline] = useState(true)
   const [ratingScore, setRatingScore] = useState(0)
@@ -284,20 +284,21 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
     if (!u) { router.replace(`/${locale}/login`); return }
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/login`); return }
     setUser(u)
+    if (!ticketId) return
     loadData()
     apiFetch(`/api/ai-usage/ticket/${ticketId}`)
       .then(r => r.json())
-      .then(d => { if (d.totalFcfa > 0) setAiCostFcfa(d.totalFcfa) })
+      .then(d => { if ((d.totalCredits ?? 0) > 0) setCreditsConsumed(d.totalCredits) })
       .catch(() => {})
     apiFetch('/api/credits/balance')
       .then(r => r.json())
-      .then(d => setCreditsRemaining(d.creditsRemaining ?? 0))
+      .then(d => setCreditsRemaining(Math.round(d.creditsRemaining ?? 0)))
       .catch(() => {})
   }, [ticketId, locale])
 
   function refreshAiCost(creditsUsed: number, creditsLeft: number) {
-    setCreditsRemaining(creditsLeft)
-    setAiCostFcfa(prev => parseFloat(((prev ?? 0) + creditsUsed).toFixed(2)))
+    setCreditsRemaining(Math.round(creditsLeft))
+    setCreditsConsumed(prev => (prev ?? 0) + Math.round(creditsUsed))
   }
 
   // WebSocket — real-time updates (messages + ticket status)
@@ -799,14 +800,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
             </div>
           </div>
 
-          {/* ── Coût premium du dossier ── */}
-          {aiCostFcfa !== null && aiCostFcfa > 0 && (
+          {/* ── Crédits consommés sur ce dossier ── */}
+          {creditsConsumed !== null && creditsConsumed > 0 && (
             <div className="flex items-center gap-2.5 bg-white/10 border border-white/15 rounded-2xl px-4 py-2.5">
               <Zap size={13} className="text-amber-300 flex-shrink-0" />
               <p className="text-xs text-blue-100 flex-1">
                 {isFr ? 'Crédits consommés (ce dossier)' : 'Credits used (this file)'}
               </p>
-              <p className="text-xs font-bold text-white font-mono">{aiCostFcfa.toFixed(2)} crédits</p>
+              <p className="text-xs font-bold text-white font-mono">{creditsConsumed} crédits</p>
             </div>
           )}
 

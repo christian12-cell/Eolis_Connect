@@ -91,13 +91,15 @@ def ticket_ai_cost(
     if ticket.bl_document_id:
         rows += db.query(AIUsage).filter(AIUsage.bl_document_id == ticket.bl_document_id).all()
 
-    total_usd  = sum(r.cost_usd  for r in rows)
-    total_fcfa = sum(r.cost_fcfa for r in rows)
+    total_usd     = sum(r.cost_usd  for r in rows)
+    total_fcfa    = sum(r.cost_fcfa for r in rows)
+    total_credits = sum(int(getattr(r, "credits_cost", 0) or 0) for r in rows)
 
     return {
-        "totalUsd":  round(total_usd,  8),
-        "totalFcfa": round(total_fcfa, 4),
-        "count":     len(rows),
+        "totalUsd":     round(total_usd,  8),
+        "totalFcfa":    round(total_fcfa, 4),
+        "totalCredits": total_credits,
+        "count":        len(rows),
     }
 
 
