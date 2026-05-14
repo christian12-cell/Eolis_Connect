@@ -8,9 +8,6 @@ import { apiFetch, apiUpload, getUser } from '@/lib/api-client'
 import { offlineDb, fileToStored } from '@/lib/offline-db'
 import { Upload, Camera, X, Zap, FileText, Bell, Wallet, ChevronRight } from 'lucide-react'
 
-const ORANGE_NUMBER = '689 506 319'
-const MTN_NUMBER    = '676 652 945'
-const ACCOUNT_NAME  = 'Blandine Denmeko'
 const MIN_AMOUNT    = 500
 const ACCEPT        = 'image/*,application/pdf,.pdf'
 
@@ -25,6 +22,9 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
   const [submitting, setSubmitting] = useState(false)
   const [balance, setBalance]     = useState<{ creditsRemaining: number } | null>(null)
   const [showScanner, setShowScanner] = useState(false)
+  const [payInfo, setPayInfo]     = useState({
+    orangeNumber: '…', mtnNumber: '…', accountName: '…', supportEmail: '',
+  })
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -33,6 +33,12 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
     if (!u) { router.replace(`/${locale}/login`); return }
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/accueil`); return }
     apiFetch('/api/credits/balance').then(r => r.json()).then(setBalance).catch(() => {})
+    apiFetch('/api/credits/payment-info').then(r => r.json()).then(d => setPayInfo({
+      orangeNumber: d.orangeNumber ?? '…',
+      mtnNumber:    d.mtnNumber    ?? '…',
+      accountName:  d.accountName  ?? '…',
+      supportEmail: d.supportEmail ?? '',
+    })).catch(() => {})
   }, [locale])
 
   const isFr    = locale === 'fr'
@@ -279,15 +285,15 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
         {/* Numéros de paiement */}
         <div className="space-y-2">
           {[
-            { op: 'Orange Money', num: ORANGE_NUMBER, bg: 'bg-orange-50', border: 'border-orange-200', dot: 'bg-orange-400' },
-            { op: 'MTN MoMo',     num: MTN_NUMBER,    bg: 'bg-yellow-50', border: 'border-yellow-200', dot: 'bg-yellow-400' },
+            { op: 'Orange Money', num: payInfo.orangeNumber, bg: 'bg-orange-50', border: 'border-orange-200', dot: 'bg-orange-400' },
+            { op: 'MTN MoMo',     num: payInfo.mtnNumber,    bg: 'bg-yellow-50', border: 'border-yellow-200', dot: 'bg-yellow-400' },
           ].map(({ op, num, bg, border, dot }) => (
             <div key={op} className={`${bg} ${border} border rounded-2xl px-4 py-3.5 flex items-center gap-3`}>
               <div className={`w-2.5 h-2.5 rounded-full ${dot} flex-shrink-0`} />
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{op}</p>
                 <p className="text-xl font-bold text-gray-900 font-mono tracking-wider">{num}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{ACCOUNT_NAME}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{payInfo.accountName}</p>
               </div>
             </div>
           ))}

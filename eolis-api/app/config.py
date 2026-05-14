@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     AWS_REGION: str = "eu-west-1"
     AWS_S3_BUCKET: str = ""
 
+    # Payment info (configurable via Railway env vars)
+    ORANGE_MONEY_NUMBER: str = "689 506 319"
+    MTN_MONEY_NUMBER: str = "676 652 945"
+    PAYMENT_ACCOUNT_NAME: str = "Blandine Denmeko"
+
     model_config = {"env_file": ".env"}
 
 settings = Settings()

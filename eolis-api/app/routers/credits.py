@@ -16,10 +16,19 @@ from ..config import settings
 
 router = APIRouter(prefix="/credits", tags=["credits"])
 
-ORANGE_NUMBER = "689 506 319"
-MTN_NUMBER    = "676 652 945"
-ACCOUNT_NAME  = "Blandine Denmeko"
-SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "contact@eoliscameroun.com")
+
+# ── Public config endpoint ─────────────────────────────────────────────────────
+
+@router.get("/payment-info")
+def payment_info():
+    return {
+        "orangeNumber":  settings.ORANGE_MONEY_NUMBER,
+        "mtnNumber":     settings.MTN_MONEY_NUMBER,
+        "accountName":   settings.PAYMENT_ACCOUNT_NAME,
+        "supportEmail":  settings.MAIL_SUPPORT_FROM,
+        "adminEmail":    settings.ADMIN_EMAIL,
+    }
+
 
 # ── S3 helpers (mirror attachments.py) ────────────────────────────────────────
 
@@ -192,9 +201,9 @@ def approve_request(
         title="Crédits ajoutés ✓|||Credits added ✓",
         message=(
             f"{int(credits_to_add)} crédits premium ont été ajoutés à votre compte."
-            f" Une question ? {SUPPORT_EMAIL}"
+            f" Une question ? {settings.MAIL_SUPPORT_FROM}"
             f"|||{int(credits_to_add)} premium credits have been added to your account."
-            f" Questions? {SUPPORT_EMAIL}"
+            f" Questions? {settings.MAIL_SUPPORT_FROM}"
         ),
     )
     db.add(notif)
@@ -228,8 +237,8 @@ def reject_request(
         type="CREDITS_REJECTED",
         title="Demande de recharge refusée|||Top-up request rejected",
         message=(
-            f"{reason_prefix_fr}Contactez-nous : {SUPPORT_EMAIL}"
-            f"|||{reason_prefix_en}Contact us: {SUPPORT_EMAIL}"
+            f"{reason_prefix_fr}Contactez-nous : {settings.MAIL_SUPPORT_FROM}"
+            f"|||{reason_prefix_en}Contact us: {settings.MAIL_SUPPORT_FROM}"
         ),
     )
     db.add(notif)
