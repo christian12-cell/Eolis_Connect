@@ -52,16 +52,17 @@ function ProofViewer({ requestId, filename }: { requestId: string; filename?: st
   )
 
   if (isPdf) return (
-    <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-      <FileText size={20} className="text-red-400 flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-800 truncate">{filename || 'justificatif.pdf'}</p>
-        <p className="text-xs text-gray-400">PDF</p>
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 text-xs text-gray-500 px-1">
+        <FileText size={13} className="text-red-400" />
+        <span className="truncate">{filename || 'justificatif.pdf'}</span>
       </div>
-      <a href={blobUrl} target="_blank" rel="noreferrer"
-        className="flex items-center gap-1 text-xs text-[#4A8FC4] font-semibold hover:underline flex-shrink-0">
-        <ExternalLink size={13} /> Ouvrir
-      </a>
+      <iframe
+        src={blobUrl}
+        className="w-full rounded-xl border border-gray-100"
+        style={{ height: '420px' }}
+        title="Justificatif PDF"
+      />
     </div>
   )
 
@@ -90,8 +91,10 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   const [filter, setFilter]       = useState<'pending' | 'approved' | 'rejected' | ''>('pending')
   const [validating, setValidating] = useState<string | null>(null)
   const [amountInputs, setAmountInputs] = useState<Record<string, string>>({})
-  const [proofOpen, setProofOpen] = useState<string | null>(null)
+  const [proofOpen, setProofOpen]         = useState<string | null>(null)
   const [searchBalance, setSearchBalance] = useState('')
+  const [expandedClient, setExpandedClient] = useState<string | null>(null)
+  const [clientUsage, setClientUsage]     = useState<Record<string, any[]>>({})
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   useEffect(() => {
@@ -135,6 +138,14 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     await apiFetch(`/api/credits/admin/requests/${id}/approve`, { method: 'POST', body: fd })
     setValidating(null)
     loadRequests()
+  }
+
+  async function loadClientUsage(cid: string) {
+    if (clientUsage[cid]) { setExpandedClient(expandedClient === cid ? null : cid); return }
+    const res = await apiFetch(`/api/ai-usage/admin?client_id=${cid}`)
+    const d   = await res.json()
+    setClientUsage(prev => ({ ...prev, [cid]: d.items ?? [] }))
+    setExpandedClient(cid)
   }
 
   async function reject(id: string) {
@@ -319,24 +330,64 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                 </div>
                 <div className="divide-y divide-gray-50">
                   {filteredBalances.map((b: any) => (
-                    <div key={b.clientId} className="grid grid-cols-4 gap-4 px-5 py-3.5 items-center hover:bg-gray-50 transition-colors">
-                      <div className="col-span-2 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{b.clientName}</p>
-                        <p className="text-xs text-gray-400">@{b.username}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-gray-700 font-mono">{b.creditsTotal}</p>
-                        <p className="text-[10px] text-gray-400">{isFr ? 'utilisés' : 'used'}: {b.creditsUsed}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-bold font-mono ${
-                          b.creditsRemaining <= 0 ? 'text-red-500' :
-                          b.creditsRemaining <= 50 ? 'text-amber-500' : 'text-emerald-600'
-                        }`}>
-                          {b.creditsRemaining}
-                        </p>
-                        <p className="text-[10px] text-gray-400">crédits</p>
-                      </div>
+                    <div key={b.clientId}>
+                      {/* Client row */}
+                      <button
+                        onClick={() => loadClientUsage(b.clientId)}
+                        className="w-full grid grid-cols-4 gap-4 px-5 py-3.5 items-center hover:bg-gray-50 transition-colors text-left">
+                        <div className="col-span-2 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{b.clientName}</p>
+                          <p className="text-xs text-gray-400">@{b.username}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-gray-700 font-mono">{b.creditsTotal}</p>
+                          <p className="text-[10px] text-gray-400">{isFr ? 'utilisés' : 'used'}: {b.creditsUsed}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-sm font-bold font-mono ${
+                            b.creditsRemaining <= 0 ? 'text-red-500' :
+                            b.creditsRemaining <= 50 ? 'text-amber-500' : 'text-emerald-600'
+                          }`}>
+                            {b.creditsRemaining}
+                          </p>
+                          <p className="text-[10px] text-gray-400">crédits</p>
+                        </div>
+                      </button>
+
+                      {/* Expanded: usage detail in credits */}
+                      {expandedClient === b.clientId && (
+                        <div className="bg-gray-50 border-t border-gray-100 px-5 py-3 space-y-1.5">
+                          {!clientUsage[b.clientId] ? (
+                            <div className="flex justify-center py-3"><Loader2 size={16} className="animate-spin text-gray-400" /></div>
+                          ) : clientUsage[b.clientId].length === 0 ? (
+                            <p className="text-xs text-gray-400 text-center py-2">{isFr ? 'Aucune opération' : 'No operations'}</p>
+                          ) : (
+                            <>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">
+                                {isFr ? 'Opérations (crédits consommés)' : 'Operations (credits consumed)'}
+                              </p>
+                              {clientUsage[b.clientId].map((item: any) => (
+                                <div key={item.id} className="flex items-center gap-3 py-1">
+                                  <span className="text-sm flex-shrink-0">
+                                    {item.type === 'bl_extraction' ? '📄' : '🎙️'}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-gray-700">
+                                      {item.ticketRef ?? (isFr ? 'Sans dossier' : 'No ticket')}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400">
+                                      {new Date(item.createdAt).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    </p>
+                                  </div>
+                                  <p className="text-xs font-bold text-gray-800 font-mono flex-shrink-0">
+                                    {item.creditsCost} crédits
+                                  </p>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {filteredBalances.length === 0 && (

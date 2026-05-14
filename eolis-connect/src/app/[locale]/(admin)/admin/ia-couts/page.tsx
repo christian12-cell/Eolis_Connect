@@ -94,19 +94,25 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
               {[
                 {
                   label: isFr ? 'Revenus recharges' : 'Top-up revenue',
-                  value: `${benefits.totalRevenue.toFixed(0)} FCFA`,
+                  fcfa: benefits.totalRevenue.toFixed(0),
+                  usd: (benefits.totalRevenue / 600).toFixed(2),
+                  eur: (benefits.totalRevenue / 655.957).toFixed(2),
                   sub: `${benefits.approvedRequestsCount} ${isFr ? 'recharge(s) validée(s)' : 'approved top-up(s)'}`,
                   color: 'bg-emerald-50 text-emerald-700',
                 },
                 {
                   label: isFr ? 'Coûts réels services' : 'Actual service costs',
-                  value: `${benefits.totalApiCost.toFixed(2)} FCFA`,
+                  fcfa: benefits.totalApiCost.toFixed(2),
+                  usd: (benefits.totalApiCost / 600).toFixed(4),
+                  eur: (benefits.totalApiCost / 655.957).toFixed(4),
                   sub: `${benefits.blCreditsConsumed} cr. BL · ${benefits.voiceCreditsConsumed} cr. voix`,
                   color: 'bg-red-50 text-red-600',
                 },
                 {
                   label: isFr ? 'Bénéfice net' : 'Net profit',
-                  value: `${benefits.grossProfit.toFixed(0)} FCFA`,
+                  fcfa: benefits.grossProfit.toFixed(0),
+                  usd: (benefits.grossProfit / 600).toFixed(2),
+                  eur: (benefits.grossProfit / 655.957).toFixed(2),
                   sub: benefits.totalRevenue > 0
                     ? `${((benefits.grossProfit / benefits.totalRevenue) * 100).toFixed(1)}% ${isFr ? 'de marge' : 'margin'}`
                     : isFr ? 'Aucune recharge encore' : 'No top-ups yet',
@@ -114,7 +120,8 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                 },
               ].map(card => (
                 <div key={card.label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                  <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                  <p className="text-xl font-bold text-gray-900">{card.fcfa} FCFA</p>
+                  <p className="text-xs text-gray-400 font-mono">${card.usd} · €{card.eur}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{card.label}</p>
                   <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-2 ${card.color}`}>
                     {card.sub}
@@ -155,6 +162,9 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-gray-900">{r.amountValidated} FCFA</p>
+                        <p className="text-[10px] text-gray-400 font-mono">
+                          ${(r.amountValidated / 600).toFixed(2)} · €{(r.amountValidated / 655.957).toFixed(2)}
+                        </p>
                         <p className="text-xs text-emerald-600">+{r.creditsAdded} crédits</p>
                       </div>
                     </div>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle, BookOpen, Wallet } from 'lucide-react'
 import { BottomNav } from './BottomNav'
-import { clearSession, isTokenExpired, getUser } from '@/lib/api-client'
+import { clearSession, isTokenExpired, getUser, apiFetch } from '@/lib/api-client'
 import { syncPending } from '@/lib/offline-sync'
 import { offlineDb } from '@/lib/offline-db'
 
@@ -28,8 +28,9 @@ export function MobileLayout({
   const otherLocale = locale === 'fr' ? 'en' : 'fr'
   const isFr        = locale === 'fr'
 
-  const [isOffline, setIsOffline] = useState(false)
-  const [toast, setToast]         = useState<string | null>(null)
+  const [isOffline, setIsOffline]       = useState(false)
+  const [toast, setToast]               = useState<string | null>(null)
+  const [liveUnread, setLiveUnread]     = useState(unreadCount)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -42,6 +43,21 @@ export function MobileLayout({
     const label = refs.length > 0 ? refs.join(', ') : `${sent}`
     showToast(isFr ? `✓ Envoyé — ${label}` : `✓ Sent — ${label}`)
   }
+
+  useEffect(() => {
+    const u = getUser()
+    if (u?.role === 'CLIENT') {
+      function fetchNotifCount() {
+        apiFetch('/api/notifications')
+          .then(r => r.json())
+          .then(d => { if (Array.isArray(d)) setLiveUnread(d.filter((n: any) => !n.isRead).length) })
+          .catch(() => {})
+      }
+      fetchNotifCount()
+      const notifInterval = setInterval(fetchNotifCount, 30_000)
+      return () => clearInterval(notifInterval)
+    }
+  }, [locale])
 
   useEffect(() => {
     // Periodic session check — auto-logout when token expires
@@ -137,7 +153,7 @@ export function MobileLayout({
           {getUser()?.role === 'CLIENT' && (
             <button onClick={() => router.push(`/${locale}/depenses`)}
               className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/20 hover:bg-white/30 transition-colors"
-              title={isFr ? 'Mes dépenses IA' : 'My AI expenses'}>
+              title={isFr ? 'Mes crédits' : 'My credits'}>
               <Wallet size={15} className="text-white" />
             </button>
           )}
@@ -160,7 +176,7 @@ export function MobileLayout({
         {children}
       </main>
 
-      <BottomNav locale={locale} unreadCount={unreadCount} />
+      <BottomNav locale={locale} unreadCount={liveUnread} />
     </div>
   )
 }

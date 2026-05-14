@@ -105,10 +105,13 @@ def ticket_ai_cost(
 def admin_usage(
     from_date: Optional[str] = Query(None, alias="from"),
     to_date:   Optional[str] = Query(None, alias="to"),
+    client_id: Optional[str] = Query(None),
     current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
     db: Session = Depends(get_db),
 ):
     q = db.query(AIUsage)
+    if client_id:
+        q = q.filter(AIUsage.client_id == client_id)
     q = _apply_date_filter(q, from_date, to_date)
     rows = q.order_by(AIUsage.created_at.desc()).all()
 
