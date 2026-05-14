@@ -1,7 +1,5 @@
-import smtplib
-import ssl
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import json
+import urllib.request
 from .config import settings
 
 # Logo hosted on Imgur — replace with your own CDN URL for production
@@ -10,22 +8,26 @@ SUPPORT_EMAIL = "support@eolisconnect.online"
 
 
 def _send(to: str, subject: str, html: str):
-    if not settings.MAIL_ENABLED or not settings.MAIL_NOREPLY_FROM or not settings.MAIL_NOREPLY_PASSWORD:
+    if not settings.MAIL_ENABLED or not settings.RESEND_API_KEY or not settings.MAIL_NOREPLY_FROM:
         return
-    # Zoho aliases: authenticate with primary account, send from alias
-    login_user = settings.MAIL_LOGIN or settings.MAIL_NOREPLY_FROM
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = f"Eolis Connect <{settings.MAIL_NOREPLY_FROM}>"
-        msg["To"] = to
-        msg.attach(MIMEText(html, "html", "utf-8"))
-        ctx = ssl.create_default_context()
-        with smtplib.SMTP(settings.MAIL_SERVER, settings.MAIL_PORT) as srv:
-            srv.ehlo()
-            srv.starttls(context=ctx)
-            srv.login(login_user, settings.MAIL_NOREPLY_PASSWORD)
-            srv.sendmail(settings.MAIL_NOREPLY_FROM, to, msg.as_string())
+        payload = json.dumps({
+            "from": f"Eolis Connect <{settings.MAIL_NOREPLY_FROM}>",
+            "to": [to],
+            "subject": subject,
+            "html": html,
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15):
+            pass
     except Exception as exc:
         print(f"[email] Failed to send to {to}: {exc}")
 

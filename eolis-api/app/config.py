@@ -10,13 +10,16 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000"
 
     MAIL_ENABLED: bool = False
-    MAIL_SERVER: str = "smtp.zoho.eu"
-    MAIL_PORT: int = 587
-    MAIL_LOGIN: str = ""           # compte principal Zoho (ex: denmeko@zohomail.eu)
-    MAIL_NOREPLY_FROM: str = ""    # alias expéditeur (ex: noreply@eolisconnect.online)
-    MAIL_NOREPLY_PASSWORD: str = ""
+    MAIL_NOREPLY_FROM: str = ""    # ex: noreply@eolisconnect.online
     MAIL_SUPPORT_FROM: str = ""
     ADMIN_EMAIL: str = ""
+    RESEND_API_KEY: str = ""       # clé API Resend (re_xxxx)
+
+    # Legacy SMTP — conservés pour Railway mais plus utilisés
+    MAIL_SERVER: str = "smtp.zoho.eu"
+    MAIL_PORT: int = 587
+    MAIL_LOGIN: str = ""
+    MAIL_NOREPLY_PASSWORD: str = ""
 
     TWILIO_ENABLED: bool = False
     TWILIO_ACCOUNT_SID: str = ""
