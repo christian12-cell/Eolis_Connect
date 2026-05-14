@@ -1,6 +1,4 @@
-import json
-import urllib.request
-import urllib.error
+import resend
 from .config import settings
 
 # Logo hosted on Imgur — replace with your own CDN URL for production
@@ -11,27 +9,15 @@ SUPPORT_EMAIL = "support@eolisconnect.online"
 def _send(to: str, subject: str, html: str):
     if not settings.MAIL_ENABLED or not settings.RESEND_API_KEY or not settings.MAIL_NOREPLY_FROM:
         return
+    resend.api_key = settings.RESEND_API_KEY
     try:
-        payload = json.dumps({
+        resend.Emails.send({
             "from": f"Eolis Connect <{settings.MAIL_NOREPLY_FROM}>",
             "to": [to],
             "subject": subject,
             "html": html,
-        }).encode("utf-8")
-        req = urllib.request.Request(
-            "https://api.resend.com/emails",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=15):
-            pass
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        print(f"[email] Resend {e.code} to {to}: {body}")
+        })
+        print(f"[email] Sent to {to}")
     except Exception as exc:
         print(f"[email] Failed to send to {to}: {exc}")
 
