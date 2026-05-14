@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import {
   Upload, Camera, X, FileText, ChevronRight, ChevronLeft, ChevronDown,
-  Check, Loader2, Star, Plus, Trash2, WifiOff,
+  Check, Loader2, Star, Plus, Trash2, WifiOff, Mic,
 } from 'lucide-react'
 import { getUser, apiFetch, apiUpload } from '@/lib/api-client'
+import { VoiceRecorder } from '@/components/ui/VoiceRecorder'
 import { offlineDb, fileToStored } from '@/lib/offline-db'
 import { getUrgency } from '@/lib/utils'
 import { ScannerModal } from '@/components/scanner/ScannerModal'
@@ -253,6 +254,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [blDocumentId, setBlDocumentId] = useState<string | null>(null)
   const [blCost, setBlCost]             = useState<{ usd: number; fcfa: number } | null>(null)
   const [showCostPopup, setShowCostPopup] = useState(false)
+  const [pendingAction, setPendingAction] = useState<'bl' | 'voice' | null>(null)
+  const [premiumAccepted, setPremiumAccepted] = useState(false)
   const [blSearch, setBlSearch]         = useState('')
 
   const [openRecap, setOpenRecap] = useState<Record<string, boolean>>({
@@ -272,11 +275,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   }, [locale])
 
   useEffect(() => {
-    // If there are pending actions from a previous offline session, show the waiting screen
     offlineDb.hasPending().then(has => {
       if (has && !navigator.onLine) setPendingOffline(true)
-      // If online, MobileLayout's sync will handle it automatically
     })
+  }, [])
+
+  useEffect(() => {
+    setPremiumAccepted(localStorage.getItem('eolis_premium_accepted') === '1')
   }, [])
 
   const isFr         = locale === 'fr'
@@ -517,9 +522,9 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   }
 
   async function enterBLMode() {
-    // Show cost popup if client hasn't dismissed it permanently
-    const accepted = typeof window !== 'undefined' && localStorage.getItem('eolis_bl_cost_accepted') === '1'
+    const accepted = typeof window !== 'undefined' && localStorage.getItem('eolis_premium_accepted') === '1'
     if (!accepted) {
+      setPendingAction('bl')
       setShowCostPopup(true)
       return
     }
@@ -845,62 +850,109 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     )
   }
 
-  // ── BL Cost popup ─────────────────────────────────────────────────────────────
+  // ── Premium features popup ────────────────────────────────────────────────────
 
   if (showCostPopup) {
     return (
       <MobileLayout locale={locale} title={isFr ? 'Nouvelle demande' : 'New request'} showBack>
-        <div className="flex flex-col items-center text-center gap-5 pt-4">
-          <div className="w-16 h-16 rounded-2xl bg-[#4A8FC4]/20 flex items-center justify-center">
-            <span className="text-3xl">⚡</span>
+        <div className="flex flex-col gap-4 pt-2">
+          {/* Header */}
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚡</span>
+            <div>
+              <h2 className="text-base font-bold text-white">
+                {isFr ? 'Fonctionnalités Premium' : 'Premium Features'}
+              </h2>
+              <p className="text-xs text-blue-200 mt-0.5">
+                {isFr
+                  ? "Ces fonctionnalités utilisent l'IA OpenAI et génèrent un coût facturable."
+                  : 'These features use OpenAI AI and generate a billable cost.'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-white mb-2">
-              {isFr ? 'Mode Rapide — Service payant' : 'Fast Mode — Paid service'}
-            </h2>
-            <p className="text-sm text-blue-100 leading-relaxed max-w-xs mx-auto">
-              {isFr
-                ? "Ce mode utilise l'intelligence artificielle pour analyser votre Booking Confirmation Eagle et pré-remplir votre demande automatiquement."
-                : 'This mode uses AI to analyze your Eagle Booking Confirmation and auto-fill your request.'}
+
+          {/* Feature: BL extraction */}
+          <div className="bg-white/10 border border-white/15 rounded-2xl p-4 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📄</span>
+              <p className="text-sm font-bold text-white">
+                {isFr ? 'Analyse automatique de document' : 'Automatic document analysis'}
+              </p>
+            </div>
+            <p className="text-xs text-blue-300 pl-7">GPT-4o-mini · ~0.30 FCFA / {isFr ? 'extraction' : 'extraction'}</p>
+            <p className="text-xs text-blue-100 pl-7">
+              {isFr ? '→ Lit et structure votre BL automatiquement' : '→ Reads and structures your BL automatically'}
             </p>
           </div>
-          <div className="bg-white/10 border border-white/20 rounded-2xl px-5 py-4 w-full space-y-2">
-            <p className="text-xs text-blue-200 font-semibold uppercase tracking-wide">
-              {isFr ? 'Coût estimé par extraction' : 'Estimated cost per extraction'}
+
+          {/* Feature: Voice */}
+          <div className="bg-white/10 border border-white/15 rounded-2xl p-4 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎙️</span>
+              <p className="text-sm font-bold text-white">
+                {isFr ? 'Dictée vocale → Texte' : 'Voice dictation → Text'}
+              </p>
+            </div>
+            <p className="text-xs text-blue-300 pl-7">Whisper · ~3.60 FCFA / min</p>
+            <p className="text-xs text-blue-100 pl-7">
+              {isFr ? "→ Parlez, le texte s'écrit automatiquement" : '→ Speak, the text writes itself'}
             </p>
-            <p className="text-2xl font-bold text-white">≈ 0.30 FCFA</p>
-            <p className="text-xs text-blue-300">≈ $0.0005 · {isFr ? 'varie selon la taille du document' : 'varies with document size'}</p>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 w-full">
-            <p className="text-xs text-blue-200 text-left leading-relaxed">
-              ℹ️ {isFr
-                ? "Le coût exact sera visible dans votre dossier et dans la section « Dépenses » de l'application."
-                : 'The exact cost will be visible in your ticket and in the Expenses section of the app.'}
+
+          {/* Cost estimate */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+            <p className="text-xs font-bold text-white/60 uppercase tracking-wide mb-2">
+              {isFr ? 'Estimation par dossier typique' : 'Estimate per typical file'}
+            </p>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between text-blue-200">
+                <span>{isFr ? '1 extraction BL' : '1 BL extraction'}</span>
+                <span className="font-mono">≈ 0.30 FCFA</span>
+              </div>
+              <div className="flex justify-between text-blue-200">
+                <span>{isFr ? '2 min de dictée' : '2 min dictation'}</span>
+                <span className="font-mono">≈ 7.20 FCFA</span>
+              </div>
+              <div className="border-t border-white/10 pt-1 flex justify-between text-white font-bold">
+                <span>{isFr ? 'Total estimé' : 'Estimated total'}</span>
+                <span className="font-mono">≈ 7.50 FCFA</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-blue-400 mt-2">
+              {isFr ? '(taux indicatif : 1$ = 600 FCFA)' : '(indicative rate: 1$ = 600 FCFA)'}
             </p>
           </div>
-          <button
-            onClick={() => {
-              setShowCostPopup(false)
-              _launchBLMode()
-            }}
-            className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold">
-            {isFr ? 'Continuer' : 'Continue'}
-          </button>
+
+          {/* Checkbox */}
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox"
-              className="w-4 h-4 rounded"
+            <input type="checkbox" className="w-4 h-4 rounded"
               onChange={e => {
-                if (e.target.checked) localStorage.setItem('eolis_bl_cost_accepted', '1')
-                else localStorage.removeItem('eolis_bl_cost_accepted')
+                if (e.target.checked) localStorage.setItem('eolis_premium_accepted', '1')
+                else localStorage.removeItem('eolis_premium_accepted')
               }} />
             <span className="text-xs text-blue-200">
               {isFr ? 'Ne plus afficher ce message' : "Don't show this again"}
             </span>
           </label>
-          <button onClick={() => setShowCostPopup(false)}
-            className="text-white/50 text-sm">
-            ← {isFr ? 'Retour' : 'Back'}
-          </button>
+
+          {/* Buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => { setShowCostPopup(false); setPendingAction(null) }}
+              className="py-3.5 rounded-2xl border border-white/30 text-white text-sm font-medium">
+              {isFr ? 'Annuler' : 'Cancel'}
+            </button>
+            <button
+              onClick={() => {
+                setPremiumAccepted(true)
+                setShowCostPopup(false)
+                if (pendingAction === 'bl') _launchBLMode()
+                setPendingAction(null)
+              }}
+              className="py-3.5 rounded-2xl bg-white text-[#1B3A5C] text-sm font-bold">
+              {isFr ? "J'ai compris →" : "I understand →"}
+            </button>
+          </div>
         </div>
       </MobileLayout>
     )
@@ -1994,7 +2046,17 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                       rows={4}
                       className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed"
                     />
-                    <p className="text-xs text-gray-300 text-right">{v.description.length}/10000</p>
+                    <div className="flex items-center justify-between mt-0.5">
+                      {premiumAccepted
+                        ? <VoiceRecorder
+                            onResult={text => updateVessel(v.id, { description: (v.description + (v.description ? ' ' : '') + text).slice(0, 10000) })}
+                          />
+                        : <button type="button" onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }} className="p-0.5">
+                            <Mic size={14} className="text-gray-300" />
+                          </button>
+                      }
+                      <p className="text-xs text-gray-300">{v.description.length}/10000</p>
+                    </div>
                   </div>
                   {/* Documents */}
                   <div className="border-t border-gray-100 pt-3">
@@ -2030,7 +2092,17 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     rows={6}
                     className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed"
                   />
-                  <p className="text-xs text-gray-300 text-right mt-1">{form.description.length}/10000</p>
+                  <div className="flex items-center justify-between mt-1">
+                    {premiumAccepted
+                      ? <VoiceRecorder
+                          onResult={text => set('description', (form.description + (form.description ? ' ' : '') + text).slice(0, 10000))}
+                        />
+                      : <button type="button" onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }} className="p-0.5">
+                          <Mic size={15} className="text-gray-300" />
+                        </button>
+                    }
+                    <p className="text-xs text-gray-300">{form.description.length}/10000</p>
+                  </div>
                 </div>
                 <div className="bg-white/10 rounded-2xl p-4 border border-white/15 space-y-3">
                   <div>

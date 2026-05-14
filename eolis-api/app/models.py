@@ -224,13 +224,14 @@ class SystemConfig(Base):
 
 
 class AIUsage(Base):
-    """Tracks every GPT call: tokens consumed, exact cost in USD and FCFA."""
+    """Tracks every AI call (GPT or Whisper): tokens/duration, exact cost in USD and FCFA."""
     __tablename__ = "ai_usage"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_id)
     client_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"))
     ticket_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("tickets.id"), nullable=True)
     bl_document_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("bl_documents.id"), nullable=True)
+    type: Mapped[str] = mapped_column(String(50), default="bl_extraction", server_default="bl_extraction")
     model: Mapped[str] = mapped_column(String(50))
     input_tokens: Mapped[int] = mapped_column(Integer)
     output_tokens: Mapped[int] = mapped_column(Integer)

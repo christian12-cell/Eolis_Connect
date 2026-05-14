@@ -6,9 +6,10 @@ import Image from 'next/image'
 import {
   ArrowLeft, Globe, Send, Star, Ship, Package, FileText,
   MessageCircle, Paperclip, Download, ChevronDown, Upload, CheckCircle,
-  X, Loader2, Camera, Trash2,
+  X, Loader2, Camera, Trash2, Mic,
 } from 'lucide-react'
 import { DocCardRow } from '@/components/ui/DocCard'
+import { VoiceRecorder } from '@/components/ui/VoiceRecorder'
 import { ScannerModal } from '@/components/scanner/ScannerModal'
 import { getUser, apiFetch, apiUpload, getToken, apiUrl } from '@/lib/api-client'
 import { useTicketWS } from '@/lib/useTicketWS'
@@ -233,6 +234,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [premiumAccepted, setPremiumAccepted] = useState(false)
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false)
   const [ratingScore, setRatingScore] = useState(0)
   const [ratingComment, setRatingComment] = useState('')
   const [ratingSubmitted, setRatingSubmitted] = useState(false)
@@ -262,6 +265,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   }
 
   useEffect(() => { params.then(p => { setLocale(p.locale); setTicketId(p.id) }) }, [params])
+  useEffect(() => { setPremiumAccepted(localStorage.getItem('eolis_premium_accepted') === '1') }, [])
 
   useEffect(() => {
     if (!ticketId) return
@@ -590,6 +594,98 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
 
   return (
     <div className="flex flex-col" style={{ height: '100dvh', paddingTop: 'env(safe-area-inset-top)' }}>
+
+      {/* Premium consent overlay */}
+      {showPremiumPopup && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center p-4">
+          <div className="bg-[#0f172a] w-full max-w-md rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚡</span>
+              <div>
+                <h2 className="text-base font-bold text-white">
+                  {isFr ? 'Fonctionnalités Premium' : 'Premium Features'}
+                </h2>
+                <p className="text-xs text-blue-200 mt-0.5">
+                  {isFr
+                    ? "Ces fonctionnalités utilisent l'IA OpenAI et génèrent un coût facturable."
+                    : 'These features use OpenAI AI and generate a billable cost.'}
+                </p>
+              </div>
+            </div>
+            <div className="bg-white/10 border border-white/15 rounded-2xl p-4 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📄</span>
+                <p className="text-sm font-bold text-white">
+                  {isFr ? 'Analyse automatique de document' : 'Automatic document analysis'}
+                </p>
+              </div>
+              <p className="text-xs text-blue-300 pl-7">GPT-4o-mini · ~0.30 FCFA / {isFr ? 'extraction' : 'extraction'}</p>
+              <p className="text-xs text-blue-100 pl-7">
+                {isFr ? '→ Lit et structure votre BL automatiquement' : '→ Reads and structures your BL automatically'}
+              </p>
+            </div>
+            <div className="bg-white/10 border border-white/15 rounded-2xl p-4 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🎙️</span>
+                <p className="text-sm font-bold text-white">
+                  {isFr ? 'Dictée vocale → Texte' : 'Voice dictation → Text'}
+                </p>
+              </div>
+              <p className="text-xs text-blue-300 pl-7">Whisper · ~3.60 FCFA / min</p>
+              <p className="text-xs text-blue-100 pl-7">
+                {isFr ? "→ Parlez, le texte s'écrit automatiquement" : '→ Speak, the text writes itself'}
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+              <p className="text-xs font-bold text-white/60 uppercase tracking-wide mb-2">
+                {isFr ? 'Estimation par dossier typique' : 'Estimate per typical file'}
+              </p>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between text-blue-200">
+                  <span>{isFr ? '1 extraction BL' : '1 BL extraction'}</span>
+                  <span className="font-mono">≈ 0.30 FCFA</span>
+                </div>
+                <div className="flex justify-between text-blue-200">
+                  <span>{isFr ? '2 min de dictée' : '2 min dictation'}</span>
+                  <span className="font-mono">≈ 7.20 FCFA</span>
+                </div>
+                <div className="border-t border-white/10 pt-1 flex justify-between text-white font-bold">
+                  <span>{isFr ? 'Total estimé' : 'Estimated total'}</span>
+                  <span className="font-mono">≈ 7.50 FCFA</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-blue-400 mt-2">
+                {isFr ? '(taux indicatif : 1$ = 600 FCFA)' : '(indicative rate: 1$ = 600 FCFA)'}
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" className="w-4 h-4 rounded"
+                onChange={e => {
+                  if (e.target.checked) localStorage.setItem('eolis_premium_accepted', '1')
+                  else localStorage.removeItem('eolis_premium_accepted')
+                }} />
+              <span className="text-xs text-blue-200">
+                {isFr ? 'Ne plus afficher ce message' : "Don't show this again"}
+              </span>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setShowPremiumPopup(false)}
+                className="py-3.5 rounded-2xl border border-white/30 text-white text-sm font-medium">
+                {isFr ? 'Annuler' : 'Cancel'}
+              </button>
+              <button
+                onClick={() => {
+                  setPremiumAccepted(true)
+                  setShowPremiumPopup(false)
+                }}
+                className="py-3.5 rounded-2xl bg-white text-[#1B3A5C] text-sm font-bold">
+                {isFr ? "J'ai compris →" : 'I understand →'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scanner modal */}
       {scanTarget && (
         <ScannerModal
@@ -1399,6 +1495,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                     className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors">
                     <Camera size={20} />
                   </button>
+                  {premiumAccepted
+                    ? <VoiceRecorder
+                        className="flex-shrink-0 mb-2"
+                        onResult={t => setText(prev => (prev + (prev ? ' ' : '') + t).trim())}
+                      />
+                    : <button type="button"
+                        onClick={() => setShowPremiumPopup(true)}
+                        className="flex-shrink-0 mb-2 text-gray-300 active:text-[#1B3A5C] transition-colors">
+                        <Mic size={20} />
+                      </button>
+                  }
                   <textarea
                     value={text}
                     onChange={e => setText(e.target.value)}
