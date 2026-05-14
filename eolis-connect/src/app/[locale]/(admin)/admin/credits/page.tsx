@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { apiFetch, apiUrl, getToken, getUser } from '@/lib/api-client'
 import {
   Zap, Check, X, Clock, CheckCircle, XCircle, Loader2,
-  ChevronDown, Users, FileText, ExternalLink,
+  ChevronDown, Users, FileText, ExternalLink, RefreshCw,
 } from 'lucide-react'
 
 // ── ProofViewer: fetch avec auth, affiche image ou PDF ─────────────────────────
@@ -96,6 +96,8 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   const [searchBalance, setSearchBalance] = useState('')
   const [expandedClient, setExpandedClient] = useState<string | null>(null)
   const [clientUsage, setClientUsage]     = useState<Record<string, any[]>>({})
+  const [rejectingId, setRejectingId]     = useState<string | null>(null)
+  const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({})
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   useEffect(() => {
@@ -127,6 +129,13 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     tab === 'requests' ? loadRequests() : loadBalances()
   }, [user, tab, loadRequests, loadBalances])
 
+  // Auto-refresh toutes les 30s sur l'onglet demandes
+  useEffect(() => {
+    if (!user || tab !== 'requests') return
+    const interval = setInterval(loadRequests, 30_000)
+    return () => clearInterval(interval)
+  }, [user, tab, loadRequests])
+
   const isFr = locale === 'fr'
   const pendingCount = requests.filter(r => r.status === 'pending').length
 
@@ -149,13 +158,14 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     setExpandedClient(cid)
   }
 
-  async function reject(id: string) {
-    const reason = prompt(isFr ? 'Motif de refus (optionnel) :' : 'Rejection reason (optional):') ?? ''
+  async function confirmReject(id: string) {
+    const reason = rejectReasons[id] ?? ''
     setValidating(id)
     const fd = new FormData()
     fd.append('reason', reason)
     await apiFetch(`/api/credits/admin/requests/${id}/reject`, { method: 'POST', body: fd })
     setValidating(null)
+    setRejectingId(null)
     loadRequests()
   }
 
@@ -180,11 +190,19 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
               {isFr ? 'Recharges et soldes des clients' : 'Top-ups and client balances'}
             </p>
           </div>
-          {pendingCount > 0 && (
-            <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-sm font-bold rounded-full animate-pulse">
-              {pendingCount} {isFr ? 'en attente' : 'pending'}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {pendingCount > 0 && (
+              <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-sm font-bold rounded-full animate-pulse">
+                {pendingCount} {isFr ? 'en attente' : 'pending'}
+              </span>
+            )}
+            <button
+              onClick={() => { setLoading(true); tab === 'requests' ? loadRequests() : loadBalances() }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-500 text-xs font-semibold hover:bg-gray-50 transition-colors">
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+              {isFr ? 'Actualiser' : 'Refresh'}
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -273,22 +291,49 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
 
                     {/* Actions pending */}
                     {r.status === 'pending' && (
-                      <div className="border-t border-gray-100 px-5 py-3 flex items-center gap-3">
-                        <input
-                          type="number"
-                          placeholder={isFr ? 'Montant reçu (FCFA)' : 'Amount received (FCFA)'}
-                          defaultValue={r.amountDeclared}
-                          onChange={e => setAmountInputs(prev => ({ ...prev, [r.id]: e.target.value }))}
-                          className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]"
-                        />
-                        <button onClick={() => approve(r.id)} disabled={validating === r.id}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50">
-                          <Check size={14} /> {isFr ? 'Valider' : 'Approve'}
-                        </button>
-                        <button onClick={() => reject(r.id)} disabled={validating === r.id}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-100 text-red-600 text-sm font-semibold disabled:opacity-50">
-                          <X size={14} /> {isFr ? 'Refuser' : 'Reject'}
-                        </button>
+                      <div className="border-t border-gray-100 px-5 py-3 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            placeholder={isFr ? 'Montant reçu (FCFA)' : 'Amount received (FCFA)'}
+                            defaultValue={r.amountDeclared}
+                            onChange={e => setAmountInputs(prev => ({ ...prev, [r.id]: e.target.value }))}
+                            className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]"
+                          />
+                          <button onClick={() => approve(r.id)} disabled={validating === r.id}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50">
+                            {validating === r.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                            {isFr ? 'Valider' : 'Approve'}
+                          </button>
+                          <button
+                            onClick={() => setRejectingId(rejectingId === r.id ? null : r.id)}
+                            disabled={validating === r.id}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-100 text-red-600 text-sm font-semibold disabled:opacity-50">
+                            <X size={14} /> {isFr ? 'Refuser' : 'Reject'}
+                          </button>
+                        </div>
+                        {rejectingId === r.id && (
+                          <div className="flex gap-2 pt-1">
+                            <textarea
+                              rows={2}
+                              placeholder={isFr ? 'Motif du refus (optionnel)...' : 'Rejection reason (optional)...'}
+                              value={rejectReasons[r.id] ?? ''}
+                              onChange={e => setRejectReasons(prev => ({ ...prev, [r.id]: e.target.value }))}
+                              className="flex-1 px-3 py-2 rounded-xl border border-red-200 text-sm focus:outline-none focus:border-red-400 resize-none"
+                            />
+                            <div className="flex flex-col gap-1.5">
+                              <button onClick={() => confirmReject(r.id)} disabled={validating === r.id}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-semibold disabled:opacity-50">
+                                {validating === r.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                {isFr ? 'Confirmer' : 'Confirm'}
+                              </button>
+                              <button onClick={() => setRejectingId(null)}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 text-gray-500 text-xs font-semibold">
+                                <X size={12} /> {isFr ? 'Annuler' : 'Cancel'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 

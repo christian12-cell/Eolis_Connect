@@ -19,6 +19,7 @@ router = APIRouter(prefix="/credits", tags=["credits"])
 ORANGE_NUMBER = "689 506 319"
 MTN_NUMBER    = "676 652 945"
 ACCOUNT_NAME  = "Blandine Denmeko"
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "contact@eoliscameroun.com")
 
 # ── S3 helpers (mirror attachments.py) ────────────────────────────────────────
 
@@ -106,15 +107,15 @@ async def submit_request(
     db.add(req)
     db.flush()
 
-    # Notify all admins
+    # Notify all admins (bilingual title|||message)
     client_name = f"{current_user.first_name} {current_user.last_name}"
     admins = db.query(User).filter(User.role.in_(["SYSTEM_ADMIN", "OPS_ADMIN"])).all()
     for admin in admins:
         db.add(Notification(
             user_id=admin.id,
             type="CREDIT_REQUEST_NEW",
-            title="Nouvelle demande de recharge",
-            message=f"{client_name} a soumis une demande de {int(amount_declared)} FCFA.",
+            title="Nouvelle demande de recharge|||New top-up request",
+            message=f"{client_name} a soumis une demande de {int(amount_declared)} FCFA.|||{client_name} submitted a request for {int(amount_declared)} FCFA.",
         ))
 
     db.commit()
@@ -188,8 +189,13 @@ def approve_request(
     notif = Notification(
         user_id=req.client_id,
         type="CREDITS_ADDED",
-        title="Crédits ajoutés ✓",
-        message=f"{int(credits_to_add)} crédits premium ont été ajoutés à votre compte.",
+        title="Crédits ajoutés ✓|||Credits added ✓",
+        message=(
+            f"{int(credits_to_add)} crédits premium ont été ajoutés à votre compte."
+            f" Une question ? {SUPPORT_EMAIL}"
+            f"|||{int(credits_to_add)} premium credits have been added to your account."
+            f" Questions? {SUPPORT_EMAIL}"
+        ),
     )
     db.add(notif)
     db.commit()
@@ -215,11 +221,16 @@ def reject_request(
     req.validated_at = datetime.utcnow()
     db.add(req)
 
+    reason_prefix_fr = f"{reason} — " if reason else ""
+    reason_prefix_en = f"{reason} — " if reason else ""
     notif = Notification(
         user_id=req.client_id,
         type="CREDITS_REJECTED",
-        title="Demande de recharge refusée",
-        message=reason or "Votre demande de recharge a été refusée. Contactez le support.",
+        title="Demande de recharge refusée|||Top-up request rejected",
+        message=(
+            f"{reason_prefix_fr}Contactez-nous : {SUPPORT_EMAIL}"
+            f"|||{reason_prefix_en}Contact us: {SUPPORT_EMAIL}"
+        ),
     )
     db.add(notif)
     db.commit()

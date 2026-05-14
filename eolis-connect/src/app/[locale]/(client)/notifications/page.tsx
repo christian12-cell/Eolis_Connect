@@ -9,16 +9,28 @@ import { getUser, apiFetch } from '@/lib/api-client'
 import { timeAgo } from '@/lib/utils'
 
 const TYPE_STYLE: Record<string, string> = {
-  NEW_MESSAGE:      'bg-blue-50 text-blue-600',
-  TICKET_UPDATED:   'bg-amber-50 text-amber-600',
-  TICKET_CLOSED:    'bg-emerald-50 text-emerald-600',
-  TICKET_ASSIGNED:  'bg-purple-50 text-purple-600',
+  NEW_MESSAGE:        'bg-blue-50 text-blue-600',
+  TICKET_UPDATED:     'bg-amber-50 text-amber-600',
+  TICKET_CLOSED:      'bg-emerald-50 text-emerald-600',
+  TICKET_ASSIGNED:    'bg-purple-50 text-purple-600',
+  CREDITS_ADDED:      'bg-emerald-50 text-emerald-600',
+  CREDITS_REJECTED:   'bg-red-50 text-red-500',
+  CREDIT_REQUEST_NEW: 'bg-amber-50 text-amber-600',
 }
 const TYPE_DOT: Record<string, string> = {
-  NEW_MESSAGE:      'bg-blue-400',
-  TICKET_UPDATED:   'bg-amber-400',
-  TICKET_CLOSED:    'bg-emerald-400',
-  TICKET_ASSIGNED:  'bg-purple-400',
+  NEW_MESSAGE:        'bg-blue-400',
+  TICKET_UPDATED:     'bg-amber-400',
+  TICKET_CLOSED:      'bg-emerald-400',
+  TICKET_ASSIGNED:    'bg-purple-400',
+  CREDITS_ADDED:      'bg-emerald-400',
+  CREDITS_REJECTED:   'bg-red-400',
+  CREDIT_REQUEST_NEW: 'bg-amber-400',
+}
+
+function pick(text: string, isFr: boolean): string {
+  if (!text) return text
+  const parts = text.split('|||')
+  return isFr ? parts[0] : (parts[1] ?? parts[0])
 }
 
 export default function NotificationsPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -95,9 +107,9 @@ export default function NotificationsPage({ params }: { params: Promise<{ locale
               }`} />
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-medium ${notif.isRead ? 'text-gray-500' : 'text-gray-900'}`}>
-                  {notif.title}
+                  {pick(notif.title, isFr)}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{notif.message}</p>
+                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{pick(notif.message, isFr)}</p>
                 <p className="text-[10px] text-gray-300 mt-1">{timeAgo(notif.createdAt, locale)}</p>
               </div>
               {notif.ticketId && (
