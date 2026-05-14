@@ -680,6 +680,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                 </div>
               </div>
             </div>
+            <div className="bg-amber-500/15 border border-amber-400/30 rounded-2xl p-3 flex items-start gap-2">
+              <span className="text-amber-400 flex-shrink-0">⚠️</span>
+              <p className="text-xs text-amber-200">
+                {isFr
+                  ? "Si vous uploadez un mauvais fichier, les 50 crédits seront quand même déduits, même si le dossier n'est pas créé."
+                  : "If you upload the wrong file, 50 credits will still be deducted, even if the file is not created."}
+              </p>
+            </div>
+
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" className="w-4 h-4 rounded"
                 onChange={e => {

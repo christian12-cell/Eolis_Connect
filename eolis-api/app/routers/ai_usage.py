@@ -123,15 +123,19 @@ def ticket_ai_cost(
         AIUsage.type == "voice_transcription",
     ).all()
 
-    # BL extraction — only if it was done specifically for this ticket
-    # (created within 2h before ticket creation, not a reused BL)
+    # BL extraction — only if this is the FIRST ticket to use this bl_document_id
+    # (reused BL = another ticket was created earlier with the same bl_document_id → free)
     if ticket.bl_document_id:
-        cutoff = ticket.created_at - timedelta(hours=2)
-        rows += db.query(AIUsage).filter(
-            AIUsage.bl_document_id == ticket.bl_document_id,
-            AIUsage.type == "bl_extraction",
-            AIUsage.created_at >= cutoff,
-        ).all()
+        earlier = db.query(Ticket).filter(
+            Ticket.bl_document_id == ticket.bl_document_id,
+            Ticket.id != ticket_id,
+            Ticket.created_at < ticket.created_at,
+        ).first()
+        if not earlier:
+            rows += db.query(AIUsage).filter(
+                AIUsage.bl_document_id == ticket.bl_document_id,
+                AIUsage.type == "bl_extraction",
+            ).all()
 
     total_credits = sum(int(getattr(r, "credits_cost", 0) or 0) for r in rows)
 

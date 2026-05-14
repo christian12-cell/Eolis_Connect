@@ -253,6 +253,9 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [prevBLsLoading, setPrevBLsLoading] = useState(false)
   const [blDocumentId, setBlDocumentId] = useState<string | null>(null)
   const [blCost, setBlCost]             = useState<{ usd: number; fcfa: number } | null>(null)
+  const [blPreviewFile, setBlPreviewFile] = useState<File | null>(null)
+  const [blPreviewUrl, setBlPreviewUrl]   = useState<string | null>(null)
+  const [blPreviewIsPdf, setBlPreviewIsPdf] = useState(false)
   const [showCostPopup, setShowCostPopup] = useState(false)
   const [pendingAction, setPendingAction] = useState<'bl' | 'voice' | null>(null)
   const [premiumAccepted, setPremiumAccepted] = useState(false)
@@ -532,11 +535,32 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     setPrevBLsLoading(false)
   }
 
+  function showBLPreview(file: File) {
+    const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf')
+    setBlPreviewIsPdf(isPdf)
+    setBlPreviewFile(file)
+    setBlPreviewUrl(isPdf ? null : URL.createObjectURL(file))
+  }
+
+  function clearBLPreview() {
+    if (blPreviewUrl) URL.revokeObjectURL(blPreviewUrl)
+    setBlPreviewFile(null)
+    setBlPreviewUrl(null)
+    setBlPreviewIsPdf(false)
+  }
+
+  function confirmBLExtract() {
+    if (!blPreviewFile) return
+    const file = blPreviewFile
+    clearBLPreview()
+    handleBLFile(file)
+  }
+
   async function handleBLUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
-    handleBLFile(file)
+    showBLPreview(file)
   }
 
   function updateBLF(path: string, value: string) {
@@ -982,6 +1006,15 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             </div>
           </div>
 
+          <div className="bg-amber-500/15 border border-amber-400/30 rounded-2xl p-3 flex items-start gap-2">
+            <span className="text-amber-400 flex-shrink-0">⚠️</span>
+            <p className="text-xs text-amber-200">
+              {isFr
+                ? "Si vous uploadez un mauvais fichier, les 50 crédits seront quand même déduits, même si le dossier n'est pas créé."
+                : "If you upload the wrong file, 50 credits will still be deducted, even if the file is not created."}
+            </p>
+          </div>
+
           {/* Checkbox */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" className="w-4 h-4 rounded"
@@ -1264,9 +1297,9 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
           <ScannerModal
             isFr={isFr}
             onScan={file => {
-              handleBLFile(file)
               setBlScanMode(false)
               setShowScanner(false)
+              showBLPreview(file)
             }}
             onClose={() => { setShowScanner(false); setBlScanMode(false) }}
           />
@@ -1290,6 +1323,43 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               </ul>
             </div>
 
+            {/* ── Preview confirmation before extraction ── */}
+            {blPreviewFile && !blUploading && (
+              <div className="space-y-4">
+                <p className="text-sm font-bold text-white text-center">
+                  {isFr ? 'Est-ce bien votre Booking Confirmation ?' : 'Is this your Booking Confirmation?'}
+                </p>
+                {blPreviewIsPdf ? (
+                  <div className="bg-white/10 border border-white/20 rounded-2xl p-5 flex items-center gap-3">
+                    <FileText size={32} className="text-red-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-white font-semibold text-sm truncate max-w-[220px]">{blPreviewFile.name}</p>
+                      <p className="text-blue-200 text-xs mt-0.5">PDF · {(blPreviewFile.size / 1024).toFixed(0)} KB</p>
+                    </div>
+                  </div>
+                ) : (
+                  <img src={blPreviewUrl!} alt="preview"
+                    className="w-full max-h-56 object-contain rounded-2xl border border-white/20 bg-white/5" />
+                )}
+                <div className="bg-amber-500/15 border border-amber-400/30 rounded-2xl p-3 flex items-start gap-2">
+                  <span className="text-amber-400 flex-shrink-0">⚠️</span>
+                  <p className="text-xs text-amber-200">
+                    {isFr
+                      ? "Si ce n'est pas le bon fichier, vos crédits seront quand même déduits une fois l'extraction lancée."
+                      : "If this is not the right file, your credits will still be deducted once extraction starts."}
+                  </p>
+                </div>
+                <button onClick={confirmBLExtract}
+                  className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold text-sm flex items-center justify-center gap-2">
+                  ✓ {isFr ? 'Oui, extraire ce document (50 crédits)' : 'Yes, extract this document (50 credits)'}
+                </button>
+                <button onClick={clearBLPreview}
+                  className="w-full py-2.5 rounded-2xl border-2 border-white/30 text-white text-sm font-medium">
+                  ✗ {isFr ? 'Non, choisir un autre fichier' : 'No, choose another file'}
+                </button>
+              </div>
+            )}
+
             {!blUploading && !blError && !isOnline && (
               <div className="flex flex-col items-center justify-center py-12 bg-white/5 rounded-2xl border border-white/15 gap-3 text-center">
                 <WifiOff size={36} className="text-blue-300/60" />
@@ -1309,7 +1379,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 )}
               </div>
             )}
-            {!blUploading && !blError && isOnline && (
+            {!blUploading && !blError && isOnline && !blPreviewFile && (
               <>
                 <label className="relative flex flex-col items-center justify-center w-full py-10 rounded-2xl border-2 border-dashed border-white/40 bg-white/5 active:bg-white/10 transition-colors gap-3 overflow-hidden cursor-pointer">
                   <div className="w-14 h-14 rounded-2xl bg-[#4A8FC4]/20 flex items-center justify-center">
