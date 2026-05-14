@@ -238,6 +238,7 @@ class AIUsage(Base):
     cost_usd: Mapped[float] = mapped_column(nullable=False)
     cost_fcfa: Mapped[float] = mapped_column(nullable=False)
     fcfa_rate: Mapped[float] = mapped_column(nullable=False)
+    credits_cost: Mapped[float] = mapped_column(default=0.0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     client: Mapped["User"] = relationship("User", foreign_keys=[client_id])

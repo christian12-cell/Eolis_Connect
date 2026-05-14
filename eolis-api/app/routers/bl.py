@@ -192,11 +192,13 @@ async def extract_bl(
         client_id=current_user.id,
         bl_document_id=bl.id,
         model="gpt-4o-mini",
+        type="bl_extraction",
         input_tokens=in_tok,
         output_tokens=out_tok,
         cost_usd=cost_usd,
         cost_fcfa=cost_fcfa,
         fcfa_rate=fcfa_rate,
+        credits_cost=CREDITS_PER_EXTRACTION,
     )
     db.add(ai_usage)
     deduct_credits(current_user.id, CREDITS_PER_EXTRACTION, db)

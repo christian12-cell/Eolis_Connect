@@ -12,11 +12,7 @@ interface UsageItem {
   type: string
   ticketId: string | null
   ticketRef: string | null
-  model: string
-  inputTokens: number
-  outputTokens: number
-  costFcfa: number
-  costUsd: number
+  creditsCost: number
   createdAt: string
 }
 
@@ -24,7 +20,7 @@ interface TicketGroup {
   ref: string | null
   ticketId: string | null
   items: UsageItem[]
-  totalFcfa: number
+  totalCredits: number
 }
 
 function groupByTicket(items: UsageItem[]): TicketGroup[] {
@@ -32,13 +28,13 @@ function groupByTicket(items: UsageItem[]): TicketGroup[] {
   for (const item of items) {
     const key = item.ticketRef ?? '__no_ticket__'
     if (!map.has(key)) {
-      map.set(key, { ref: item.ticketRef, ticketId: item.ticketId, items: [], totalFcfa: 0 })
+      map.set(key, { ref: item.ticketRef, ticketId: item.ticketId, items: [], totalCredits: 0 })
     }
     const g = map.get(key)!
     g.items.push(item)
-    g.totalFcfa = parseFloat((g.totalFcfa + item.costFcfa).toFixed(4))
+    g.totalCredits = parseFloat((g.totalCredits + (item.creditsCost || 0)).toFixed(2))
   }
-  return [...map.values()].sort((a, b) => (b.totalFcfa - a.totalFcfa))
+  return [...map.values()].sort((a, b) => (b.totalCredits - a.totalCredits))
 }
 
 export default function DepensesPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -82,26 +78,15 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
 
         <PeriodFilter onChange={(r) => load(r)} isFr={isFr} dark />
 
-        {/* Total banner */}
+        {/* Total credits banner */}
         {data && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-[#1B3A5C] flex items-center justify-center">
-                <TrendingUp size={18} className="text-white" />
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
-                  {isFr ? 'Total dépensé' : 'Total spent'}
-                </p>
-                <p className="text-xl font-bold text-[#1B3A5C]">
-                  {(data.totalFcfa ?? 0).toFixed(4)} FCFA
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>${(data.totalUsd ?? 0).toFixed(8)}</span>
-              <span>{data.count ?? 0} {isFr ? 'opération(s) premium' : 'premium operation(s)'}</span>
-            </div>
+          <div className="bg-white/10 border border-white/15 rounded-2xl px-4 py-3 flex items-center justify-between">
+            <p className="text-sm text-blue-100">
+              {data.count ?? 0} {isFr ? 'opération(s) premium' : 'premium operation(s)'}
+            </p>
+            <p className="text-sm font-bold text-white font-mono">
+              {(data.totalCredits ?? 0).toFixed(0)} crédits
+            </p>
           </div>
         )}
 
@@ -173,7 +158,7 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0 mr-1">
-                      <p className="text-sm font-bold text-[#1B3A5C]">{g.totalFcfa.toFixed(4)} FCFA</p>
+                      <p className="text-sm font-bold text-[#1B3A5C] font-mono">{g.totalCredits} crédits</p>
                     </div>
                     {isOpen
                       ? <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
@@ -192,18 +177,17 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
                                 isFr ? 'fr-FR' : 'en-GB',
                                 { day: '2-digit', month: 'short', year: 'numeric' }
                               )}
-                              {item.type === 'bl_extraction' && ` · ${(item.inputTokens + item.outputTokens)} tokens`}
                             </p>
                           </div>
                           <p className="text-xs font-bold text-gray-800 font-mono flex-shrink-0">
-                            {item.costFcfa.toFixed(4)} FCFA
+                            {item.creditsCost} crédits
                           </p>
                         </div>
                       ))}
                       {/* Subtotal */}
                       <div className="flex justify-between px-4 py-2.5 bg-gray-50">
                         <p className="text-xs text-gray-500 font-medium">{isFr ? 'Total dossier' : 'File total'}</p>
-                        <p className="text-xs font-bold text-[#1B3A5C] font-mono">{g.totalFcfa.toFixed(4)} FCFA</p>
+                        <p className="text-xs font-bold text-[#1B3A5C] font-mono">{g.totalCredits} crédits</p>
                       </div>
                     </div>
                   )}

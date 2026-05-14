@@ -53,8 +53,7 @@ def my_usage(
     q = _apply_date_filter(q, from_date, to_date)
     rows = q.order_by(AIUsage.created_at.desc()).all()
 
-    total_usd  = sum(r.cost_usd  for r in rows)
-    total_fcfa = sum(r.cost_fcfa for r in rows)
+    total_credits = sum(getattr(r, "credits_cost", 0) or 0 for r in rows)
 
     items = []
     for r in rows:
@@ -64,20 +63,14 @@ def my_usage(
             "type":         r.type,
             "ticketId":     ticket.id   if ticket else r.ticket_id,
             "ticketRef":    ticket.ref  if ticket else None,
-            "model":        r.model,
-            "inputTokens":  r.input_tokens,
-            "outputTokens": r.output_tokens,
-            "costUsd":      round(r.cost_usd,  8),
-            "costFcfa":     round(r.cost_fcfa, 4),
-            "fcfaRate":     r.fcfa_rate,
+            "creditsCost":  round(getattr(r, "credits_cost", 0) or 0, 2),
             "createdAt":    r.created_at.isoformat() + "Z",
         })
 
     return {
-        "totalUsd":  round(total_usd,  8),
-        "totalFcfa": round(total_fcfa, 4),
-        "count":     len(items),
-        "items":     items,
+        "totalCredits": round(total_credits, 2),
+        "count":        len(items),
+        "items":        items,
     }
 
 

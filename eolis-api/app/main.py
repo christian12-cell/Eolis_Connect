@@ -167,6 +167,9 @@ def startup():
         conn.execute(text(
             "ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'bl_extraction'"
         ))
+        conn.execute(text(
+            "ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS credits_cost DOUBLE PRECISION NOT NULL DEFAULT 0"
+        ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS credit_balances (
                 id VARCHAR(36) PRIMARY KEY,

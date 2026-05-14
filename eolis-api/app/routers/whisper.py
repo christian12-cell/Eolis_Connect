@@ -70,6 +70,7 @@ async def transcribe_audio(
         cost_usd=cost_usd,
         cost_fcfa=cost_fcfa,
         fcfa_rate=fcfa_rate,
+        credits_cost=credits_cost,
     )
     db.add(usage)
     credits_left = deduct_credits(current_user.id, credits_cost, db)
