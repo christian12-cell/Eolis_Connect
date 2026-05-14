@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import {
   Upload, Camera, X, FileText, ChevronRight, ChevronLeft, ChevronDown,
-  Check, Loader2, Star, Plus, Trash2, WifiOff, Mic,
+  Check, Loader2, Star, Plus, Trash2, WifiOff, Mic, Zap,
 } from 'lucide-react'
 import { getUser, apiFetch, apiUpload } from '@/lib/api-client'
 import { VoiceRecorder } from '@/components/ui/VoiceRecorder'
@@ -981,49 +981,111 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   // ── Mode selection ────────────────────────────────────────────────────────────
 
   if (!pageMode) {
+    const hasEnoughCredits = creditsRemaining === null || creditsRemaining >= 50
     return (
       <MobileLayout locale={locale} title={t.title} showBack>
         <div className="space-y-4 pt-2">
-          <p className="text-sm text-blue-100 text-center mb-2">
+
+          {/* Solde de crédits */}
+          {creditsRemaining !== null && (
+            <div className={`flex items-center justify-between rounded-2xl px-4 py-3 border ${
+              hasEnoughCredits
+                ? 'bg-white/10 border-white/15'
+                : 'bg-red-500/15 border-red-400/30'
+            }`}>
+              <div className="flex items-center gap-2">
+                <Zap size={15} className={hasEnoughCredits ? 'text-amber-300' : 'text-red-300'} />
+                <p className="text-sm text-white">
+                  {isFr ? 'Solde :' : 'Balance:'}
+                  <span className="font-bold ml-1">{creditsRemaining} crédits</span>
+                </p>
+              </div>
+              {!hasEnoughCredits && (
+                <button
+                  onClick={() => router.push(`/${locale}/recharger`)}
+                  className="text-xs font-bold text-red-300 underline">
+                  {isFr ? 'Recharger' : 'Top up'}
+                </button>
+              )}
+            </div>
+          )}
+
+          <p className="text-sm text-blue-100 text-center">
             {isFr ? 'Comment souhaitez-vous créer votre demande ?' : 'How would you like to create your request?'}
           </p>
+
+          {/* Mode manuel — gratuit */}
           <button onClick={() => setPageMode('manual')}
             className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
                 <FileText size={24} className="text-white" />
               </div>
-              <div>
-                <p className="text-base font-bold text-white mb-1">
-                  {isFr ? 'Saisie manuelle' : 'Manual entry'}
-                </p>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-base font-bold text-white mb-1">
+                    {isFr ? 'Saisie manuelle' : 'Manual entry'}
+                  </p>
+                  <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+                    {isFr ? 'Gratuit' : 'Free'}
+                  </span>
+                </div>
                 <p className="text-sm text-blue-100 leading-relaxed">
                   {isFr ? 'Remplissez le formulaire étape par étape' : 'Fill in the form step by step'}
                 </p>
               </div>
             </div>
           </button>
+
+          {/* Mode BL — 50 crédits */}
           <button onClick={enterBLMode}
-            className="w-full bg-white/10 border-2 border-[#4A8FC4]/60 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+            className={`w-full rounded-2xl p-5 text-left active:scale-[0.99] transition-all ${
+              hasEnoughCredits
+                ? 'bg-white/10 border-2 border-[#4A8FC4]/60'
+                : 'bg-white/5 border-2 border-red-400/40 opacity-80'
+            }`}>
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[#4A8FC4]/30 flex items-center justify-center flex-shrink-0">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                hasEnoughCredits ? 'bg-[#4A8FC4]/30' : 'bg-red-500/20'
+              }`}>
                 <Upload size={24} className="text-white" />
               </div>
-              <div>
-                <p className="text-base font-bold text-white mb-1">
-                  {isFr ? 'Upload BL Eagle' : 'Upload Eagle BL'}
-                </p>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-base font-bold text-white">
+                    {isFr ? 'Upload BL Eagle' : 'Upload Eagle BL'}
+                  </p>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    hasEnoughCredits
+                      ? 'text-[#4A8FC4] bg-[#4A8FC4]/20'
+                      : 'text-red-300 bg-red-400/20'
+                  }`}>
+                    ⚡ 50 crédits
+                  </span>
+                </div>
                 <p className="text-sm text-blue-100 leading-relaxed">
                   {isFr
-                    ? 'Importez votre Booking Confirmation pour remplissage automatique par IA'
-                    : 'Import your Booking Confirmation for AI auto-fill'}
+                    ? 'Importez votre Booking Confirmation pour remplissage automatique'
+                    : 'Import your Booking Confirmation for automatic filling'}
                 </p>
-                <span className="inline-block mt-2 text-[10px] font-bold text-[#4A8FC4] bg-[#4A8FC4]/20 px-2 py-0.5 rounded-full uppercase tracking-wide">
-                  ⚡ {isFr ? 'Rapide' : 'Fast'}
-                </span>
+                {!hasEnoughCredits && (
+                  <p className="text-xs text-red-300 font-semibold mt-1.5">
+                    {isFr
+                      ? `Crédits insuffisants — il vous en faut 50, vous en avez ${creditsRemaining}`
+                      : `Insufficient credits — need 50, you have ${creditsRemaining}`}
+                  </p>
+                )}
+                {hasEnoughCredits && creditsRemaining !== null && (
+                  <p className="text-[10px] text-blue-300 mt-1">
+                    {isFr
+                      ? `Il vous restera ${creditsRemaining - 50} crédits après`
+                      : `You will have ${creditsRemaining - 50} credits left after`}
+                  </p>
+                )}
               </div>
             </div>
           </button>
+
         </div>
       </MobileLayout>
     )

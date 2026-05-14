@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import { ScannerModal } from '@/components/scanner/ScannerModal'
-import { apiFetch, getUser } from '@/lib/api-client'
+import { apiFetch, apiUpload, getUser } from '@/lib/api-client'
 import { offlineDb, fileToStored } from '@/lib/offline-db'
 import { Upload, Camera, X, Zap, FileText, Bell, Wallet, ChevronRight } from 'lucide-react'
 
@@ -72,7 +72,7 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
       const fd = new FormData()
       fd.append('amount_declared', String(credits))
       fd.append('photo', proof, proof.name)
-      const res = await apiFetch('/api/credits/request', { method: 'POST', body: fd })
+      const res = await apiUpload('/api/credits/request', fd)
       if (res.ok) setStep('done')
     } finally {
       setSubmitting(false)
