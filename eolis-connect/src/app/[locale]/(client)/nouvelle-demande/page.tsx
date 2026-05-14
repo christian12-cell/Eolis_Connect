@@ -256,6 +256,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [showCostPopup, setShowCostPopup] = useState(false)
   const [pendingAction, setPendingAction] = useState<'bl' | 'voice' | null>(null)
   const [premiumAccepted, setPremiumAccepted] = useState(false)
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null)
+  const [isOnline, setIsOnline] = useState(true)
   const [blSearch, setBlSearch]         = useState('')
 
   const [openRecap, setOpenRecap] = useState<Record<string, boolean>>({
@@ -282,7 +284,21 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
   useEffect(() => {
     setPremiumAccepted(localStorage.getItem('eolis_premium_accepted') === '1')
+    setIsOnline(navigator.onLine)
+    const on  = () => setIsOnline(true)
+    const off = () => setIsOnline(false)
+    window.addEventListener('online',  on)
+    window.addEventListener('offline', off)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+    apiFetch('/api/credits/balance')
+      .then(r => r.json())
+      .then(d => setCreditsRemaining(d.creditsRemaining ?? 0))
+      .catch(() => {})
+  }, [user])
 
   const isFr         = locale === 'fr'
   const categories   = isFr ? CATEGORIES_FR : CATEGORIES_EN
@@ -522,6 +538,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   }
 
   async function enterBLMode() {
+    if (creditsRemaining !== null && creditsRemaining < 50) {
+      router.push(`/${locale}/recharger`)
+      return
+    }
     const accepted = typeof window !== 'undefined' && localStorage.getItem('eolis_premium_accepted') === '1'
     if (!accepted) {
       setPendingAction('bl')
@@ -865,8 +885,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               </h2>
               <p className="text-xs text-blue-200 mt-0.5">
                 {isFr
-                  ? "Ces fonctionnalités utilisent l'IA OpenAI et génèrent un coût facturable."
-                  : 'These features use OpenAI AI and generate a billable cost.'}
+                  ? "Ces fonctionnalités avancées génèrent un coût en crédits."
+                  : 'These advanced features consume premium credits.'}
               </p>
             </div>
           </div>
@@ -879,7 +899,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 {isFr ? 'Analyse automatique de document' : 'Automatic document analysis'}
               </p>
             </div>
-            <p className="text-xs text-blue-300 pl-7">GPT-4o-mini · ~0.30 FCFA / {isFr ? 'extraction' : 'extraction'}</p>
+            <p className="text-xs text-blue-300 pl-7">50 crédits / {isFr ? 'extraction' : 'extraction'}</p>
             <p className="text-xs text-blue-100 pl-7">
               {isFr ? '→ Lit et structure votre BL automatiquement' : '→ Reads and structures your BL automatically'}
             </p>
@@ -893,7 +913,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 {isFr ? 'Dictée vocale → Texte' : 'Voice dictation → Text'}
               </p>
             </div>
-            <p className="text-xs text-blue-300 pl-7">Whisper · ~3.60 FCFA / min</p>
+            <p className="text-xs text-blue-300 pl-7">10 crédits / min</p>
             <p className="text-xs text-blue-100 pl-7">
               {isFr ? "→ Parlez, le texte s'écrit automatiquement" : '→ Speak, the text writes itself'}
             </p>
@@ -907,19 +927,19 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             <div className="space-y-1 text-xs">
               <div className="flex justify-between text-blue-200">
                 <span>{isFr ? '1 extraction BL' : '1 BL extraction'}</span>
-                <span className="font-mono">≈ 0.30 FCFA</span>
+                <span className="font-mono">50 crédits</span>
               </div>
               <div className="flex justify-between text-blue-200">
                 <span>{isFr ? '2 min de dictée' : '2 min dictation'}</span>
-                <span className="font-mono">≈ 7.20 FCFA</span>
+                <span className="font-mono">20 crédits</span>
               </div>
               <div className="border-t border-white/10 pt-1 flex justify-between text-white font-bold">
                 <span>{isFr ? 'Total estimé' : 'Estimated total'}</span>
-                <span className="font-mono">≈ 7.50 FCFA</span>
+                <span className="font-mono">70 crédits</span>
               </div>
             </div>
             <p className="text-[10px] text-blue-400 mt-2">
-              {isFr ? '(taux indicatif : 1$ = 600 FCFA)' : '(indicative rate: 1$ = 600 FCFA)'}
+              {isFr ? '(1 crédit = 1 FCFA · recharge minimum 500 crédits)' : '(1 credit = 1 FCFA · min recharge 500 credits)'}
             </p>
           </div>
 
@@ -1489,7 +1509,24 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 onChange={e => set('description', e.target.value.slice(0, 10000))}
                 placeholder={t.descPlaceholder} rows={6}
                 className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed" />
-              <p className="text-xs text-gray-300 text-right mt-1">{form.description.length}/10000</p>
+              <div className="flex items-center justify-between mt-1.5">
+                {premiumAccepted
+                  ? <VoiceRecorder size="sm"
+                      label={isFr ? 'Dicter' : 'Dictate'}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] active:bg-[#1B3A5C] active:text-white transition-colors"
+                      disabledReason={!isOnline ? 'offline' : (creditsRemaining !== null && creditsRemaining <= 0) ? 'no_credits' : null}
+                      onDisabledClick={() => router.push(`/${locale}/recharger`)}
+                      onResult={text => set('description', (form.description + (form.description ? ' ' : '') + text).slice(0, 10000))}
+                    />
+                  : <button type="button"
+                      onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] text-xs font-medium active:bg-[#1B3A5C] active:text-white transition-colors">
+                      <Mic size={12} />
+                      <span>{isFr ? 'Dicter' : 'Dictate'}</span>
+                    </button>
+                }
+                <p className="text-xs text-gray-300">{form.description.length}/10000</p>
+              </div>
             </div>
             <div className="bg-white/10 rounded-2xl p-4 border border-white/15 space-y-3">
               <div>
@@ -2046,22 +2083,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                       rows={4}
                       className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed"
                     />
-                    <div className="flex items-center justify-between mt-1.5">
-                      {premiumAccepted
-                        ? <VoiceRecorder size="sm"
-                            label={isFr ? 'Dicter' : 'Dictate'}
-                            className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600 active:bg-gray-200 transition-colors"
-                            onResult={text => updateVessel(v.id, { description: (v.description + (v.description ? ' ' : '') + text).slice(0, 10000) })}
-                          />
-                        : <button type="button"
-                            onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }}
-                            className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-gray-100 text-gray-500 text-xs font-medium active:bg-gray-200 transition-colors">
-                            <Mic size={11} />
-                            <span>{isFr ? 'Dicter' : 'Dictate'}</span>
-                          </button>
-                      }
-                      <p className="text-xs text-gray-300">{v.description.length}/10000</p>
-                    </div>
+                    <p className="text-xs text-gray-300 text-right mt-0.5">{v.description.length}/10000</p>
                   </div>
                   {/* Documents */}
                   <div className="border-t border-gray-100 pt-3">
@@ -2097,22 +2119,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     rows={6}
                     className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed"
                   />
-                  <div className="flex items-center justify-between mt-1.5">
-                    {premiumAccepted
-                      ? <VoiceRecorder size="sm"
-                          label={isFr ? 'Dicter' : 'Dictate'}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] active:bg-[#1B3A5C] active:text-white transition-colors"
-                          onResult={text => set('description', (form.description + (form.description ? ' ' : '') + text).slice(0, 10000))}
-                        />
-                      : <button type="button"
-                          onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] text-xs font-medium active:bg-[#1B3A5C] active:text-white transition-colors">
-                          <Mic size={12} />
-                          <span>{isFr ? 'Dicter' : 'Dictate'}</span>
-                        </button>
-                    }
-                    <p className="text-xs text-gray-300">{form.description.length}/10000</p>
-                  </div>
+                  <p className="text-xs text-gray-300 text-right mt-1">{form.description.length}/10000</p>
                 </div>
                 <div className="bg-white/10 rounded-2xl p-4 border border-white/15 space-y-3">
                   <div>

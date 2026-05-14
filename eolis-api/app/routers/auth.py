@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, Backgrou
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..limiter import limiter
-from ..models import User, Log, AccountSetupToken
+from ..models import User, Log, AccountSetupToken, CreditBalance
+from ..credit_service import FREE_CREDITS_ON_SIGNUP
 from ..schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from ..security import hash_password, verify_password, create_access_token
 from ..deps import get_current_user
@@ -70,6 +71,7 @@ def register(request: Request, body: RegisterRequest, background_tasks: Backgrou
     db.add(user)
     db.flush()
     db.add(Log(user_id=user.id, action="REGISTER", entity="User", entity_id=user.id, details=f"New registration — @{username}"))
+    db.add(CreditBalance(client_id=user.id, credits_total=FREE_CREDITS_ON_SIGNUP, credits_used=0.0))
     db.commit()
     background_tasks.add_task(send_welcome_client, user.email, user.first_name, username)
     # Welcome SMS is sent after OTP verification, not here

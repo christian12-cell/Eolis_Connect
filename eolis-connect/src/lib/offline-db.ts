@@ -12,7 +12,7 @@ export interface StoredFile {
 
 export interface PendingAction {
   id: string
-  type: 'CREATE_TICKET' | 'SEND_MESSAGE' | 'AGENT_REPLY' | 'INTERNAL_NOTE'
+  type: 'CREATE_TICKET' | 'SEND_MESSAGE' | 'AGENT_REPLY' | 'INTERNAL_NOTE' | 'CREDIT_REQUEST'
   payload: Record<string, unknown>
   files?: StoredFile[]
   createdAt: number

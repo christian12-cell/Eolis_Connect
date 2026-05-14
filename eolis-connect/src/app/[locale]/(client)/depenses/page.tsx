@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import { PeriodFilter, DateRange } from '@/components/ui/PeriodFilter'
 import { apiFetch, getUser } from '@/lib/api-client'
-import { ChevronDown, ChevronRight, Loader2, TrendingUp, Zap } from 'lucide-react'
+import { ChevronDown, ChevronRight, Loader2, TrendingUp, Zap, PlusCircle } from 'lucide-react'
 
 interface UsageItem {
   id: string
@@ -47,6 +47,7 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
   const [data, setData]     = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [balance, setBalance] = useState<any>(null)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -54,6 +55,7 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
     const u = getUser()
     if (!u) { router.replace(`/${locale}/login`); return }
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/accueil`); return }
+    apiFetch('/api/credits/balance').then(r => r.json()).then(setBalance).catch(() => {})
   }, [locale])
 
   const load = useCallback((r: DateRange | null) => {
@@ -98,16 +100,46 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
             </div>
             <div className="flex items-center justify-between text-xs text-gray-400">
               <span>${(data.totalUsd ?? 0).toFixed(8)}</span>
-              <span>{data.count ?? 0} {isFr ? 'opération(s) IA' : 'AI operation(s)'}</span>
+              <span>{data.count ?? 0} {isFr ? 'opération(s) premium' : 'premium operation(s)'}</span>
             </div>
+          </div>
+        )}
+
+        {/* Credit balance block */}
+        {balance && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap size={16} className="text-amber-500" />
+              <p className="text-sm font-bold text-gray-900">{isFr ? 'Crédits Premium' : 'Premium Credits'}</p>
+            </div>
+            <div className="space-y-2 text-sm">
+              {[
+                { label: isFr ? 'Achetés' : 'Purchased',  value: balance.creditsTotal },
+                { label: isFr ? 'Utilisés' : 'Used',      value: balance.creditsUsed },
+              ].map(row => (
+                <div key={row.label} className="flex justify-between text-gray-600">
+                  <span>{row.label}</span>
+                  <span className="font-mono font-semibold">{row.value} crédits</span>
+                </div>
+              ))}
+              <div className="border-t border-gray-100 pt-2 flex justify-between text-[#1B3A5C] font-bold">
+                <span>{isFr ? 'Restants' : 'Remaining'}</span>
+                <span className="font-mono">{balance.creditsRemaining} crédits</span>
+              </div>
+            </div>
+            <button onClick={() => router.push(`/${locale}/recharger`)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#1B3A5C] text-white text-sm font-semibold active:opacity-80 transition-opacity">
+              <PlusCircle size={15} />
+              {isFr ? 'Recharger mes crédits' : 'Top up credits'}
+            </button>
           </div>
         )}
 
         <div className="bg-white/10 border border-white/15 rounded-2xl px-4 py-3 text-xs text-blue-100 leading-relaxed">
           <Zap size={12} className="inline mr-1" />
           {isFr
-            ? 'Coûts liés aux extractions BL et aux dictées vocales (OpenAI).'
-            : 'Costs from BL extractions and voice dictation (OpenAI).'}
+            ? 'Détail des opérations premium consommées.'
+            : 'Detail of premium operations consumed.'}
         </div>
 
         {loading ? (

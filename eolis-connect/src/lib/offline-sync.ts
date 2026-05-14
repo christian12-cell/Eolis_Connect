@@ -45,6 +45,17 @@ async function execute(action: PendingAction): Promise<string | null> {
     return null
   }
 
+  if (action.type === 'CREDIT_REQUEST' && action.files && action.files.length > 0) {
+    const { amountDeclared } = action.payload as { amountDeclared: number }
+    const f = action.files[0]!
+    const fd = new FormData()
+    fd.append('amount_declared', String(amountDeclared))
+    fd.append('photo', new Blob([f.data], { type: f.mimeType }), f.name)
+    const res = await apiUpload('/api/credits/request', fd)
+    if (!res.ok) throw new Error('credit_request_failed')
+    return null
+  }
+
   return null
 }
 

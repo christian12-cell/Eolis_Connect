@@ -9,7 +9,7 @@ from sqlalchemy import text
 from .config import settings
 from .database import engine
 from .models import Base
-from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config, ws, whisper
+from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config, ws, whisper, credits
 
 app = FastAPI(title="Eolis Connect API", version="1.0.0")
 app.state.limiter = limiter
@@ -51,6 +51,7 @@ app.include_router(sessions.router, prefix="/api")
 app.include_router(ai_usage.router, prefix="/api")
 app.include_router(admin_config.router, prefix="/api")
 app.include_router(whisper.router, prefix="/api")
+app.include_router(credits.router, prefix="/api")
 app.include_router(ws.router)  # WebSocket — no /api prefix, path is /ws/ticket/{id}
 
 
@@ -166,6 +167,31 @@ def startup():
         conn.execute(text(
             "ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'bl_extraction'"
         ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS credit_balances (
+                id VARCHAR(36) PRIMARY KEY,
+                client_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id),
+                credits_total DOUBLE PRECISION NOT NULL DEFAULT 0,
+                credits_used DOUBLE PRECISION NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS credit_requests (
+                id VARCHAR(36) PRIMARY KEY,
+                client_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                amount_declared DOUBLE PRECISION NOT NULL,
+                photo_url VARCHAR(500) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                amount_validated DOUBLE PRECISION,
+                credits_added DOUBLE PRECISION,
+                validated_by VARCHAR(36) REFERENCES users(id),
+                validated_at TIMESTAMP,
+                rejection_reason TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
         conn.commit()
 
     _ensure_system_admin()

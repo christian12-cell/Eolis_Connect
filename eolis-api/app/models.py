@@ -242,3 +242,37 @@ class AIUsage(Base):
 
     client: Mapped["User"] = relationship("User", foreign_keys=[client_id])
     ticket: Mapped["Ticket | None"] = relationship("Ticket", foreign_keys=[ticket_id])
+
+
+class CreditBalance(Base):
+    """Premium credit balance per client. 1 credit = 1 FCFA."""
+    __tablename__ = "credit_balances"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_id)
+    client_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), unique=True)
+    credits_total: Mapped[float] = mapped_column(default=0.0, server_default="0")
+    credits_used: Mapped[float] = mapped_column(default=0.0, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    client: Mapped["User"] = relationship("User", foreign_keys=[client_id])
+
+
+class CreditRequest(Base):
+    """Client top-up request via mobile money."""
+    __tablename__ = "credit_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_id)
+    client_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"))
+    amount_declared: Mapped[float] = mapped_column(nullable=False)
+    photo_url: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    amount_validated: Mapped[float | None] = mapped_column(nullable=True)
+    credits_added: Mapped[float | None] = mapped_column(nullable=True)
+    validated_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    validated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    client: Mapped["User"] = relationship("User", foreign_keys=[client_id])
+    validator: Mapped["User | None"] = relationship("User", foreign_keys=[validated_by])

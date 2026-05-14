@@ -55,10 +55,10 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Zap size={22} className="text-violet-600" />
-              {isFr ? 'Coûts IA' : 'AI Costs'}
+              {isFr ? 'Coûts Premium' : 'Premium Costs'}
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {isFr ? 'Extractions BL (GPT-4o-mini) + Dictées (Whisper)' : 'BL extractions (GPT-4o-mini) + Dictations (Whisper)'}
+              {isFr ? 'Extractions BL + Dictées vocales' : 'BL extractions + Voice dictations'}
             </p>
           </div>
           <PeriodFilter onChange={handleRange} isFr={isFr} />
@@ -83,21 +83,21 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                 {
                   label: isFr ? 'Extractions BL' : 'BL Extractions',
                   value: String(blCount),
-                  sub: 'GPT-4o-mini',
+                  sub: isFr ? 'Extractions BL' : 'BL extractions',
                   icon: <FileText size={18} className="text-blue-600" />,
                   bg: 'bg-blue-50',
                 },
                 {
                   label: isFr ? 'Dictées vocales' : 'Voice dictations',
                   value: String(voiceCount),
-                  sub: 'Whisper-1',
+                  sub: isFr ? 'Dictées vocales' : 'Voice dictations',
                   icon: <Mic size={18} className="text-emerald-600" />,
                   bg: 'bg-emerald-50',
                 },
                 {
                   label: isFr ? 'Clients actifs' : 'Active clients',
                   value: String(data.clientsSummary?.length ?? 0),
-                  sub: isFr ? 'ayant utilisé l\'IA' : 'who used AI',
+                  sub: isFr ? 'ayant utilisé les features' : 'who used features',
                   icon: <Users size={18} className="text-amber-600" />,
                   bg: 'bg-amber-50',
                 },

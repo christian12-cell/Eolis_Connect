@@ -6,6 +6,7 @@ from ..database import get_db
 from ..models import User, AIUsage, SystemConfig
 from ..deps import get_current_user
 from ..config import settings
+from ..credit_service import credits_remaining, deduct_credits, CREDITS_PER_VOICE_MINUTE
 
 router = APIRouter(prefix="/whisper", tags=["whisper"])
 
@@ -27,7 +28,10 @@ async def transcribe_audio(
     if current_user.role != "CLIENT":
         raise HTTPException(403, "Clients uniquement")
     if not settings.OPENAI_API_KEY:
-        raise HTTPException(503, "OpenAI non configuré — ajoutez OPENAI_API_KEY dans les variables Railway")
+        raise HTTPException(503, "Service non configuré")
+
+    if credits_remaining(current_user.id, db) <= 0:
+        raise HTTPException(402, "insufficient_credits")
 
     content = await file.read()
     if len(content) > 25 * 1024 * 1024:
@@ -48,11 +52,13 @@ async def transcribe_audio(
         text = (transcript.text or "").strip()
         duration_seconds = getattr(transcript, "duration", None) or (len(content) / 2000)
     except Exception as e:
-        raise HTTPException(503, f"Erreur Whisper : {e}")
+        raise HTTPException(503, f"Erreur de transcription : {e}")
 
     cost_usd = (duration_seconds / 60) * _WHISPER_PRICE_PER_MINUTE
     fcfa_rate = _get_fcfa_rate(db)
     cost_fcfa = cost_usd * fcfa_rate
+
+    credits_cost = max(1.0, round((duration_seconds / 60) * CREDITS_PER_VOICE_MINUTE, 2))
 
     usage = AIUsage(
         client_id=current_user.id,
@@ -66,11 +72,13 @@ async def transcribe_audio(
         fcfa_rate=fcfa_rate,
     )
     db.add(usage)
+    credits_left = deduct_credits(current_user.id, credits_cost, db)
     db.commit()
 
     return {
-        "text": text,
+        "text":            text,
         "durationSeconds": round(duration_seconds, 1),
-        "costUsd": round(cost_usd, 8),
-        "costFcfa": round(cost_fcfa, 4),
+        "creditsUsed":     credits_cost,
+        "creditsRemaining": round(credits_left, 2),
+        "costFcfa":        round(cost_fcfa, 4),
     }

@@ -237,6 +237,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const [premiumAccepted, setPremiumAccepted] = useState(false)
   const [showPremiumPopup, setShowPremiumPopup] = useState(false)
   const [aiCostFcfa, setAiCostFcfa] = useState<number | null>(null)
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null)
+  const [isOnline, setIsOnline] = useState(true)
   const [ratingScore, setRatingScore] = useState(0)
   const [ratingComment, setRatingComment] = useState('')
   const [ratingSubmitted, setRatingSubmitted] = useState(false)
@@ -266,7 +268,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   }
 
   useEffect(() => { params.then(p => { setLocale(p.locale); setTicketId(p.id) }) }, [params])
-  useEffect(() => { setPremiumAccepted(localStorage.getItem('eolis_premium_accepted') === '1') }, [])
+  useEffect(() => {
+    setPremiumAccepted(localStorage.getItem('eolis_premium_accepted') === '1')
+    setIsOnline(navigator.onLine)
+    const on  = () => setIsOnline(true)
+    const off = () => setIsOnline(false)
+    window.addEventListener('online',  on)
+    window.addEventListener('offline', off)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+  }, [])
 
   useEffect(() => {
     if (!ticketId) return
@@ -279,10 +289,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       .then(r => r.json())
       .then(d => { if (d.totalFcfa > 0) setAiCostFcfa(d.totalFcfa) })
       .catch(() => {})
+    apiFetch('/api/credits/balance')
+      .then(r => r.json())
+      .then(d => setCreditsRemaining(d.creditsRemaining ?? 0))
+      .catch(() => {})
   }, [ticketId, locale])
 
-  function refreshAiCost(addedFcfa: number) {
-    setAiCostFcfa(prev => parseFloat(((prev ?? 0) + addedFcfa).toFixed(4)))
+  function refreshAiCost(creditsUsed: number, creditsLeft: number) {
+    setCreditsRemaining(creditsLeft)
+    setAiCostFcfa(prev => parseFloat(((prev ?? 0) + creditsUsed).toFixed(2)))
   }
 
   // WebSocket — real-time updates (messages + ticket status)
@@ -616,8 +631,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                 </h2>
                 <p className="text-xs text-blue-200 mt-0.5">
                   {isFr
-                    ? "Ces fonctionnalités utilisent l'IA OpenAI et génèrent un coût facturable."
-                    : 'These features use OpenAI AI and generate a billable cost.'}
+                    ? "Ces fonctionnalités avancées consomment des crédits premium."
+                    : 'These advanced features consume premium credits.'}
                 </p>
               </div>
             </div>
@@ -628,7 +643,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                   {isFr ? 'Analyse automatique de document' : 'Automatic document analysis'}
                 </p>
               </div>
-              <p className="text-xs text-blue-300 pl-7">GPT-4o-mini · ~0.30 FCFA / {isFr ? 'extraction' : 'extraction'}</p>
+              <p className="text-xs text-blue-300 pl-7">50 crédits / {isFr ? 'extraction' : 'extraction'}</p>
               <p className="text-xs text-blue-100 pl-7">
                 {isFr ? '→ Lit et structure votre BL automatiquement' : '→ Reads and structures your BL automatically'}
               </p>
@@ -640,7 +655,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                   {isFr ? 'Dictée vocale → Texte' : 'Voice dictation → Text'}
                 </p>
               </div>
-              <p className="text-xs text-blue-300 pl-7">Whisper · ~3.60 FCFA / min</p>
+              <p className="text-xs text-blue-300 pl-7">10 crédits / min</p>
               <p className="text-xs text-blue-100 pl-7">
                 {isFr ? "→ Parlez, le texte s'écrit automatiquement" : '→ Speak, the text writes itself'}
               </p>
@@ -660,11 +675,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                 </div>
                 <div className="border-t border-white/10 pt-1 flex justify-between text-white font-bold">
                   <span>{isFr ? 'Total estimé' : 'Estimated total'}</span>
-                  <span className="font-mono">≈ 7.50 FCFA</span>
+                  <span className="font-mono">70 crédits</span>
                 </div>
               </div>
               <p className="text-[10px] text-blue-400 mt-2">
-                {isFr ? '(taux indicatif : 1$ = 600 FCFA)' : '(indicative rate: 1$ = 600 FCFA)'}
+                {isFr ? '(1 crédit = 1 FCFA · recharge minimum 500 crédits)' : '(1 credit = 1 FCFA · min recharge 500 credits)'}
               </p>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -784,14 +799,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
             </div>
           </div>
 
-          {/* ── Coût IA du dossier ── */}
+          {/* ── Coût premium du dossier ── */}
           {aiCostFcfa !== null && aiCostFcfa > 0 && (
             <div className="flex items-center gap-2.5 bg-white/10 border border-white/15 rounded-2xl px-4 py-2.5">
               <Zap size={13} className="text-amber-300 flex-shrink-0" />
               <p className="text-xs text-blue-100 flex-1">
-                {isFr ? 'Coût IA de ce dossier' : 'AI cost for this file'}
+                {isFr ? 'Crédits consommés (ce dossier)' : 'Credits used (this file)'}
               </p>
-              <p className="text-xs font-bold text-white font-mono">{aiCostFcfa.toFixed(4)} FCFA</p>
+              <p className="text-xs font-bold text-white font-mono">{aiCostFcfa.toFixed(2)} crédits</p>
             </div>
           )}
 
@@ -1515,19 +1530,22 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                     className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors">
                     <Camera size={20} />
                   </button>
-                  {premiumAccepted
-                    ? <VoiceRecorder
-                        className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors"
-                        ticketId={ticketId}
-                        onCostUpdate={refreshAiCost}
-                        onResult={t => setText(prev => (prev + (prev ? ' ' : '') + t).trim())}
-                      />
-                    : <button type="button"
-                        onClick={() => setShowPremiumPopup(true)}
-                        className="flex-shrink-0 mb-2 text-gray-300 active:text-[#1B3A5C] transition-colors">
-                        <Mic size={20} />
-                      </button>
-                  }
+                  {ticket?.blDocumentId && (
+                    premiumAccepted
+                      ? <VoiceRecorder
+                          className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors"
+                          ticketId={ticketId}
+                          onCostUpdate={refreshAiCost}
+                          disabledReason={!isOnline ? 'offline' : (creditsRemaining !== null && creditsRemaining <= 0) ? 'no_credits' : null}
+                          onDisabledClick={() => router.push(`/${locale}/recharger`)}
+                          onResult={t => setText(prev => (prev + (prev ? ' ' : '') + t).trim())}
+                        />
+                      : <button type="button"
+                          onClick={() => setShowPremiumPopup(true)}
+                          className="flex-shrink-0 mb-2 text-gray-300 active:text-[#1B3A5C] transition-colors">
+                          <Mic size={20} />
+                        </button>
+                  )}
                   <textarea
                     value={text}
                     onChange={e => setText(e.target.value)}

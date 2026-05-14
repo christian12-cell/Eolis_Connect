@@ -6,6 +6,7 @@ from ..database import get_db
 from ..models import User, BLDocument, AIUsage, SystemConfig
 from ..deps import get_current_user
 from ..config import settings
+from ..credit_service import check_credits, deduct_credits, CREDITS_PER_EXTRACTION
 
 router = APIRouter(prefix="/bl", tags=["bl"])
 
@@ -138,6 +139,8 @@ async def extract_bl(
     if current_user.role != "CLIENT":
         raise HTTPException(403, "Clients uniquement")
 
+    check_credits(current_user.id, CREDITS_PER_EXTRACTION, db)
+
     content = await file.read()
     text = _extract_pdf_text(content)
     data, in_tok, out_tok = _call_gpt(text)
@@ -196,6 +199,7 @@ async def extract_bl(
         fcfa_rate=fcfa_rate,
     )
     db.add(ai_usage)
+    deduct_credits(current_user.id, CREDITS_PER_EXTRACTION, db)
     db.commit()
     db.refresh(bl)
     db.refresh(ai_usage)
