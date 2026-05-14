@@ -110,9 +110,18 @@ def _template(content: str) -> str:
 
 # ── Email senders ──────────────────────────────────────────────────────────────
 
-def send_welcome_client(to_email: str, first_name: str, username: str):
+def send_welcome_client(to_email: str, first_name: str, username: str, pwd_hint: str = ""):
     """Sent immediately when a client self-registers (auto-approved)."""
-    subject = f"Bienvenue sur Eolis Connect, {first_name} ! 🎉"
+    subject = f"Bienvenue sur Eolis Connect, {first_name}"
+    pwd_row = f"""
+      <tr>
+        <td style="padding:12px 24px 20px;border-top:1px solid #dbeafe;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;">Confirmation mot de passe</p>
+          <p style="margin:0;font-size:22px;font-weight:800;color:#1B3A5C;font-family:monospace;letter-spacing:2px;">{pwd_hint}</p>
+          <p style="margin:4px 0 0;font-size:11px;color:#9ca3af;">Votre mot de passe a bien été enregistré par le système.</p>
+        </td>
+      </tr>
+    """ if pwd_hint else ""
     content = f"""
       <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Bonjour <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
       <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Votre compte sur <strong>Eolis Connect</strong> a été créé avec succès. Vous pouvez dès maintenant vous connecter et soumettre vos demandes.</p>
@@ -125,6 +134,7 @@ def send_welcome_client(to_email: str, first_name: str, username: str):
             <p style="margin:6px 0 0;font-size:12px;color:#4b5563;">Conservez cet identifiant précieusement — il vous sera demandé à chaque connexion.</p>
           </td>
         </tr>
+        {pwd_row}
       </table>
 
       <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Pour vous connecter, utilisez votre identifiant ci-dessus et le mot de passe que vous avez choisi lors de l'inscription.</p>
@@ -137,7 +147,7 @@ def send_welcome_client(to_email: str, first_name: str, username: str):
         </tr>
       </table>
 
-      <p style="margin:20px 0 0;font-size:13px;color:#9ca3af;">Des questions ? Notre équipe est disponible à <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a> ou au {SUPPORT_EMAIL}.</p>
+      <p style="margin:20px 0 0;font-size:13px;color:#9ca3af;">Des questions ? Notre équipe est disponible à <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a>.</p>
     """
     _send(to_email, subject, _template(content))
 
@@ -257,26 +267,3 @@ def send_account_deleted(to_email: str, first_name: str):
     _send(to_email, subject, _template(content))
 
 
-def send_new_message_notification(to_email: str, first_name: str, ticket_ref: str, agent_name: str):
-    subject = f"Nouveau message — Dossier {ticket_ref}"
-    content = f"""
-      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Bonjour <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
-      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Votre agent vous a envoyé un nouveau message concernant votre dossier <strong style="color:#1B3A5C;">{ticket_ref}</strong>.</p>
-
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFF6FF;border:1px solid #bfdbfe;border-radius:12px;margin:20px 0;">
-        <tr>
-          <td style="padding:16px 24px;">
-            <p style="margin:0;font-size:13px;color:#4b5563;">Agent : <strong style="color:#1B3A5C;">{agent_name}</strong></p>
-          </td>
-        </tr>
-      </table>
-
-      <table cellpadding="0" cellspacing="0" style="margin:20px 0;">
-        <tr>
-          <td style="background:#1B3A5C;border-radius:10px;padding:0;">
-            <a href="{settings.ALLOWED_ORIGINS.split(",")[0].strip()}/fr/mes-demandes" style="display:inline-block;padding:13px 28px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Lire le message →</a>
-          </td>
-        </tr>
-      </table>
-    """
-    _send(to_email, subject, _template(content))
