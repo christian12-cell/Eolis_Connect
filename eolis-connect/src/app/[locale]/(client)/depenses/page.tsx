@@ -73,7 +73,7 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
   }
 
   return (
-    <MobileLayout locale={locale} title={isFr ? 'Mes dépenses IA' : 'My AI expenses'}>
+    <MobileLayout locale={locale} title={isFr ? 'Mes crédits' : 'My credits'}>
       <div className="space-y-4">
 
         <PeriodFilter onChange={(r) => load(r)} isFr={isFr} dark />

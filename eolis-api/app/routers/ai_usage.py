@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -40,6 +40,34 @@ def _resolve_ticket(r: AIUsage, db: Session, client_id: Optional[str] = None) ->
             q = q.filter(Ticket.client_id == client_id)
         return q.first()
     return None
+
+
+@router.post("/link-to-ticket/{ticket_id}")
+def link_voice_to_ticket(
+    ticket_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Link recent unlinked voice transcriptions to this ticket (recorded during description step)."""
+    ticket = db.query(Ticket).filter(
+        Ticket.id == ticket_id,
+        Ticket.client_id == current_user.id,
+    ).first()
+    if not ticket:
+        raise HTTPException(404)
+
+    cutoff = datetime.utcnow() - timedelta(hours=2)
+    rows = db.query(AIUsage).filter(
+        AIUsage.client_id == current_user.id,
+        AIUsage.type == "voice_transcription",
+        AIUsage.ticket_id == None,
+        AIUsage.created_at >= cutoff,
+    ).all()
+
+    for r in rows:
+        r.ticket_id = ticket_id
+    db.commit()
+    return {"linked": len(rows)}
 
 
 @router.get("/my")

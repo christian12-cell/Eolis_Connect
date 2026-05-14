@@ -692,6 +692,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
           files.forEach(f => fd.append('files', f))
           await apiUpload(`/api/tickets/${data.id}/attachments`, fd).catch(() => {})
         }
+        // Lier les enregistrements voix (description step) au ticket créé
+        if (data.id) {
+          apiFetch(`/api/ai-usage/link-to-ticket/${data.id}`, { method: 'POST' }).catch(() => {})
+        }
         setSuccess({ ref: data.ref ?? '', id: data.id ?? '' })
       }
     } catch { /* ignore */ }
