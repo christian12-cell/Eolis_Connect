@@ -1,4 +1,4 @@
-const CACHE = 'eolis-v3'
+const CACHE = 'eolis-v4'
 const SHELL_URLS = ['/', '/fr/accueil', '/en/accueil']
 
 self.addEventListener('install', e => {
