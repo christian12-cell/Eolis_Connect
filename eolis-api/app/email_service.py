@@ -12,6 +12,8 @@ SUPPORT_EMAIL = "support@eolisconnect.online"
 def _send(to: str, subject: str, html: str):
     if not settings.MAIL_ENABLED or not settings.MAIL_NOREPLY_FROM or not settings.MAIL_NOREPLY_PASSWORD:
         return
+    # Zoho aliases: authenticate with primary account, send from alias
+    login_user = settings.MAIL_LOGIN or settings.MAIL_NOREPLY_FROM
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
@@ -22,7 +24,7 @@ def _send(to: str, subject: str, html: str):
         with smtplib.SMTP(settings.MAIL_SERVER, settings.MAIL_PORT) as srv:
             srv.ehlo()
             srv.starttls(context=ctx)
-            srv.login(settings.MAIL_NOREPLY_FROM, settings.MAIL_NOREPLY_PASSWORD)
+            srv.login(login_user, settings.MAIL_NOREPLY_PASSWORD)
             srv.sendmail(settings.MAIL_NOREPLY_FROM, to, msg.as_string())
     except Exception as exc:
         print(f"[email] Failed to send to {to}: {exc}")
@@ -162,54 +164,6 @@ def send_welcome_email(to_email: str, first_name: str, username: str):
     """
     _send(to_email, subject, _template(content))
 
-
-def send_account_approved(to_email: str, first_name: str, username: str):
-    subject = f"✓ Votre compte Eolis Connect est approuvé, {first_name} !"
-    content = f"""
-      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Bonjour <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
-      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Bonne nouvelle ! Votre compte sur <strong>Eolis Connect</strong> a été approuvé par notre équipe. Vous avez désormais accès à toute la plateforme.</p>
-
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#ECFDF5;border:1px solid #a7f3d0;border-radius:12px;margin:20px 0;">
-        <tr>
-          <td style="padding:20px 24px;">
-            <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:0.8px;">Votre identifiant de connexion</p>
-            <p style="margin:0;font-size:26px;font-weight:800;color:#1B3A5C;font-family:monospace;letter-spacing:1px;">{username}</p>
-          </td>
-        </tr>
-      </table>
-
-      <table cellpadding="0" cellspacing="0" style="margin:24px 0;">
-        <tr>
-          <td style="background:#059669;border-radius:10px;padding:0;">
-            <a href="{settings.ALLOWED_ORIGINS.split(",")[0].strip()}/fr/login" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">Accéder à la plateforme →</a>
-          </td>
-        </tr>
-      </table>
-
-      <p style="margin:0;font-size:13px;color:#9ca3af;">Des questions ? <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a> — {SUPPORT_EMAIL}</p>
-    """
-    _send(to_email, subject, _template(content))
-
-
-def send_account_rejected(to_email: str, first_name: str):
-    subject = "Votre demande de compte Eolis Connect"
-    content = f"""
-      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Bonjour <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
-      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Nous avons bien examiné votre demande de création de compte sur <strong>Eolis Connect</strong>.</p>
-      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">Nous sommes au regret de vous informer que votre demande n'a pas pu être validée à ce stade.</p>
-
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF2F2;border:1px solid #fecaca;border-radius:12px;margin:20px 0;">
-        <tr>
-          <td style="padding:18px 24px;">
-            <p style="margin:0;font-size:14px;color:#7f1d1d;">Si vous pensez qu'il s'agit d'une erreur ou souhaitez plus d'informations, n'hésitez pas à nous contacter :</p>
-            <p style="margin:10px 0 0;font-size:14px;"><a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;font-weight:600;">{settings.MAIL_SUPPORT_FROM}</a> &nbsp;|&nbsp; <span style="color:#1B3A5C;font-weight:600;">{SUPPORT_EMAIL}</span></p>
-          </td>
-        </tr>
-      </table>
-
-      <p style="margin:0;font-size:14px;color:#6b7280;">Nous restons à votre disposition et vous souhaitons bonne continuation.</p>
-    """
-    _send(to_email, subject, _template(content))
 
 
 def send_account_created_by_admin(to_email: str, first_name: str, username: str, password: str, role: str, setup_url: str):

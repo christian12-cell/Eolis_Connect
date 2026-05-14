@@ -11,8 +11,8 @@ from ..schemas import UserResponse, UserUpdateRequest, CreateUserRequest
 from ..deps import get_current_user, require_roles
 from ..security import hash_password, verify_password
 from ..config import settings
-from ..email_service import send_account_approved, send_account_rejected, send_account_created_by_admin, send_account_deleted
-from ..sms_service import sms_account_approved, sms_account_rejected, sms_test, sms_account_deleted
+from ..email_service import send_account_created_by_admin, send_account_deleted
+from ..sms_service import sms_test, sms_account_deleted
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -141,14 +141,7 @@ def update_user(
     db.refresh(user)
     _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
     login_url = f"{_frontend}/fr/login"
-    if body.status == "ACTIVE" and prev_status == "PENDING":
-        background_tasks.add_task(send_account_approved, user.email, user.first_name, user.username)
-        if user.phone:
-            background_tasks.add_task(sms_account_approved, user.phone, user.first_name, user.username, login_url)
-    elif body.status == "REJECTED" and prev_status == "PENDING":
-        background_tasks.add_task(send_account_rejected, user.email, user.first_name)
-        if user.phone:
-            background_tasks.add_task(sms_account_rejected, user.phone, user.first_name)
+    pass
     return user
 
 

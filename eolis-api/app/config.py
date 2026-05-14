@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     MAIL_ENABLED: bool = False
     MAIL_SERVER: str = "smtp.zoho.eu"
     MAIL_PORT: int = 587
-    MAIL_NOREPLY_FROM: str = ""
+    MAIL_LOGIN: str = ""           # compte principal Zoho (ex: denmeko@zohomail.eu)
+    MAIL_NOREPLY_FROM: str = ""    # alias expéditeur (ex: noreply@eolisconnect.online)
     MAIL_NOREPLY_PASSWORD: str = ""
     MAIL_SUPPORT_FROM: str = ""
     ADMIN_EMAIL: str = ""
