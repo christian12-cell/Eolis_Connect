@@ -6,7 +6,7 @@ import Image from 'next/image'
 import {
   ArrowLeft, Globe, Send, Star, Ship, Package, FileText,
   MessageCircle, Paperclip, Download, ChevronDown, Upload, CheckCircle,
-  X, Loader2, Camera, Trash2, Mic,
+  X, Loader2, Camera, Trash2, Mic, Zap,
 } from 'lucide-react'
 import { DocCardRow } from '@/components/ui/DocCard'
 import { VoiceRecorder } from '@/components/ui/VoiceRecorder'
@@ -236,6 +236,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const [sending, setSending] = useState(false)
   const [premiumAccepted, setPremiumAccepted] = useState(false)
   const [showPremiumPopup, setShowPremiumPopup] = useState(false)
+  const [aiCostFcfa, setAiCostFcfa] = useState<number | null>(null)
   const [ratingScore, setRatingScore] = useState(0)
   const [ratingComment, setRatingComment] = useState('')
   const [ratingSubmitted, setRatingSubmitted] = useState(false)
@@ -274,7 +275,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/login`); return }
     setUser(u)
     loadData()
+    apiFetch(`/api/ai-usage/ticket/${ticketId}`)
+      .then(r => r.json())
+      .then(d => { if (d.totalFcfa > 0) setAiCostFcfa(d.totalFcfa) })
+      .catch(() => {})
   }, [ticketId, locale])
+
+  function refreshAiCost(addedFcfa: number) {
+    setAiCostFcfa(prev => parseFloat(((prev ?? 0) + addedFcfa).toFixed(4)))
+  }
 
   // WebSocket — real-time updates (messages + ticket status)
   useTicketWS(ticketId, {
@@ -774,6 +783,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
               )}
             </div>
           </div>
+
+          {/* ── Coût IA du dossier ── */}
+          {aiCostFcfa !== null && aiCostFcfa > 0 && (
+            <div className="flex items-center gap-2.5 bg-white/10 border border-white/15 rounded-2xl px-4 py-2.5">
+              <Zap size={13} className="text-amber-300 flex-shrink-0" />
+              <p className="text-xs text-blue-100 flex-1">
+                {isFr ? 'Coût IA de ce dossier' : 'AI cost for this file'}
+              </p>
+              <p className="text-xs font-bold text-white font-mono">{aiCostFcfa.toFixed(4)} FCFA</p>
+            </div>
+          )}
 
           {/* ── Équipement ── */}
           {parsedEquipment && (
@@ -1497,7 +1517,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                   </button>
                   {premiumAccepted
                     ? <VoiceRecorder
-                        className="flex-shrink-0 mb-2"
+                        className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors"
+                        ticketId={ticketId}
+                        onCostUpdate={refreshAiCost}
                         onResult={t => setText(prev => (prev + (prev ? ' ' : '') + t).trim())}
                       />
                     : <button type="button"

@@ -2046,13 +2046,18 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                       rows={4}
                       className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed"
                     />
-                    <div className="flex items-center justify-between mt-0.5">
+                    <div className="flex items-center justify-between mt-1.5">
                       {premiumAccepted
-                        ? <VoiceRecorder
+                        ? <VoiceRecorder size="sm"
+                            label={isFr ? 'Dicter' : 'Dictate'}
+                            className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600 active:bg-gray-200 transition-colors"
                             onResult={text => updateVessel(v.id, { description: (v.description + (v.description ? ' ' : '') + text).slice(0, 10000) })}
                           />
-                        : <button type="button" onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }} className="p-0.5">
-                            <Mic size={14} className="text-gray-300" />
+                        : <button type="button"
+                            onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }}
+                            className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-gray-100 text-gray-500 text-xs font-medium active:bg-gray-200 transition-colors">
+                            <Mic size={11} />
+                            <span>{isFr ? 'Dicter' : 'Dictate'}</span>
                           </button>
                       }
                       <p className="text-xs text-gray-300">{v.description.length}/10000</p>
@@ -2092,13 +2097,18 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     rows={6}
                     className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed"
                   />
-                  <div className="flex items-center justify-between mt-1">
+                  <div className="flex items-center justify-between mt-1.5">
                     {premiumAccepted
-                      ? <VoiceRecorder
+                      ? <VoiceRecorder size="sm"
+                          label={isFr ? 'Dicter' : 'Dictate'}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] active:bg-[#1B3A5C] active:text-white transition-colors"
                           onResult={text => set('description', (form.description + (form.description ? ' ' : '') + text).slice(0, 10000))}
                         />
-                      : <button type="button" onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }} className="p-0.5">
-                          <Mic size={15} className="text-gray-300" />
+                      : <button type="button"
+                          onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] text-xs font-medium active:bg-[#1B3A5C] active:text-white transition-colors">
+                          <Mic size={12} />
+                          <span>{isFr ? 'Dicter' : 'Dictate'}</span>
                         </button>
                     }
                     <p className="text-xs text-gray-300">{form.description.length}/10000</p>

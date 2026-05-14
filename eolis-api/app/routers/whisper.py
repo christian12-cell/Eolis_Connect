@@ -1,5 +1,6 @@
 import io
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import User, AIUsage, SystemConfig
@@ -19,6 +20,7 @@ def _get_fcfa_rate(db: Session) -> float:
 @router.post("/transcribe")
 async def transcribe_audio(
     file: UploadFile = File(...),
+    ticket_id: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -54,6 +56,7 @@ async def transcribe_audio(
 
     usage = AIUsage(
         client_id=current_user.id,
+        ticket_id=ticket_id,
         model="whisper-1",
         type="voice_transcription",
         input_tokens=0,
