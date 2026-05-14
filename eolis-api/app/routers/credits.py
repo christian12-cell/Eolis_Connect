@@ -278,8 +278,12 @@ def get_proof_photo(
     photo_url = req.photo_url
 
     if photo_url.startswith("s3://"):
-        url = _proof_presigned_url(photo_url)
-        return RedirectResponse(url)
+        # Return presigned URL as JSON so the frontend can use it in <img>/<iframe>
+        # directly — avoids CORS issues that occur when fetch() follows a redirect to S3
+        ext    = photo_url.rsplit(".", 1)[-1].lower() if "." in photo_url else ""
+        is_pdf = ext == "pdf"
+        url    = _proof_presigned_url(photo_url)
+        return {"url": url, "isPdf": is_pdf}
 
     if not os.path.exists(photo_url):
         raise HTTPException(404, "File not found")

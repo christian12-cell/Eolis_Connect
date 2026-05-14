@@ -23,16 +23,23 @@ function ProofViewer({ requestId, filename, isFr }: { requestId: string; filenam
     fetch(apiUrl(`/api/credits/photo/${requestId}`), {
       headers: { Authorization: `Bearer ${token ?? ''}` },
     })
-      .then(r => {
+      .then(async r => {
         if (!r.ok) throw new Error('not_found')
         const ct = r.headers.get('content-type') || ''
-        setIsPdf(ct.includes('pdf'))
-        return r.blob()
-      })
-      .then(b => {
-        const url = URL.createObjectURL(b)
-        blobRef.current = url
-        setBlobUrl(url)
+        if (ct.includes('application/json')) {
+          // S3 path: backend returns { url, isPdf } — use URL directly in img/iframe
+          // (no CORS issue with <img src> / <iframe src> unlike fetch())
+          const data = await r.json()
+          setIsPdf(!!data.isPdf)
+          setBlobUrl(data.url)
+        } else {
+          // Local file path: stream as blob
+          setIsPdf(ct.includes('pdf'))
+          const b = await r.blob()
+          const url = URL.createObjectURL(b)
+          blobRef.current = url
+          setBlobUrl(url)
+        }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false))
