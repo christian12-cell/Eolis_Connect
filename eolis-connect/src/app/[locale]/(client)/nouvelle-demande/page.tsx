@@ -294,9 +294,16 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
   useEffect(() => {
     if (!user) return
+    // Charge depuis le cache si offline
+    const cached = parseInt(localStorage.getItem('eolis_credits_cache') ?? '-1')
+    if (!navigator.onLine && cached >= 0) { setCreditsRemaining(cached); return }
     apiFetch('/api/credits/balance')
       .then(r => r.json())
-      .then(d => setCreditsRemaining(d.creditsRemaining ?? 0))
+      .then(d => {
+        const rem = Math.round(d.creditsRemaining ?? 0)
+        setCreditsRemaining(rem)
+        localStorage.setItem('eolis_credits_cache', String(rem))
+      })
       .catch(() => {})
   }, [user])
 
@@ -482,6 +489,14 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         setBlDocumentId(data.bl_id ?? null)
         setBlCost(data.cost_usd != null ? { usd: data.cost_usd, fcfa: data.cost_fcfa } : null)
         setBlStep('review')
+        // Cache pour usage offline
+        if (data.bl_id) {
+          await offlineDb.set(`bl_raw_${data.bl_id}`, { bl_id: data.bl_id, raw: data.raw, vesselData: data.vesselData })
+          const listCache = (await offlineDb.get('bl_list') as any[] | null) ?? []
+          const r = data.raw || {}
+          const newEntry = { id: data.bl_id, bookingNo: r.booking_no || null, vessel: r.vessel || null, voyage: r.voyage || null, portOfLoading: r.port_of_loading || null, portOfDischarge: r.port_of_discharge || null, ets: r.ets || null }
+          await offlineDb.set('bl_list', [newEntry, ...listCache.filter((b: any) => b.id !== data.bl_id)])
+        }
       } else {
         const err = await res.json().catch(() => ({}))
         setBlError(err.detail || (isFr ? "Erreur lors de l'extraction." : 'Extraction error.'))
@@ -495,11 +510,23 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   async function handleBLReuse(blId: string) {
     setPrevBLsLoading(true)
     try {
+      if (!isOnline) {
+        const cached = await offlineDb.get(`bl_raw_${blId}`) as any | null
+        if (cached) {
+          setBlFields(buildBlFieldsFromRaw(cached.raw || {}))
+          setBlDocumentId(blId)
+          setBlStep('review')
+        }
+        setPrevBLsLoading(false)
+        return
+      }
       const res = await apiFetch(`/api/bl/${blId}/raw`)
       if (res.ok) {
         const data = await res.json()
         setBlFields(buildBlFieldsFromRaw(data.raw || {}))
+        setBlDocumentId(blId)   // ← bug fix: était manquant
         setBlStep('review')
+        await offlineDb.set(`bl_raw_${blId}`, data)
       }
     } catch {}
     setPrevBLsLoading(false)
@@ -538,7 +565,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   }
 
   async function enterBLMode() {
-    if (creditsRemaining !== null && creditsRemaining < 50) {
+    const credits = creditsRemaining ?? parseInt(localStorage.getItem('eolis_credits_cache') ?? '0')
+    if (credits < 50) {
       router.push(`/${locale}/recharger`)
       return
     }
@@ -556,12 +584,22 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     setBlStep('pick')
     setPrevBLs(null)
     setBlSearch('')
+
+    if (!isOnline) {
+      const cached = (await offlineDb.get('bl_list') as any[] | null) ?? []
+      setPrevBLs(cached)
+      if (cached.length === 0) setBlStep('upload')
+      return
+    }
+
     try {
       const res = await apiFetch('/api/bl/my-bls')
       if (res.ok) {
         const data = await res.json()
-        setPrevBLs(Array.isArray(data) ? data : [])
-        if (!Array.isArray(data) || data.length === 0) setBlStep('upload')
+        const bls = Array.isArray(data) ? data : []
+        setPrevBLs(bls)
+        if (bls.length === 0) setBlStep('upload')
+        await offlineDb.set('bl_list', bls)
       } else {
         setPrevBLs([])
         setBlStep('upload')
@@ -1193,11 +1231,21 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               )
             })()}
 
-            <button onClick={() => setBlStep('upload')}
-              className="w-full py-3.5 rounded-2xl border-2 border-white/30 text-white font-semibold text-sm flex items-center justify-center gap-2">
-              <Upload size={16} />
-              {isFr ? 'Non, importer un nouveau BL' : 'No, import a new BL'}
-            </button>
+            {isOnline ? (
+              <button onClick={() => setBlStep('upload')}
+                className="w-full py-3.5 rounded-2xl border-2 border-white/30 text-white font-semibold text-sm flex items-center justify-center gap-2">
+                <Upload size={16} />
+                {isFr ? 'Non, importer un nouveau BL' : 'No, import a new BL'}
+              </button>
+            ) : (
+              <div className="w-full py-3.5 rounded-2xl border-2 border-white/15 text-white/35 text-sm flex flex-col items-center justify-center gap-1 cursor-not-allowed select-none">
+                <div className="flex items-center gap-2">
+                  <WifiOff size={14} />
+                  {isFr ? 'Importer un nouveau BL' : 'Import a new BL'}
+                </div>
+                <p className="text-[10px] text-white/25">{isFr ? 'Nécessite une connexion internet' : 'Requires an internet connection'}</p>
+              </div>
+            )}
             <button onClick={() => setPageMode(null)}
               className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
               ← {isFr ? 'Retour' : 'Back'}
@@ -1241,7 +1289,26 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               </ul>
             </div>
 
-            {!blUploading && !blError && (
+            {!blUploading && !blError && !isOnline && (
+              <div className="flex flex-col items-center justify-center py-12 bg-white/5 rounded-2xl border border-white/15 gap-3 text-center">
+                <WifiOff size={36} className="text-blue-300/60" />
+                <p className="text-white font-semibold text-sm">
+                  {isFr ? 'Connexion requise' : 'Connection required'}
+                </p>
+                <p className="text-blue-200 text-xs max-w-[240px] leading-relaxed">
+                  {isFr
+                    ? "L'extraction IA nécessite une connexion internet. Reconnectez-vous pour uploader un nouveau BL."
+                    : "AI extraction requires an internet connection. Reconnect to upload a new BL."}
+                </p>
+                {(prevBLs?.length ?? 0) > 0 && (
+                  <button onClick={() => setBlStep('pick')}
+                    className="mt-2 text-xs text-[#4A8FC4] font-semibold underline">
+                    ← {isFr ? 'Voir mes BLs enregistrés' : 'See my saved BLs'}
+                  </button>
+                )}
+              </div>
+            )}
+            {!blUploading && !blError && isOnline && (
               <>
                 <label className="relative flex flex-col items-center justify-center w-full py-10 rounded-2xl border-2 border-dashed border-white/40 bg-white/5 active:bg-white/10 transition-colors gap-3 overflow-hidden cursor-pointer">
                   <div className="w-14 h-14 rounded-2xl bg-[#4A8FC4]/20 flex items-center justify-center">
