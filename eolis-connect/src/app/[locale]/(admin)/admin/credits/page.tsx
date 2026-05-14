@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { apiFetch, apiUrl, getToken, getUser } from '@/lib/api-client'
+import { apiFetch, apiUpload, apiUrl, getToken, getUser } from '@/lib/api-client'
 import {
   Zap, Check, X, Clock, CheckCircle, XCircle, Loader2,
   ChevronDown, Users, FileText, ExternalLink, RefreshCw,
@@ -158,7 +158,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     setValidating(id)
     const fd = new FormData()
     fd.append('amount_received', String(amt))
-    await apiFetch(`/api/credits/admin/requests/${id}/approve`, { method: 'POST', body: fd })
+    await apiUpload(`/api/credits/admin/requests/${id}/approve`, fd)
     setValidating(null)
     loadRequests(true)
   }
@@ -176,7 +176,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     setValidating(id)
     const fd = new FormData()
     fd.append('reason', reason)
-    await apiFetch(`/api/credits/admin/requests/${id}/reject`, { method: 'POST', body: fd })
+    await apiUpload(`/api/credits/admin/requests/${id}/reject`, fd)
     setValidating(null)
     setRejectingId(null)
     loadRequests(true)
