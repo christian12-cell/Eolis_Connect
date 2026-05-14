@@ -1254,22 +1254,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                         </div>
                       )}
                       {showAttachmentPlaceholder && (
-                        <div className={`rounded-xl overflow-hidden mt-1.5 ${isClient ? 'bg-white/20' : 'bg-gray-100'}`}>
-                          <div className="flex items-center gap-2 px-3 py-2.5">
-                            <Loader2 size={13} className={`animate-spin flex-shrink-0 ${isClient ? 'text-blue-200' : 'text-blue-400'}`} />
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-xs font-medium ${isClient ? 'text-white' : 'text-gray-700'}`}>
-                                {isFr ? 'Document joint' : 'Attached file'}
-                              </p>
-                              <p className={`text-[10px] ${isClient ? 'text-blue-200' : 'text-gray-400'}`}>
-                                {isFr ? 'Chargement...' : 'Loading...'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className={`h-1 ${isClient ? 'bg-white/10' : 'bg-gray-200'}`}>
-                            <div className={`h-full w-2/5 rounded-full animate-pulse ${isClient ? 'bg-blue-300' : 'bg-blue-400'}`} />
-                          </div>
-                        </div>
+                        <p className={`text-[10px] italic mt-1 ${isClient ? 'text-blue-200' : 'text-gray-400'}`}>
+                          📎 {isFr ? 'Ce message contient un document — il apparaîtra dès que possible.' : 'This message has an attached document — it will appear shortly.'}
+                        </p>
                       )}
                       <p className={`text-[10px] mt-1 flex items-center gap-1 ${isClient ? 'text-blue-200' : 'text-gray-500'}`}>
                         {msg.pending
