@@ -1392,7 +1392,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             {BLProgress}
             <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-2xl px-4 py-3">
               <p className="text-sm font-bold text-white mb-0.5">✅ {isFr ? 'BL extrait — vérifiez et corrigez si besoin' : 'BL extracted — review and correct if needed'}</p>
-              <p className="text-xs text-blue-100">{isFr ? "L'IA peut parfois se tromper. Tous les champs sont modifiables." : 'AI can make mistakes. All fields are editable.'}</p>
+              <p className="text-xs text-blue-100">{isFr ? "Le système peut parfois se tromper. Vérifiez et corrigez si besoin." : 'The system may occasionally make errors. Review and correct if needed.'}</p>
             </div>
 
             {/* Références */}
@@ -1596,6 +1596,11 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </button>
                 ))}
               </div>
+            )}
+            {(form.subcategory === 'Autre' || form.subcategory === 'Other') && (
+              <input type="text" value={form.subcategoryOther} onChange={e => set('subcategoryOther', e.target.value)}
+                placeholder={t.otherLabel}
+                className="w-full px-4 py-3 rounded-2xl bg-white text-[#1B3A5C] text-sm font-medium outline-none" />
             )}
             <button onClick={() => setBlStep('describe')} disabled={!catCanNext}
               className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">

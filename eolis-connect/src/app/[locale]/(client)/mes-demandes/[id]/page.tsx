@@ -940,22 +940,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
             </DossierSection>
           )}
 
-          {/* ── AI usage badge ── */}
-          {ticket.aiUsage && (
-            <div className="flex items-center gap-2 bg-white/15 border border-white/20 rounded-2xl px-4 py-2.5">
-              <span className="text-sm">⚡</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white">
-                  {isFr ? 'Extraction IA utilisée' : 'AI extraction used'}
-                </p>
-                <p className="text-[10px] text-blue-300">{ticket.aiUsage.model}</p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-xs font-bold text-white">{ticket.aiUsage.costFcfa?.toFixed(2)} FCFA</p>
-                <p className="text-[10px] text-blue-300">${ticket.aiUsage.costUsd?.toFixed(6)}</p>
-              </div>
-            </div>
-          )}
 
           {/* ── BL / Booking Confirmation ── */}
           {blData && (

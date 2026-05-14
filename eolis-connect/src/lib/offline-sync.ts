@@ -84,5 +84,9 @@ export async function syncPending(): Promise<SyncResult> {
     }
   }
 
+  if (sent > 0 && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('eolis-sync-done'))
+  }
+
   return { sent, refs }
 }
