@@ -426,15 +426,15 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                           <p className="text-xs text-gray-400">@{b.username}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-gray-700 font-mono">{b.creditsTotal}</p>
-                          <p className="text-[10px] text-gray-400">{isFr ? 'utilisés' : 'used'}: {b.creditsUsed}</p>
+                          <p className="text-sm font-bold text-gray-700 font-mono">{Math.round(b.creditsTotal)}</p>
+                          <p className="text-[10px] text-gray-400">{isFr ? 'utilisés' : 'used'}: {Math.round(b.creditsUsed)}</p>
                         </div>
                         <div className="text-right">
                           <p className={`text-sm font-bold font-mono ${
                             b.creditsRemaining <= 0 ? 'text-red-500' :
                             b.creditsRemaining <= 50 ? 'text-amber-500' : 'text-emerald-600'
                           }`}>
-                            {b.creditsRemaining}
+                            {Math.round(b.creditsRemaining)}
                           </p>
                           <p className="text-[10px] text-gray-400">crédits</p>
                         </div>
@@ -466,7 +466,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                                     </p>
                                   </div>
                                   <p className="text-xs font-bold text-gray-800 font-mono flex-shrink-0">
-                                    {item.creditsCost} crédits
+                                    {Math.round(item.creditsCost)} crédits
                                   </p>
                                 </div>
                               ))}

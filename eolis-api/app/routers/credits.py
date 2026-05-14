@@ -182,7 +182,7 @@ def approve_request(
     if amount_received < 500:
         raise HTTPException(400, "Montant minimum 500 FCFA")
 
-    credits_to_add = amount_received  # 1 crédit = 1 FCFA
+    credits_to_add = round(amount_received)  # 1 crédit = 1 FCFA, toujours entier
 
     bal = get_or_create_balance(req.client_id, db)
     bal.credits_total += credits_to_add

@@ -997,7 +997,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 <Zap size={15} className={hasEnoughCredits ? 'text-amber-300' : 'text-red-300'} />
                 <p className="text-sm text-white">
                   {isFr ? 'Solde :' : 'Balance:'}
-                  <span className="font-bold ml-1">{creditsRemaining} crédits</span>
+                  <span className="font-bold ml-1">{Math.round(creditsRemaining ?? 0)} crédits</span>
                 </p>
               </div>
               {!hasEnoughCredits && (
@@ -1071,15 +1071,15 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 {!hasEnoughCredits && (
                   <p className="text-xs text-red-300 font-semibold mt-1.5">
                     {isFr
-                      ? `Crédits insuffisants — il vous en faut 50, vous en avez ${creditsRemaining}`
-                      : `Insufficient credits — need 50, you have ${creditsRemaining}`}
+                      ? `Crédits insuffisants — il vous en faut 50, vous en avez ${Math.round(creditsRemaining ?? 0)}`
+                      : `Insufficient credits — need 50, you have ${Math.round(creditsRemaining ?? 0)}`}
                   </p>
                 )}
                 {hasEnoughCredits && creditsRemaining !== null && (
                   <p className="text-[10px] text-blue-300 mt-1">
                     {isFr
-                      ? `Il vous restera ${creditsRemaining - 50} crédits après`
-                      : `You will have ${creditsRemaining - 50} credits left after`}
+                      ? `Il vous restera ${Math.round(creditsRemaining - 50)} crédits après`
+                      : `You will have ${Math.round(creditsRemaining - 50)} credits left after`}
                   </p>
                 )}
               </div>

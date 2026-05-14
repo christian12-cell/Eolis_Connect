@@ -1,4 +1,5 @@
 import io
+import math
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from sqlalchemy.orm import Session
@@ -58,7 +59,8 @@ async def transcribe_audio(
     fcfa_rate = _get_fcfa_rate(db)
     cost_fcfa = cost_usd * fcfa_rate
 
-    credits_cost = max(1.0, round((duration_seconds / 60) * CREDITS_PER_VOICE_MINUTE, 2))
+    # Arrondi supérieur → toujours un entier (ex: 9.84s → 2 crédits, jamais 1.64)
+    credits_cost = max(1, math.ceil((duration_seconds / 60) * CREDITS_PER_VOICE_MINUTE))
 
     usage = AIUsage(
         client_id=current_user.id,
@@ -70,16 +72,16 @@ async def transcribe_audio(
         cost_usd=cost_usd,
         cost_fcfa=cost_fcfa,
         fcfa_rate=fcfa_rate,
-        credits_cost=credits_cost,
+        credits_cost=float(credits_cost),
     )
     db.add(usage)
     credits_left = deduct_credits(current_user.id, credits_cost, db)
     db.commit()
 
     return {
-        "text":            text,
-        "durationSeconds": round(duration_seconds, 1),
-        "creditsUsed":     credits_cost,
-        "creditsRemaining": round(credits_left, 2),
-        "costFcfa":        round(cost_fcfa, 4),
+        "text":             text,
+        "durationSeconds":  round(duration_seconds, 1),
+        "creditsUsed":      credits_cost,
+        "creditsRemaining": int(credits_left),
+        "costFcfa":         round(cost_fcfa, 4),
     }

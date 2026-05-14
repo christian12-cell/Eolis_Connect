@@ -99,8 +99,8 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
             </div>
             <div className="space-y-2 text-sm">
               {[
-                { label: isFr ? 'Achetés' : 'Purchased',  value: balance.creditsTotal },
-                { label: isFr ? 'Utilisés' : 'Used',      value: balance.creditsUsed },
+                { label: isFr ? 'Achetés' : 'Purchased',  value: Math.round(balance.creditsTotal) },
+                { label: isFr ? 'Utilisés' : 'Used',      value: Math.round(balance.creditsUsed) },
               ].map(row => (
                 <div key={row.label} className="flex justify-between text-gray-600">
                   <span>{row.label}</span>
@@ -109,7 +109,7 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
               ))}
               <div className="border-t border-gray-100 pt-2 flex justify-between text-[#1B3A5C] font-bold">
                 <span>{isFr ? 'Restants' : 'Remaining'}</span>
-                <span className="font-mono">{balance.creditsRemaining} crédits</span>
+                <span className="font-mono">{Math.round(balance.creditsRemaining)} crédits</span>
               </div>
             </div>
             <button onClick={() => router.push(`/${locale}/recharger`)}
@@ -158,7 +158,7 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0 mr-1">
-                      <p className="text-sm font-bold text-[#1B3A5C] font-mono">{g.totalCredits} crédits</p>
+                      <p className="text-sm font-bold text-[#1B3A5C] font-mono">{Math.round(g.totalCredits)} crédits</p>
                     </div>
                     {isOpen
                       ? <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
@@ -180,14 +180,14 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
                             </p>
                           </div>
                           <p className="text-xs font-bold text-gray-800 font-mono flex-shrink-0">
-                            {item.creditsCost} crédits
+                            {Math.round(item.creditsCost)} crédits
                           </p>
                         </div>
                       ))}
                       {/* Subtotal */}
                       <div className="flex justify-between px-4 py-2.5 bg-gray-50">
                         <p className="text-xs text-gray-500 font-medium">{isFr ? 'Total dossier' : 'File total'}</p>
-                        <p className="text-xs font-bold text-[#1B3A5C] font-mono">{g.totalCredits} crédits</p>
+                        <p className="text-xs font-bold text-[#1B3A5C] font-mono">{Math.round(g.totalCredits)} crédits</p>
                       </div>
                     </div>
                   )}

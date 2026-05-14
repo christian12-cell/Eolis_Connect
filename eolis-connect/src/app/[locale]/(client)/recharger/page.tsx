@@ -253,7 +253,7 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
             <Zap size={16} className="text-amber-300 flex-shrink-0" />
             <p className="text-sm text-white">
               {isFr ? 'Solde actuel :' : 'Current balance:'}
-              <span className="font-bold ml-1">{balance.creditsRemaining} crédits</span>
+              <span className="font-bold ml-1">{Math.round(balance.creditsRemaining)} crédits</span>
             </p>
           </div>
         )}
