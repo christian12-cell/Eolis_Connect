@@ -234,7 +234,14 @@ export default function AgentTicketActions({
           const prevById = new Map(prev.map(m => [m.id, m]))
           const mergedMsgs = msgs.map((m: any) => {
             const local = prevById.get(m.id) as any
-            return local?._localFiles?.length ? { ...m, _localFiles: local._localFiles } : m
+            if (local?._localFiles?.length) return { ...m, _localFiles: local._localFiles }
+            const pending = prev.find((p: any) =>
+              p.pending && !serverIds.has(p.id) &&
+              p.content === m.content && p.senderType === m.senderType &&
+              (p as any)._localFiles?.length > 0
+            )
+            if (pending) return { ...m, _localFiles: (pending as any)._localFiles }
+            return m
           })
           const stillPending = prev.filter(m => (m as any).pending && !serverIds.has(m.id))
           return [...mergedMsgs, ...stillPending]
@@ -289,15 +296,20 @@ export default function AgentTicketActions({
     const el = chatScrollRef.current
     if (!el) return
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
-    if (nearBottom) {
+    const newMsgs = messages.slice(-newCount)
+    const myOwn = newMsgs.some((m: any) => m.senderId === currentAgentId && m.pending)
+    if (nearBottom || myOwn) {
       el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
       setUnreadWhileUp(0)
       setIsScrolledUp(false)
     } else {
-      setIsScrolledUp(true)
-      setUnreadWhileUp(p => p + newCount)
+      const fromOthers = newMsgs.filter((m: any) => m.senderId !== currentAgentId).length
+      if (fromOthers > 0) {
+        setIsScrolledUp(true)
+        setUnreadWhileUp(p => p + fromOthers)
+      }
     }
-  }, [messages])
+  }, [messages, currentAgentId])
 
   function handleAgentChatScroll() {
     const el = chatScrollRef.current

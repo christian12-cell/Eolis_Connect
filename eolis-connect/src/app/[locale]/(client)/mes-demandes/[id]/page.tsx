@@ -278,7 +278,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
           const prevById = new Map(prev.map(m => [m.id, m]))
           const mergedMsgs = msgs.map((m: any) => {
             const local = prevById.get(m.id) as any
-            return local?._localFiles?.length ? { ...m, _localFiles: local._localFiles } : m
+            if (local?._localFiles?.length) return { ...m, _localFiles: local._localFiles }
+            // Carry _localFiles from pending message with same content (WS fires before step 3)
+            const pending = prev.find((p: any) =>
+              p.pending && !serverIds.has(p.id) &&
+              p.content === m.content && p.senderType === m.senderType &&
+              (p as any)._localFiles?.length > 0
+            )
+            if (pending) return { ...m, _localFiles: (pending as any)._localFiles }
+            return m
           })
           const stillPending = prev.filter((m: any) => {
             if (!m.pending) return false
@@ -344,16 +352,18 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
     const el = chatInnerRef.current
     if (!el) return
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
-    if (nearBottom) {
+    const newMsgs = messages.slice(-newCount)
+    const myOwn = newMsgs.some((m: any) => m.senderType === 'CLIENT' && m.pending)
+    if (nearBottom || myOwn) {
       el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
       setUnreadWhileUp(0)
       setIsScrolledUp(false)
     } else {
-      setIsScrolledUp(true)
-      setUnreadWhileUp(p => p + newCount)
-      if (!firstUnreadIdRef.current) {
-        const newMsgs = messages.slice(-newCount)
-        firstUnreadIdRef.current = newMsgs[0]?.id ?? null
+      const fromOthers = newMsgs.filter((m: any) => m.senderType !== 'CLIENT').length
+      if (fromOthers > 0) {
+        setIsScrolledUp(true)
+        setUnreadWhileUp(p => p + fromOthers)
+        if (!firstUnreadIdRef.current) firstUnreadIdRef.current = newMsgs[0]?.id ?? null
       }
     }
   }, [messages])
