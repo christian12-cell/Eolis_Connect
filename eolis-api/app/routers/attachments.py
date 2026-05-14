@@ -109,6 +109,38 @@ def list_attachments(
     return db.query(Attachment).filter(Attachment.ticket_id == ticket_id).order_by(Attachment.created_at.asc()).all()
 
 
+@router.delete("/attachments/{attachment_id}")
+def delete_attachment(
+    attachment_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    attachment = db.query(Attachment).filter(Attachment.id == attachment_id).first()
+    if not attachment:
+        raise HTTPException(404, "Not found")
+    ticket = db.query(Ticket).filter(Ticket.id == attachment.ticket_id).first()
+    if current_user.role == "CLIENT" and ticket and ticket.client_id != current_user.id:
+        raise HTTPException(403, "Access denied")
+    if attachment.message_id:
+        raise HTTPException(403, "Cannot delete a linked attachment")
+
+    if attachment.url and attachment.url.startswith("s3://"):
+        try:
+            key = attachment.url.replace(f"s3://{settings.AWS_S3_BUCKET}/", "")
+            _s3_client().delete_object(Bucket=settings.AWS_S3_BUCKET, Key=key)
+        except Exception:
+            pass
+    elif attachment.url and os.path.exists(attachment.url):
+        try:
+            os.remove(attachment.url)
+        except Exception:
+            pass
+
+    db.delete(attachment)
+    db.commit()
+    return {"success": True}
+
+
 @router.get("/attachments/{attachment_id}/download")
 def download_attachment(
     attachment_id: str,

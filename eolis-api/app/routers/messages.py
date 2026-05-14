@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from ..database import get_db
-from sqlalchemy import func
+from sqlalchemy import func, update
 from ..models import User, Ticket, Message, Notification, Attachment
 from ..schemas import MessageCreateRequest, MessageResponse
 from ..deps import get_current_user
@@ -149,6 +149,12 @@ def send_message(
     )
     db.add(msg)
     db.flush()
+
+    # Link pre-uploaded attachments to this message
+    if body.attachment_ids:
+        db.query(Attachment).filter(
+            Attachment.id.in_(body.attachment_ids),
+        ).update({"message_id": msg.id, "source": None}, synchronize_session=False)
 
     client = ticket.client
 

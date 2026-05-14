@@ -165,8 +165,13 @@ export default function AgentTicketActions({
   const [takenByOther, setTakenByOther]   = useState(false)
   const [allStaff, setAllStaff]           = useState<any[]>([])
   const [mentionUsers, setMentionUsers]   = useState<any[]>([])
-  const [internalFiles, setInternalFiles] = useState<File[]>([])
-  const [replyFiles, setReplyFiles]       = useState<File[]>([])
+
+  interface FileUploadA {
+    uid: string; file: File; previewUrl: string | null
+    status: 'uploading' | 'done' | 'error'; attachmentId?: string
+  }
+  const [replyUploads, setReplyUploads]       = useState<FileUploadA[]>([])
+  const [internalUploads, setInternalUploads] = useState<FileUploadA[]>([])
 
   const bottomRef       = useRef<HTMLDivElement>(null)
   const chatScrollRef   = useRef<HTMLDivElement>(null)
@@ -404,6 +409,36 @@ export default function AgentTicketActions({
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
+  function handleAgentFiles(files: File[], tab: Tab) {
+    const setter = tab === 'client' ? setReplyUploads : setInternalUploads
+    const newUploads: FileUploadA[] = files.map(file => ({
+      uid: `fu-${Date.now()}-${Math.random()}`,
+      file,
+      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      status: 'uploading' as const,
+    }))
+    setter(prev => [...prev, ...newUploads])
+    newUploads.forEach(fu => {
+      const fd = new FormData()
+      fd.append('files', fu.file)
+      apiUpload(`/api/tickets/${ticketId}/attachments?source=pre-upload`, fd)
+        .then(r => r.json())
+        .then(atts => setter(prev => prev.map(f => f.uid === fu.uid ? { ...f, status: 'done', attachmentId: atts[0]?.id } : f)))
+        .catch(() => setter(prev => prev.map(f => f.uid === fu.uid ? { ...f, status: 'error' } : f)))
+    })
+  }
+
+  function removeAgentFile(uid: string, tab: Tab) {
+    const uploads = tab === 'client' ? replyUploads : internalUploads
+    const setter  = tab === 'client' ? setReplyUploads : setInternalUploads
+    const fu = uploads.find(f => f.uid === uid)
+    if (fu) {
+      if (fu.previewUrl) URL.revokeObjectURL(fu.previewUrl)
+      if (fu.attachmentId) apiFetch(`/api/attachments/${fu.attachmentId}`, { method: 'DELETE' }).catch(() => {})
+    }
+    setter(prev => prev.filter(f => f.uid !== uid))
+  }
+
   async function takeTicket() {
     setActionLoading('take')
     const res = await apiFetch(`/api/tickets/${ticketId}/take`, { method: 'PATCH' })
@@ -434,55 +469,46 @@ export default function AgentTicketActions({
   }
 
   async function sendReply() {
-    const noContent = !text.trim() && (chatTab === 'client' ? replyFiles.length === 0 : internalFiles.length === 0)
-    if (noContent || sending) return
+    const uploads = chatTab === 'client' ? replyUploads : internalUploads
+    const hasUploading = uploads.some(f => f.status === 'uploading')
+    const noContent = !text.trim() && uploads.length === 0
+    if (noContent || sending || hasUploading) return
+
     setSending(true)
     const senderType = chatTab === 'internal' ? 'INTERNAL_NOTE' : 'AGENT'
     const content = text.trim() || ' '
-    const filesToSend = chatTab === 'client' ? [...replyFiles] : [...internalFiles]
-    if (chatTab === 'client') setReplyFiles([])
-    else setInternalFiles([])
+    const attachmentIds = uploads.filter(f => f.status === 'done' && f.attachmentId).map(f => f.attachmentId!)
+    const previewData = uploads.map(fu => ({
+      url: fu.previewUrl, filename: fu.file.name, size: fu.file.size, mimeType: fu.file.type,
+    }))
 
-    // Afficher le message immédiatement
+    if (chatTab === 'client') setReplyUploads([])
+    else setInternalUploads([])
+
     const tempId = `pending-${Date.now()}`
     setMessages(prev => [...prev, {
       id: tempId, senderId: currentAgentId, senderType,
       content, sender: null, createdAt: new Date().toISOString(),
-      isRead: false, pending: true, _localFiles: filesToSend,
+      isRead: false, pending: true, _previewData: previewData,
     } as any])
 
     try {
       const res = await apiFetch(`/api/tickets/${ticketId}/messages`, {
         method: 'POST',
-        body: JSON.stringify({ content, senderType }),
+        body: JSON.stringify({ content, senderType, attachmentIds: attachmentIds.length ? attachmentIds : undefined }),
       })
       if (res.ok) {
         const msg = await res.json()
-        setMessages(prev => prev.map(m => m.id === tempId ? { ...msg, _localFiles: filesToSend } : m))
-        if (filesToSend.length > 0 && msg.id) {
-          const fd = new FormData()
-          filesToSend.forEach(f => fd.append('files', f))
-          const up = await apiUpload(`/api/tickets/${ticketId}/attachments?message_id=${msg.id}`, fd).catch(() => null)
-          if (up?.ok) {
-            const newAtts = await up.json().catch(() => [])
-            setAttachments(prev => [...prev, ...newAtts])
-            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, _localFiles: [] } : m))
-          }
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...msg, _previewData: previewData } : m))
+        const tkt = await apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()).catch(() => null)
+        if (tkt?.attachments) {
+          setAttachments(tkt.attachments)
+          setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, _previewData: [] } : m))
         }
       }
     } catch {
-      // Offline — queue and keep the existing optimistic (tempId) — don't add another
-      const storedFiles = filesToSend.length > 0
-        ? await Promise.all(filesToSend.map(f => fileToStored(f)))
-        : undefined
-      await offlineDb.add({
-        type: chatTab === 'internal' ? 'INTERNAL_NOTE' : 'AGENT_REPLY',
-        payload: { ticketId, content, senderType },
-        files: storedFiles,
-      })
-      setMessages(prev => prev.map(m =>
-        m.id === tempId ? { ...m, _pendingFileCount: filesToSend.length } : m
-      ))
+      await offlineDb.add({ type: chatTab === 'internal' ? 'INTERNAL_NOTE' : 'AGENT_REPLY', payload: { ticketId, content, senderType } })
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m } : m))
     }
 
     setText('')
@@ -668,9 +694,9 @@ export default function AgentTicketActions({
     }
 
     const msgAtts = attachments.filter((a: any) => a.messageId === msg.id)
-    const localFiles: File[] = (msg as any)._localFiles ?? []
-    const showLocal = localFiles.length > 0 && msgAtts.length === 0
-    const showAttachmentPlaceholder = !showLocal && msgAtts.length === 0 && (msg as any).attachmentCount > 0
+    const previewData: any[] = (msg as any)._previewData ?? []
+    const showLocalPreview = previewData.length > 0 && msgAtts.length === 0
+    const showAttachmentPlaceholder = !showLocalPreview && msgAtts.length === 0 && (msg as any).attachmentCount > 0
 
     return (
       <div key={msg.id} className={`flex ${isClient ? 'justify-start' : 'justify-end'}`}>
@@ -688,10 +714,18 @@ export default function AgentTicketActions({
                   ))}
                 </div>
               )}
-              {showLocal && (
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {localFiles.map((f, i) => (
-                    <FilePreview key={i} file={f} uploading />
+              {showLocalPreview && (
+                <div className="flex flex-col gap-1 mt-1">
+                  {previewData.map((pd: any, i: number) => pd.url ? (
+                    <img key={i} src={pd.url} alt={pd.filename} className="max-w-full max-h-48 object-cover rounded-xl" />
+                  ) : (
+                    <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-xl ${isClient ? 'bg-white/25 border border-white/30' : 'bg-black/8'}`}>
+                      <FileText size={16} className={isClient ? 'text-blue-100 flex-shrink-0' : 'text-blue-500 flex-shrink-0'} />
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-xs font-medium truncate ${isClient ? 'text-white' : 'text-gray-800'}`}>{pd.filename}</p>
+                        <p className={`text-[10px] ${isClient ? 'text-blue-200' : 'text-gray-400'}`}>{(pd.size/1024).toFixed(1)} KB</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -983,10 +1017,16 @@ export default function AgentTicketActions({
                   </div>
                 ) : (
                   <>
-                    {replyFiles.length > 0 && (
+                    {replyUploads.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 rounded-xl border border-gray-100">
-                        {replyFiles.map((f, i) => (
-                          <FilePreview key={i} file={f} onRemove={() => setReplyFiles(p => p.filter((_, idx) => idx !== i))} />
+                        {replyUploads.map(fu => (
+                          <div key={fu.uid} className="relative flex-shrink-0">
+                            {fu.previewUrl
+                              ? <div className="w-16 h-16 rounded-xl overflow-hidden border border-white shadow"><img src={fu.previewUrl} alt={fu.file.name} className={`w-full h-full object-cover ${fu.status==='uploading'?'opacity-60':''}`} />{fu.status==='uploading'&&<div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl"><Loader2 size={12} className="text-white animate-spin"/></div>}</div>
+                              : <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-2 py-1.5 shadow-sm">{fu.status==='uploading'?<Loader2 size={13} className="text-blue-400 animate-spin flex-shrink-0"/>:<FileText size={13} className="text-blue-500 flex-shrink-0"/>}<span className="text-[10px] truncate max-w-[80px] text-gray-700">{fu.file.name}</span></div>
+                            }
+                            <button onClick={() => removeAgentFile(fu.uid,'client')} className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center z-10"><X size={8} className="text-white"/></button>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -998,14 +1038,15 @@ export default function AgentTicketActions({
                           accept="image/*,application/pdf,.doc,.docx"
                           onChange={e => {
                             const files = Array.from(e.target.files ?? [])
-                            if (files.length > 0) setReplyFiles(p => [...p, ...files])
+                            if (files.length > 0) handleAgentFiles(files, 'client')
+                            e.target.value = ''
                           }} />
                       </label>
                       <textarea value={text} onChange={e => setText(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
                         placeholder={t.replyPh} rows={2}
                         className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-[#1B3A5C] resize-none transition-colors" />
-                      <button onClick={sendReply} disabled={(!text.trim() && replyFiles.length === 0) || sending}
+                      <button onClick={sendReply} disabled={(!text.trim() && replyUploads.length === 0) || sending || replyUploads.some(f=>f.status==='uploading')}
                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1B3A5C] text-white disabled:opacity-40 hover:bg-[#152d47] transition-colors flex-shrink-0">
                         {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                       </button>
@@ -1043,10 +1084,16 @@ export default function AgentTicketActions({
               )}
 
               {/* File previews */}
-              {internalFiles.length > 0 && (
+              {internalUploads.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2 p-2 bg-amber-50 rounded-xl border border-amber-100">
-                  {internalFiles.map((f, i) => (
-                    <FilePreview key={i} file={f} onRemove={() => setInternalFiles(p => p.filter((_, idx) => idx !== i))} />
+                  {internalUploads.map(fu => (
+                    <div key={fu.uid} className="relative flex-shrink-0">
+                      {fu.previewUrl
+                        ? <div className="w-14 h-14 rounded-xl overflow-hidden border border-white shadow"><img src={fu.previewUrl} alt={fu.file.name} className={`w-full h-full object-cover ${fu.status==='uploading'?'opacity-60':''}`}/>{fu.status==='uploading'&&<div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl"><Loader2 size={10} className="text-white animate-spin"/></div>}</div>
+                        : <div className="flex items-center gap-1.5 bg-white border border-amber-200 rounded-xl px-2 py-1.5">{fu.status==='uploading'?<Loader2 size={12} className="text-amber-400 animate-spin"/>:<FileText size={12} className="text-amber-500"/>}<span className="text-[10px] truncate max-w-[80px] text-gray-700">{fu.file.name}</span></div>
+                      }
+                      <button onClick={() => removeAgentFile(fu.uid,'internal')} className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center z-10"><X size={8} className="text-white"/></button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -1058,7 +1105,8 @@ export default function AgentTicketActions({
                   <input type="file" multiple className="sr-only"
                     onChange={e => {
                       const files = Array.from(e.target.files ?? [])
-                      if (files.length > 0) setInternalFiles(p => [...p, ...files])
+                      if (files.length > 0) handleAgentFiles(files, 'internal')
+                      e.target.value = ''
                     }} />
                 </label>
                 <textarea value={text}
@@ -1068,7 +1116,7 @@ export default function AgentTicketActions({
                   placeholder={t.notePh} rows={2}
                   className="flex-1 px-4 py-2.5 rounded-xl border-2 border-amber-200 bg-white text-sm focus:outline-none focus:border-amber-400 resize-none transition-colors" />
                 <button onClick={sendReply}
-                  disabled={(!text.trim() && internalFiles.length === 0) || sending}
+                  disabled={(!text.trim() && internalUploads.length === 0) || sending || internalUploads.some(f=>f.status==='uploading')}
                   className="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-500 text-white disabled:opacity-40 hover:bg-amber-600 transition-colors flex-shrink-0">
                   {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 </button>

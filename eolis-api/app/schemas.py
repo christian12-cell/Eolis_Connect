@@ -200,8 +200,9 @@ class TicketResponse(BaseModel):
 
 class MessageCreateRequest(BaseModel):
     content: str
-    sender_type: Optional[str] = None          # INTERNAL_NOTE | DOCUMENT_REQUEST | FINAL_RESPONSE
-    document_description: Optional[str] = None # for DOCUMENT_REQUEST
+    sender_type: Optional[str] = None
+    document_description: Optional[str] = None
+    attachment_ids: Optional[list[str]] = None  # pre-uploaded attachment IDs to link
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
 class MessageResponse(BaseModel):

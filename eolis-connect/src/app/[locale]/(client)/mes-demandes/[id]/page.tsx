@@ -240,7 +240,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const [docSlots, setDocSlots] = useState<Record<string, (File | null)[]>>({})
   const [submittingDocs, setSubmittingDocs] = useState<string | null>(null)
   const [scanTarget, setScanTarget] = useState<{ msgId: string; slotIdx: number } | null>(null)
-  const [clientFiles, setClientFiles] = useState<File[]>([])
+  interface FileUpload {
+    uid: string
+    file: File
+    previewUrl: string | null
+    status: 'uploading' | 'done' | 'error'
+    attachmentId?: string
+  }
+  const [fileUploads, setFileUploads] = useState<FileUpload[]>([])
   const [open, setOpen] = useState({ equip: true, log: true, desc: true, docs: true, bl: true })
   const messagesEndRef     = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -404,15 +411,60 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
     setLoading(false)
   }
 
+  function handleFilesSelected(files: File[]) {
+    const newUploads: FileUpload[] = files.map(file => ({
+      uid: `fu-${Date.now()}-${Math.random()}`,
+      file,
+      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      status: 'uploading' as const,
+    }))
+    setFileUploads(prev => [...prev, ...newUploads])
+
+    newUploads.forEach(fu => {
+      const fd = new FormData()
+      fd.append('files', fu.file)
+      apiUpload(`/api/tickets/${ticketId}/attachments?source=pre-upload`, fd)
+        .then(r => r.json())
+        .then(atts => {
+          setFileUploads(prev => prev.map(f =>
+            f.uid === fu.uid ? { ...f, status: 'done', attachmentId: atts[0]?.id } : f
+          ))
+        })
+        .catch(() => {
+          setFileUploads(prev => prev.map(f =>
+            f.uid === fu.uid ? { ...f, status: 'error' } : f
+          ))
+        })
+    })
+  }
+
+  function removeFileUpload(uid: string) {
+    const fu = fileUploads.find(f => f.uid === uid)
+    if (fu) {
+      if (fu.previewUrl) URL.revokeObjectURL(fu.previewUrl)
+      if (fu.attachmentId) apiFetch(`/api/attachments/${fu.attachmentId}`, { method: 'DELETE' }).catch(() => {})
+    }
+    setFileUploads(prev => prev.filter(f => f.uid !== uid))
+  }
+
   async function sendMessage() {
-    if ((!text.trim() && clientFiles.length === 0) || sending) return
+    const hasUploading = fileUploads.some(f => f.status === 'uploading')
+    if ((!text.trim() && fileUploads.length === 0) || sending || hasUploading) return
+
     const content = text.trim() || ' '
-    const filesToSend = [...clientFiles]
+    const doneUploads = fileUploads.filter(f => f.status === 'done' && f.attachmentId)
+    const attachmentIds = doneUploads.map(f => f.attachmentId!)
+    const previewData = fileUploads.map(fu => ({
+      url: fu.previewUrl,
+      filename: fu.file.name,
+      size: fu.file.size,
+      mimeType: fu.file.type,
+    }))
+
     setSending(true)
     setText('')
-    setClientFiles([])
+    setFileUploads([])
 
-    // Afficher le message immédiatement avec les fichiers locaux
     const tempId = `pending-${Date.now()}`
     const optimistic: any = {
       id: tempId,
@@ -421,41 +473,26 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       createdAt: new Date().toISOString(),
       sender: getUser(),
       pending: true,
-      _localFiles: filesToSend,
+      _previewData: previewData,
     }
     setMessages(prev => [...prev, optimistic])
 
     try {
       const r = await apiFetch(`/api/tickets/${ticketId}/messages`, {
         method: 'POST',
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, attachmentIds: attachmentIds.length ? attachmentIds : undefined }),
       })
       if (r.ok) {
         const msg = await r.json()
-        // Remplacer l'optimiste par le vrai message (garder _localFiles pendant l'upload)
-        setMessages(prev => prev.map(m => m.id === tempId ? { ...msg, _localFiles: filesToSend } : m))
-        if (filesToSend.length > 0 && msg.id) {
-          const fd = new FormData()
-          filesToSend.forEach(f => fd.append('files', f))
-          await apiUpload(`/api/tickets/${ticketId}/attachments?message_id=${msg.id}`, fd).catch(() => {})
-          const tk = await apiFetch(`/api/tickets/${ticketId}`).then(res => res.json()).catch(() => null)
-          if (tk) {
-            setTicket(tk)
-            // Retirer les fichiers locaux — les pièces jointes serveur prennent le relais
-            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, _localFiles: [] } : m))
-          }
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...msg, _previewData: previewData } : m))
+        const tk = await apiFetch(`/api/tickets/${ticketId}`).then(res => res.json()).catch(() => null)
+        if (tk) {
+          setTicket(tk)
+          setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, _previewData: [] } : m))
         }
       }
     } catch {
-      // Offline — garder l'optimiste, mettre en file d'attente
-      const storedFiles = filesToSend.length > 0
-        ? await Promise.all(filesToSend.map(f => fileToStored(f)))
-        : undefined
-      await offlineDb.add({
-        type: 'SEND_MESSAGE',
-        payload: { ticketId, content },
-        files: storedFiles,
-      })
+      await offlineDb.add({ type: 'SEND_MESSAGE', payload: { ticketId, content } })
     } finally {
       setSending(false)
     }
@@ -1206,9 +1243,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                 const canDelete = isClient && withinLimit
 
                 const msgAtts = (ticket.attachments ?? []).filter((a: any) => a.messageId === msg.id)
-                const localFiles: File[] = (msg as any)._localFiles ?? []
-                const showLocal = localFiles.length > 0 && msgAtts.length === 0
-                const showAttachmentPlaceholder = !showLocal && msgAtts.length === 0 && (msg.attachmentCount ?? 0) > 0
+                const previewData: any[] = (msg as any)._previewData ?? []
+                const showLocalPreview = previewData.length > 0 && msgAtts.length === 0
+                const showAttachmentPlaceholder = !showLocalPreview && msgAtts.length === 0 && (msg.attachmentCount ?? 0) > 0
                 return (
                   <div key={msg.id} className={`flex items-end gap-1.5 ${isClient ? 'justify-end' : 'justify-start'}`}>
                     {canDelete && (
@@ -1246,10 +1283,18 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                           ))}
                         </div>
                       )}
-                      {showLocal && (
-                        <div className={`flex flex-wrap gap-2 ${msg.content.trim() && msg.content !== ' ' ? 'mt-1.5' : ''}`}>
-                          {localFiles.map((f, i) => (
-                            <FilePreview key={i} file={f} uploading />
+                      {showLocalPreview && (
+                        <div className={`flex flex-col gap-1 ${msg.content.trim() && msg.content !== ' ' ? 'mt-1.5' : ''}`}>
+                          {previewData.map((pd: any, i: number) => pd.url ? (
+                            <img key={i} src={pd.url} alt={pd.filename} className="max-w-full max-h-52 object-cover rounded-xl" />
+                          ) : (
+                            <div key={i} className={`flex items-center gap-2 px-3 py-2.5 rounded-xl ${isClient ? 'bg-white/25 border border-white/30' : 'bg-white border border-gray-200 shadow-sm'}`}>
+                              <FileText size={18} className={isClient ? 'text-blue-100 flex-shrink-0' : 'text-blue-500 flex-shrink-0'} />
+                              <div className="min-w-0 flex-1">
+                                <p className={`text-xs font-semibold truncate ${isClient ? 'text-white' : 'text-gray-800'}`}>{pd.filename}</p>
+                                <p className={`text-[10px] ${isClient ? 'text-blue-200' : 'text-gray-400'}`}>{(pd.size/1024).toFixed(1)} KB</p>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -1305,10 +1350,35 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
             {/* Input intégré dans le bloc chat */}
             {(ticket.status === 'PENDING' || ticket.status === 'IN_PROGRESS') && (
               <div className="flex-shrink-0 bg-white border-t border-gray-200 px-3 py-2.5">
-                {clientFiles.length > 0 && (
+                {fileUploads.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 rounded-xl border border-gray-100">
-                    {clientFiles.map((f, i) => (
-                      <FilePreview key={i} file={f} onRemove={() => setClientFiles(prev => prev.filter((_, idx) => idx !== i))} />
+                    {fileUploads.map(fu => (
+                      <div key={fu.uid} className="relative flex-shrink-0">
+                        {fu.previewUrl ? (
+                          <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-md">
+                            <img src={fu.previewUrl} alt={fu.file.name} className={`w-full h-full object-cover ${fu.status === 'uploading' ? 'opacity-60' : ''}`} />
+                            {fu.status === 'uploading' && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl">
+                                <Loader2 size={16} className="text-white animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm max-w-[150px]">
+                            {fu.status === 'uploading'
+                              ? <Loader2 size={16} className="text-blue-400 animate-spin flex-shrink-0" />
+                              : <FileText size={16} className="text-blue-500 flex-shrink-0" />}
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-gray-800 truncate">{fu.file.name}</p>
+                              <p className="text-[10px] text-gray-400">{fu.status === 'uploading' ? (isFr ? 'Envoi...' : 'Uploading...') : `${(fu.file.size/1024).toFixed(1)} KB`}</p>
+                            </div>
+                          </div>
+                        )}
+                        <button onClick={() => removeFileUpload(fu.uid)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 shadow flex items-center justify-center z-10">
+                          <X size={10} className="text-white" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -1320,7 +1390,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                       accept="image/*,application/pdf,.doc,.docx"
                       onChange={e => {
                         const files = Array.from(e.target.files ?? [])
-                        if (files.length > 0) setClientFiles(prev => [...prev, ...files])
+                        if (files.length > 0) handleFilesSelected(files)
+                        e.target.value = ''
                       }} />
                   </label>
                   <button type="button" onClick={() => setScanTarget({ msgId: '__chat__', slotIdx: 0 })}
@@ -1337,9 +1408,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                     className="flex-1 text-sm bg-gray-100 rounded-2xl px-4 py-2.5 resize-none outline-none leading-relaxed text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#1B3A5C]/20 transition-all"
                     style={{ maxHeight: '5rem', overflowY: 'auto' }}
                   />
-                  <button onClick={sendMessage} disabled={(!text.trim() && clientFiles.length === 0) || sending}
+                  <button onClick={sendMessage}
+                    disabled={(!text.trim() && fileUploads.length === 0) || sending || fileUploads.some(f => f.status === 'uploading')}
                     className="w-9 h-9 rounded-full bg-[#1B3A5C] flex items-center justify-center flex-shrink-0 disabled:opacity-40 active:scale-95 transition-transform">
-                    <Send size={15} className="text-white" />
+                    {sending ? <Loader2 size={15} className="text-white animate-spin" /> : <Send size={15} className="text-white" />}
                   </button>
                 </div>
               </div>
