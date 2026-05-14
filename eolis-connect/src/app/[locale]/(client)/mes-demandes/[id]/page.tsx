@@ -668,20 +668,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between text-blue-200">
                   <span>{isFr ? '1 extraction BL' : '1 BL extraction'}</span>
-                  <span className="font-mono">≈ 0.30 FCFA</span>
+                  <span className="font-mono">50 crédits</span>
                 </div>
                 <div className="flex justify-between text-blue-200">
                   <span>{isFr ? '2 min de dictée' : '2 min dictation'}</span>
-                  <span className="font-mono">≈ 7.20 FCFA</span>
+                  <span className="font-mono">20 crédits</span>
                 </div>
                 <div className="border-t border-white/10 pt-1 flex justify-between text-white font-bold">
                   <span>{isFr ? 'Total estimé' : 'Estimated total'}</span>
                   <span className="font-mono">70 crédits</span>
                 </div>
               </div>
-              <p className="text-[10px] text-blue-400 mt-2">
-                {isFr ? '(1 crédit = 1 FCFA · recharge minimum 500 crédits)' : '(1 credit = 1 FCFA · min recharge 500 credits)'}
-              </p>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" className="w-4 h-4 rounded"

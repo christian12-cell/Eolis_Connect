@@ -980,9 +980,6 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 <span className="font-mono">70 crédits</span>
               </div>
             </div>
-            <p className="text-[10px] text-blue-400 mt-2">
-              {isFr ? '(1 crédit = 1 FCFA · recharge minimum 500 crédits)' : '(1 credit = 1 FCFA · min recharge 500 credits)'}
-            </p>
           </div>
 
           {/* Checkbox */}
