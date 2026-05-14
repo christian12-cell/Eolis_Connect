@@ -1,5 +1,6 @@
 import json
 import urllib.request
+import urllib.error
 from .config import settings
 
 # Logo hosted on Imgur — replace with your own CDN URL for production
@@ -28,6 +29,9 @@ def _send(to: str, subject: str, html: str):
         )
         with urllib.request.urlopen(req, timeout=15):
             pass
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        print(f"[email] Resend {e.code} to {to}: {body}")
     except Exception as exc:
         print(f"[email] Failed to send to {to}: {exc}")
 
