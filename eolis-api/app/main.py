@@ -213,3 +213,4 @@ def debug_config():
         "openai_configured": bool(settings.OPENAI_API_KEY),
         "openai_model": settings.OPENAI_MODEL,
     }
+
