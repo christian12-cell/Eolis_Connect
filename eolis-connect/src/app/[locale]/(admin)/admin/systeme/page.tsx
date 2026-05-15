@@ -39,9 +39,12 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
   const [resetPhrase, setResetPhrase] = useState('')
   const [resetting, setResetting] = useState(false)
   const [resetResult, setResetResult] = useState<'ok' | 'err' | null>(null)
-  const [fcfaRate, setFcfaRate] = useState('600')
+  const [fcfaRate, setFcfaRate]   = useState('600')
   const [fcfaSaving, setFcfaSaving] = useState(false)
-  const [fcfaSaved, setFcfaSaved] = useState(false)
+  const [fcfaSaved, setFcfaSaved]   = useState(false)
+  const [eurRate, setEurRate]       = useState('655.957')
+  const [eurSaving, setEurSaving]   = useState(false)
+  const [eurSaved, setEurSaved]     = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -53,9 +56,10 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
     const savedTz = localStorage.getItem('eolis_timezone') ?? 'Africa/Douala'
     setTimezone(savedTz)
     setSelectedTz(savedTz)
-    // Load FCFA rate
+    // Load exchange rates
     apiFetch('/api/admin/config').then(r => r.json()).then(cfg => {
       if (cfg.fcfa_rate) setFcfaRate(cfg.fcfa_rate)
+      if (cfg.eur_rate)  setEurRate(cfg.eur_rate)
     }).catch(() => {})
   }, [locale])
 
@@ -103,6 +107,19 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
     setFcfaSaving(false)
   }
 
+  async function saveEurRate(e: React.FormEvent) {
+    e.preventDefault()
+    const v = parseFloat(eurRate)
+    if (isNaN(v) || v <= 0) return
+    setEurSaving(true)
+    try {
+      await apiFetch('/api/admin/config/eur_rate', { method: 'PATCH', body: JSON.stringify({ value: String(v) }) })
+      setEurSaved(true)
+      setTimeout(() => setEurSaved(false), 2500)
+    } catch {}
+    setEurSaving(false)
+  }
+
   async function sendTestSms(e: React.FormEvent) {
     e.preventDefault()
     setSmsSending(true)
@@ -138,41 +155,57 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
     <DashboardLayout locale={locale} userName={`${user.firstName} ${user.lastName}`} role={user.role}>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t.title}</h1>
 
-      {/* FCFA Rate config */}
+      {/* Taux de change */}
       <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 max-w-4xl">
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-5">
           <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
             <DollarSign size={18} className="text-emerald-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-900">{isFr ? 'Taux de change USD → FCFA' : 'USD → FCFA exchange rate'}</h2>
-            <p className="text-xs text-gray-400">{isFr ? 'Utilisé pour le calcul des coûts IA affichés aux clients' : 'Used to calculate AI costs displayed to clients'}</p>
+            <h2 className="font-semibold text-gray-900">{isFr ? 'Taux de change' : 'Exchange rates'}</h2>
+            <p className="text-xs text-gray-400">{isFr ? 'Utilisés pour toutes les conversions de prix dans l\'application' : 'Used for all price conversions in the application'}</p>
           </div>
         </div>
-        <form onSubmit={saveFcfaRate} className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
-              1 USD =
-            </label>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* USD */}
+          <form onSubmit={saveFcfaRate} className="bg-gray-50 rounded-2xl p-4 space-y-3">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">USD → FCFA</p>
+            <p className="text-[11px] text-gray-400">{isFr ? 'Taux opérationnel Eolis — utilisé pour les coûts OpenAI' : 'Eolis operational rate — used for OpenAI costs'}</p>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="1"
-                step="0.01"
-                value={fcfaRate}
+              <span className="text-sm font-semibold text-gray-500">1 $ =</span>
+              <input type="number" min="1" step="0.01" value={fcfaRate}
                 onChange={e => setFcfaRate(e.target.value)}
-                className="w-36 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]"
-              />
+                className="w-28 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]" />
               <span className="text-sm font-semibold text-gray-600">FCFA</span>
             </div>
-          </div>
-          <button type="submit" disabled={fcfaSaving}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-              fcfaSaved ? 'bg-emerald-500 text-white' : 'bg-[#1B3A5C] text-white hover:bg-[#152d47]'
-            }`}>
-            {fcfaSaved ? (isFr ? '✓ Enregistré' : '✓ Saved') : (isFr ? 'Enregistrer' : 'Save')}
-          </button>
-        </form>
+            <button type="submit" disabled={fcfaSaving}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                fcfaSaved ? 'bg-emerald-500 text-white' : 'bg-[#1B3A5C] text-white hover:bg-[#152d47]'
+              }`}>
+              {fcfaSaved ? '✓' : ''} {isFr ? 'Enregistrer' : 'Save'}
+            </button>
+          </form>
+
+          {/* EUR */}
+          <form onSubmit={saveEurRate} className="bg-gray-50 rounded-2xl p-4 space-y-3">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">EUR → FCFA</p>
+            <p className="text-[11px] text-gray-400">{isFr ? 'Taux fixe officiel XAF/EUR (modifiable si changement de parité)' : 'Official fixed XAF/EUR rate (editable if parity changes)'}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-500">1 € =</span>
+              <input type="number" min="1" step="0.001" value={eurRate}
+                onChange={e => setEurRate(e.target.value)}
+                className="w-28 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]" />
+              <span className="text-sm font-semibold text-gray-600">FCFA</span>
+            </div>
+            <button type="submit" disabled={eurSaving}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                eurSaved ? 'bg-emerald-500 text-white' : 'bg-[#1B3A5C] text-white hover:bg-[#152d47]'
+              }`}>
+              {eurSaved ? '✓' : ''} {isFr ? 'Enregistrer' : 'Save'}
+            </button>
+          </form>
+        </div>
       </section>
 
       <div className="grid lg:grid-cols-2 gap-6 max-w-4xl mb-6">

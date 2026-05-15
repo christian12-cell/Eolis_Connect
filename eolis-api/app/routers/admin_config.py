@@ -9,7 +9,7 @@ from ..models import User
 
 router = APIRouter(prefix="/admin/config", tags=["admin-config"])
 
-ALLOWED_KEYS = {"fcfa_rate"}
+ALLOWED_KEYS = {"fcfa_rate", "eur_rate"}
 
 class ConfigUpdate(BaseModel):
     value: str
@@ -24,6 +24,7 @@ def get_config(
     config = {r.key: r.value for r in rows}
     # Defaults
     config.setdefault("fcfa_rate", "600")
+    config.setdefault("eur_rate",  "655.957")
     return config
 
 
