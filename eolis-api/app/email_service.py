@@ -25,8 +25,9 @@ def _send(to: str, subject: str, html: str):
 def _template(content: str, lang: str = "fr") -> str:
     """Base HTML email template with logo header and branded signature."""
     en = lang == "en"
-    t_rights  = "© 2026 Eolis Connect — All rights reserved" if en else "© 2026 Eolis Connect — Tous droits réservés"
-    t_auto    = "This email was sent automatically. Please do not reply directly." if en else "Cet email a été envoyé automatiquement. Merci de ne pas y répondre directement."
+    t_subtitle = "CLIENT FILE MANAGEMENT PLATFORM" if en else "PLATEFORME DE GESTION DES DOSSIERS CLIENTS"
+    t_rights   = "© 2026 Eolis Connect — All rights reserved" if en else "© 2026 Eolis Connect — Tous droits réservés"
+    t_auto     = "This email was sent automatically. Please do not reply directly." if en else "Cet email a été envoyé automatiquement. Merci de ne pas y répondre directement."
     return f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -43,7 +44,7 @@ def _template(content: str, lang: str = "fr") -> str:
     <td style="background:linear-gradient(135deg,#1B3A5C 0%,#2a5480 100%);padding:28px 40px;text-align:center;">
       <img src="{LOGO_URL}" alt="Eolis Connect" height="52" style="display:block;margin:0 auto 12px;max-width:160px;" />
       <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:-0.3px;">Eolis Connect</h1>
-      <p style="color:#a8c8e8;margin:4px 0 0;font-size:12px;letter-spacing:0.5px;">PLATEFORME DE GESTION DES DOSSIERS CLIENTS</p>
+      <p style="color:#a8c8e8;margin:4px 0 0;font-size:12px;letter-spacing:0.5px;">{t_subtitle}</p>
     </td>
   </tr>
 
