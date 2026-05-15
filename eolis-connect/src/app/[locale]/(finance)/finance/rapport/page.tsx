@@ -111,11 +111,10 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
     revenue: acc.revenue + r.revenue,
     aiCost: acc.aiCost + r.aiCost,
     infraCost: acc.infraCost + r.infraCost,
-    acquisitionCost: acc.acquisitionCost + (r.acquisitionCost ?? 0),
     totalCost: acc.totalCost + r.totalCost,
     grossProfit: acc.grossProfit + r.grossProfit,
     netProfit: acc.netProfit + r.netProfit,
-  }), { revenue: 0, aiCost: 0, infraCost: 0, acquisitionCost: 0, totalCost: 0, grossProfit: 0, netProfit: 0 })
+  }), { revenue: 0, aiCost: 0, infraCost: 0, totalCost: 0, grossProfit: 0, netProfit: 0 })
 
   // Forecast: simple linear regression on netProfit
   const forecast = (() => {
@@ -256,7 +255,6 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
                       <th className="px-3 py-3 text-right">{isFr ? 'Revenus' : 'Revenue'}</th>
                       <th className="px-3 py-3 text-right">{isFr ? 'Coûts IA' : 'AI costs'}</th>
                       <th className="px-3 py-3 text-right">{isFr ? 'Infra' : 'Infra'}</th>
-                      <th className="px-3 py-3 text-right">{isFr ? 'Acquisition' : 'Acquisition'}</th>
                       <th className="px-3 py-3 text-right">{isFr ? 'Bén. brut' : 'Gross'}</th>
                       <th className="px-3 py-3 text-right">{isFr ? 'Bén. net' : 'Net'}</th>
                       <th className="px-3 py-3 text-right">Marge</th>
@@ -277,14 +275,6 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
                         <td className="px-3 py-3 text-right">
                           <p className="font-semibold text-amber-600">{f2(r.infraCost)}</p>
                           <p className="text-[10px] text-gray-400">${toUsd(r.infraCost)}·€{toEur(r.infraCost)}</p>
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          {(r.acquisitionCost ?? 0) > 0 ? (
-                            <>
-                              <p className="font-semibold text-purple-600">−{f2(r.acquisitionCost ?? 0)}</p>
-                              <p className="text-[10px] text-gray-400">{(r.acquisitionCost ?? 0) / 100} client(s)</p>
-                            </>
-                          ) : <span className="text-gray-300 text-xs">—</span>}
                         </td>
                         <td className="px-3 py-3 text-right">
                           <p className="font-semibold text-blue-600">{f2(r.grossProfit)}</p>
@@ -310,7 +300,6 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
                       <td className="px-3 py-3 text-right text-emerald-600">{f2(totals.revenue)}<br/><span className="text-[10px] font-normal text-gray-400">${toUsd(totals.revenue)}·€{toEur(totals.revenue)}</span></td>
                       <td className="px-3 py-3 text-right text-red-500">{totals.aiCost.toFixed(4)}</td>
                       <td className="px-3 py-3 text-right text-amber-600">{f2(totals.infraCost)}<br/><span className="text-[10px] font-normal text-gray-400">${toUsd(totals.infraCost)}·€{toEur(totals.infraCost)}</span></td>
-                      <td className="px-3 py-3 text-right text-purple-600">−{f2(totals.acquisitionCost)}<br/><span className="text-[10px] font-normal text-gray-400">{totals.acquisitionCost / 100} client(s)</span></td>
                       <td className="px-3 py-3 text-right text-blue-600">{f2(totals.grossProfit)}</td>
                       <td className="px-3 py-3 text-right" style={{color: totals.netProfit >= 0 ? '#7c3aed' : '#ef4444'}}>
                         {f2(totals.netProfit)}<br/><span className="text-[10px] font-normal text-gray-400">${toUsd(totals.netProfit)}·€{toEur(totals.netProfit)}</span>

@@ -80,18 +80,17 @@ def finance_dashboard(
     pending = db.query(CreditRequest).filter(CreditRequest.status == "pending").all()
     pending_amount = sum(r.amount_declared for r in pending)
 
-    # Acquisition cost — crédits offerts aux nouveaux clients inscrits sur la période
+    # Nouveaux clients (info seulement — leur coût réel est déjà dans totalAiCostFcfa)
     new_clients_q = db.query(User).filter(User.role == "CLIENT")
     new_clients_q = _apply_date_filter(new_clients_q, User.created_at, from_date, to_date)
-    new_clients_count   = new_clients_q.count()
-    acquisition_cost    = new_clients_count * FREE_CREDITS_ON_SIGNUP
+    new_clients_count = new_clients_q.count()
 
     # P&L
-    total_costs     = total_ai_fcfa + total_infra_fcfa + acquisition_cost
-    gross_profit    = total_revenue - total_ai_fcfa
-    net_profit      = total_revenue - total_costs
-    usage_profit    = total_credits - total_ai_fcfa
-    margin_pct      = round((net_profit / total_revenue * 100), 1) if total_revenue > 0 else None
+    total_costs  = total_ai_fcfa + total_infra_fcfa
+    gross_profit = total_revenue - total_ai_fcfa
+    net_profit   = total_revenue - total_costs
+    usage_profit = total_credits - total_ai_fcfa
+    margin_pct   = round((net_profit / total_revenue * 100), 1) if total_revenue > 0 else None
 
     return {
         "totalRevenue":        round(total_revenue,       2),
@@ -102,7 +101,6 @@ def finance_dashboard(
         "totalInfraFcfa":      round(total_infra_fcfa,    2),
         "totalInfraUsd":       round(total_infra_usd,     4),
         "newClientsCount":     new_clients_count,
-        "acquisitionCostFcfa": round(acquisition_cost,    2),
         "totalCosts":          round(total_costs,         2),
         "grossProfit":         round(gross_profit,        2),
         "netProfit":           round(net_profit,          2),
@@ -251,7 +249,7 @@ def pnl_report(
     infra = db.query(InfrastructureCost).all()
 
     def _blank():
-        return {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0, "acquisitionCost": 0}
+        return {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0, "newClients": 0}
 
     # Group by month
     months: dict = {}
@@ -273,29 +271,28 @@ def pnl_report(
         months.setdefault(key, _blank())
         months[key]["infraCost"] += c.amount_fcfa
 
-    # Acquisition cost — nouveaux clients par mois
+    # Nouveaux clients par mois (info seulement, pas un coût P&L)
     new_clients_q = db.query(User).filter(User.role == "CLIENT")
     new_clients_q = _apply_date_filter(new_clients_q, User.created_at, from_date, to_date)
     for client in new_clients_q.all():
         key = client.created_at.strftime("%Y-%m")
         months.setdefault(key, _blank())
-        months[key]["acquisitionCost"] += FREE_CREDITS_ON_SIGNUP
+        months[key]["newClients"] += 1
 
     rows = []
     for month, v in sorted(months.items()):
-        acq = v["acquisitionCost"]
-        net = v["revenue"] - v["aiCost"] - v["infraCost"] - acq
+        net = v["revenue"] - v["aiCost"] - v["infraCost"]
         rows.append({
-            "month":           month,
-            "revenue":         round(v["revenue"],   2),
-            "aiCost":          round(v["aiCost"],    4),
-            "infraCost":       round(v["infraCost"], 2),
-            "acquisitionCost": round(acq,            2),
-            "totalCost":       round(v["aiCost"] + v["infraCost"] + acq, 2),
-            "grossProfit":     round(v["revenue"] - v["aiCost"], 2),
-            "netProfit":       round(net,             2),
-            "credits":         round(v["credits"],    2),
-            "marginPct":       round(net / v["revenue"] * 100, 1) if v["revenue"] > 0 else None,
+            "month":       month,
+            "revenue":     round(v["revenue"],   2),
+            "aiCost":      round(v["aiCost"],    4),
+            "infraCost":   round(v["infraCost"], 2),
+            "totalCost":   round(v["aiCost"] + v["infraCost"], 2),
+            "grossProfit": round(v["revenue"] - v["aiCost"], 2),
+            "netProfit":   round(net,             2),
+            "credits":     round(v["credits"],    2),
+            "newClients":  v["newClients"],
+            "marginPct":   round(net / v["revenue"] * 100, 1) if v["revenue"] > 0 else None,
         })
 
     return rows

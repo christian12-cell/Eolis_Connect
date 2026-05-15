@@ -126,24 +126,13 @@ export default function FinanceDashboardPage({ params }: { params: Promise<{ loc
               <KpiCard icon={<Building2 size={18} className="text-amber-600" />}    label={isFr ? 'Charges infra' : 'Infra costs'}                   fcfa={data.totalInfraFcfa}        sub={`$${f2(data.totalInfraUsd)}`}         color="bg-amber-50" />
             </div>
 
-            {/* Acquisition cost */}
-            {data.acquisitionCostFcfa > 0 && (
-              <div className="bg-white rounded-2xl border border-purple-100 p-4 shadow-sm flex items-center gap-4">
-                <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-                  <Wallet size={18} className="text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-900">
-                    {isFr ? 'Crédits offerts (acquisition)' : 'Free credits (acquisition)'}
-                  </p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">
-                    {data.newClientsCount} {isFr ? 'nouveau(x) client(s)' : 'new client(s)'} × {isFr ? '100 FCFA offerts à l\'inscription' : '100 FCFA given at signup'}
-                  </p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-base font-bold text-purple-600">−{f2(data.acquisitionCostFcfa)} <span className="text-xs font-normal text-gray-400">FCFA</span></p>
-                  <p className="text-[10px] text-gray-400 font-mono">${toUsd(data.acquisitionCostFcfa)} · €{toEur(data.acquisitionCostFcfa)}</p>
-                </div>
+            {/* Nouveaux clients — info seulement */}
+            {data.newClientsCount > 0 && (
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <Wallet size={16} className="text-blue-500 flex-shrink-0" />
+                <p className="text-xs text-blue-700">
+                  <span className="font-bold">{data.newClientsCount}</span> {isFr ? 'nouveau(x) client(s) inscrit(s) sur la période — 100 crédits offerts chacun. Le coût réel (OpenAI) est déjà inclus dans les Coûts IA.' : 'new client(s) registered in period — 100 free credits each. The real cost (OpenAI) is already included in AI Costs.'}
+                </p>
               </div>
             )}
 
