@@ -88,6 +88,7 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Journal d\'audit' : 'Audit log',         href: `${base}/finance/audit`,      icon: <ShieldCheck size={18} /> },
       { label: locale === 'fr' ? 'Notifications' : 'Notifications',        href: `${base}/agent/notifications`, icon: <Bell size={18} /> },
       { label: locale === 'fr' ? 'Paramètres' : 'Settings',                href: `${base}/agent/parametres`,   icon: <Settings size={18} /> },
+      { label: locale === 'fr' ? 'Aide' : 'Help',                          href: `${base}/finance/aide`,       icon: <BookOpen size={18} /> },
     ]
   }
 
