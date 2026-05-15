@@ -425,4 +425,103 @@ Les 8 derniers commentaires écrits par des clients sur les dossiers de cet agen
 
 ---
 
+---
+
+## Page Classement (Rankings)
+
+Page de classement compétitif des agents basé sur un **score composite** calculé automatiquement.
+
+> **Note importante :** Seuls les comptes de rôle `AGENT` apparaissent dans le classement. Les dossiers traités par un OPS_ADMIN ou SYSTEM_ADMIN n'entrent pas en compte — même règle que la page Performance.
+
+---
+
+### Filtres
+
+- **Year / Month / Day** : filtrent la période analysée sur la date de clôture des dossiers
+- **Urgency** (multi-sélection) : filtre par degré de gravité — HIGH, MEDIUM, LOW. Indispensable pour comparer des agents sur des dossiers de même complexité. Un agent qui traite surtout des dossiers LOW (délai cible 10h) sera mécaniquement plus rapide qu'un agent HIGH (délai cible 3h) — le filtre urgence neutralise cet avantage
+
+---
+
+### Score composite (0 → 100)
+
+C'est le chiffre central du classement. Il combine deux dimensions :
+
+| Composante | Poids | Calcul |
+|---|---|---|
+| **Satisfaction client** | 50% | `(note moyenne / 5) × 100` |
+| **Vitesse de résolution** | 50% | `max(0, 100 − (délai moyen en h / 24h) × 100)` |
+
+**Exemple :** un agent avec 5.0/5 de satisfaction et 3min de délai moyen :
+- satScore = `(5.0/5) × 100` = 100
+- speedScore = `100 − (0.05/24) × 100` = 99.79
+- composite = `(100 × 0.5) + (99.79 × 0.5)` = **99.90/100**
+
+Un score de 100/100 exact est intentionnellement quasi-impossible — il faudrait un délai de résolution de 0 seconde. Le score reflète la perfection *relative*, pas absolue.
+
+**Cas "aucune note client" :** Si un client a oublié de noter, l'agent n'est pas pénalisé. La composante satisfaction est remplacée par une valeur neutre (50) — pas par 0. Un oubli de notation ne fait pas chuter le score composite.
+
+**Couleurs du score dans le tableau :**
+- 🟢 Vert ≥ 70
+- 🟡 Orange 50–69
+- 🔴 Rouge < 50
+
+---
+
+### Règle de tri (départage en cas d'égalité)
+
+Quand deux agents ont le même score composite (au centième près), on départage dans cet ordre :
+
+1. **Satisfaction moyenne** (décroissant) — ignorée si l'un des deux n'a pas de notes
+2. **SLA %** global (décroissant)
+3. **Délai moyen** (croissant — le plus rapide gagne)
+
+---
+
+### Bloc "Awards" (distinctions)
+
+Affiché au-dessus du podium si au moins un des 3 premiers agents a obtenu un badge. Cliquer sur un badge l'expand pour afficher le détail.
+
+| Badge | Critère |
+|---|---|
+| 🏆 Volume | A traité le plus grand nombre de dossiers sur la période |
+| ⭐ Satisfaction | Meilleure note moyenne client |
+| ⚡ Rapidité | Meilleur temps de 1ère réponse |
+| 🎯 SLA | Meilleur taux de respect des délais |
+
+Un agent peut cumuler plusieurs badges. Les badges sont attribués uniquement aux 3 premiers du podium.
+
+---
+
+### Podium (Top 3)
+
+Affichage visuel des 3 meilleurs agents sur la période filtrée. Chaque carte affiche :
+- Le score composite `/100`
+- La satisfaction moyenne (si disponible)
+- Le délai moyen de résolution
+- Le SLA %
+
+---
+
+### Classement complet (accordion)
+
+Tableau dépliable (fermé par défaut) listant **tous** les agents ayant traité au moins un dossier sur la période. Le nombre d'agents est affiché dans le titre.
+
+| Colonne | Description |
+|---|---|
+| **Rang** | Position dans le classement |
+| **Agent** | Nom de l'agent |
+| **Score** | Score composite /100 (2 décimales) |
+| **Traités** | Nombre de dossiers clôturés |
+| **Satisfaction** | Note moyenne /5 |
+| **Délai moy.** | Temps moyen entre création et clôture |
+| **1ère réponse** | Temps moyen avant le premier message de l'agent |
+| **SLA %** | % global de dossiers résolus dans les délais cibles |
+| **Trend (Évol.)** | Évolution du rang vs la période précédente : ↑ monté, ↓ descendu, — stable |
+| **Awards** | Badges obtenus — cliquer pour afficher le détail |
+| **Performances →** | Lien direct vers la fiche détaillée de l'agent dans la page Performance |
+
+**Colonne Trend :** la comparaison se fait sur la période équivalente précédente (mois précédent si filtre mois, année précédente si filtre année, 30 derniers jours par défaut). Elle prend en compte le même filtre d'urgence pour rester cohérente.
+
+---
+
 *(Suite du manuel à venir — pages suivantes)*
