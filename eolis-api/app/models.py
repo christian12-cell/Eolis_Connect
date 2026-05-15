@@ -247,6 +247,23 @@ class InfrastructureCost(Base):
     added_by_user: Mapped["User"] = relationship("User", foreign_keys=[added_by])
 
 
+class FinancialProjection(Base):
+    """Objectifs financiers mensuels définis par le FINANCE_AGENT."""
+    __tablename__ = "financial_projections"
+
+    id: Mapped[str]            = mapped_column(String(36), primary_key=True, default=gen_id)
+    period: Mapped[str]        = mapped_column(String(7), unique=True, nullable=False)  # YYYY-MM
+    target_revenue: Mapped[float] = mapped_column(default=0.0, server_default="0")
+    target_clients: Mapped[int]   = mapped_column(Integer, default=0, server_default="0")
+    target_margin_pct: Mapped[float | None] = mapped_column(nullable=True)
+    notes: Mapped[str | None]  = mapped_column(Text, nullable=True)
+    created_by: Mapped[str]    = mapped_column(String(36), ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+
+
 class SystemConfig(Base):
     """Key-value store for admin-configurable settings (e.g. fcfa_rate)."""
     __tablename__ = "system_config"

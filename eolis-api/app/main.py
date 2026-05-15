@@ -181,6 +181,19 @@ def startup():
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS financial_projections (
+                id VARCHAR(36) PRIMARY KEY,
+                period VARCHAR(7) NOT NULL UNIQUE,
+                target_revenue DOUBLE PRECISION NOT NULL DEFAULT 0,
+                target_clients INTEGER NOT NULL DEFAULT 0,
+                target_margin_pct DOUBLE PRECISION,
+                notes TEXT,
+                created_by VARCHAR(36) NOT NULL REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
         conn.execute(text(
             "ALTER TABLE credit_requests ADD COLUMN IF NOT EXISTS admin_confirmed_by VARCHAR(36)"
         ))

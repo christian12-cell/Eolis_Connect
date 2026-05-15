@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import User, AIUsage, CreditRequest, InfrastructureCost, FinancialAuditLog
+from ..models import User, AIUsage, CreditRequest, InfrastructureCost, FinancialAuditLog, FinancialProjection
 from ..deps import get_current_user, require_roles
 from ..credit_service import FREE_CREDITS_ON_SIGNUP
 
@@ -24,6 +24,14 @@ class InfraCostIn(BaseModel):
     label: str
     amount_fcfa: float
     amount_usd: float
+
+
+class ProjectionIn(BaseModel):
+    period: str                          # YYYY-MM
+    target_revenue: float
+    target_clients: int = 0
+    target_margin_pct: Optional[float] = None
+    notes: Optional[str] = None
     period: str
     invoice_url: Optional[str] = None
 
@@ -542,3 +550,183 @@ def export_pnl_xlsx(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+# ── Projections économiques ────────────────────────────────────────────────────
+
+@router.get("/projections")
+def list_projections(
+    current_user: User = Depends(require_roles(*FINANCE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    rows = db.query(FinancialProjection).order_by(FinancialProjection.period).all()
+    return [
+        {
+            "id":              r.id,
+            "period":          r.period,
+            "targetRevenue":   r.target_revenue,
+            "targetClients":   r.target_clients,
+            "targetMarginPct": r.target_margin_pct,
+            "notes":           r.notes,
+            "createdBy":       f"{r.creator.first_name} {r.creator.last_name}" if r.creator else None,
+            "updatedAt":       r.updated_at.isoformat() + "Z",
+        } for r in rows
+    ]
+
+
+@router.post("/projections", status_code=201)
+def upsert_projection(
+    body: ProjectionIn,
+    current_user: User = Depends(require_roles("FINANCE_AGENT")),
+    db: Session = Depends(get_db),
+):
+    import re
+    if not re.match(r"^\d{4}-\d{2}$", body.period):
+        raise HTTPException(400, "Format période invalide (attendu: YYYY-MM)")
+    existing = db.query(FinancialProjection).filter(FinancialProjection.period == body.period).first()
+    if existing:
+        existing.target_revenue    = body.target_revenue
+        existing.target_clients    = body.target_clients
+        existing.target_margin_pct = body.target_margin_pct
+        existing.notes             = body.notes
+        existing.updated_at        = datetime.utcnow()
+        db.commit()
+        db.refresh(existing)
+        return {"id": existing.id, "period": existing.period}
+    proj = FinancialProjection(
+        period=body.period, target_revenue=body.target_revenue,
+        target_clients=body.target_clients, target_margin_pct=body.target_margin_pct,
+        notes=body.notes, created_by=current_user.id,
+    )
+    db.add(proj)
+    db.commit()
+    db.refresh(proj)
+    return {"id": proj.id, "period": proj.period}
+
+
+@router.delete("/projections/{projection_id}", status_code=204)
+def delete_projection(
+    projection_id: str,
+    current_user: User = Depends(require_roles("FINANCE_AGENT")),
+    db: Session = Depends(get_db),
+):
+    proj = db.query(FinancialProjection).filter(FinancialProjection.id == projection_id).first()
+    if not proj:
+        raise HTTPException(404)
+    db.delete(proj)
+    db.commit()
+
+
+@router.get("/projections/comparison")
+def projection_comparison(
+    year: Optional[str] = Query(None),
+    current_user: User = Depends(require_roles(*FINANCE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    """Compare objectifs vs réalité mois par mois."""
+    from ..models import Ticket
+
+    # Projections filtrées par année
+    proj_q = db.query(FinancialProjection).order_by(FinancialProjection.period)
+    if year:
+        proj_q = proj_q.filter(FinancialProjection.period.like(f"{year}-%"))
+    projections = {p.period: p for p in proj_q.all()}
+
+    # Données réelles — même logique que pnl_report
+    from_date = f"{year}-01-01" if year else None
+    to_date   = f"{year}-12-31" if year else None
+
+    req_q = db.query(CreditRequest).filter(CreditRequest.status == "approved")
+    req_q = _apply_date_filter(req_q, CreditRequest.validated_at, from_date, to_date)
+    approved = req_q.all()
+
+    ai_q = db.query(AIUsage)
+    ai_q = _apply_date_filter(ai_q, AIUsage.created_at, from_date, to_date)
+    usages = ai_q.all()
+
+    infra = db.query(InfrastructureCost)
+    if year:
+        infra = infra.filter(InfrastructureCost.period.like(f"{year}-%"))
+    infra = infra.all()
+
+    new_clients_q = db.query(User).filter(User.role == "CLIENT")
+    new_clients_q = _apply_date_filter(new_clients_q, User.created_at, from_date, to_date)
+    new_clients = new_clients_q.all()
+
+    actuals: dict = {}
+    def _ab(): return {"revenue": 0.0, "aiCost": 0.0, "infraCost": 0.0, "newClients": 0}
+
+    for r in approved:
+        if not r.validated_at: continue
+        key = r.validated_at.strftime("%Y-%m")
+        actuals.setdefault(key, _ab())
+        actuals[key]["revenue"] += r.amount_validated or 0
+
+    for u in usages:
+        key = u.created_at.strftime("%Y-%m")
+        actuals.setdefault(key, _ab())
+        actuals[key]["aiCost"] += u.cost_fcfa
+
+    for c in infra:
+        actuals.setdefault(c.period, _ab())
+        actuals[c.period]["infraCost"] += c.amount_fcfa
+
+    for cl in new_clients:
+        key = cl.created_at.strftime("%Y-%m")
+        actuals.setdefault(key, _ab())
+        actuals[key]["newClients"] += 1
+
+    # Merge all periods
+    all_periods = sorted(set(list(projections.keys()) + list(actuals.keys())))
+
+    rows = []
+    for period in all_periods:
+        proj = projections.get(period)
+        act  = actuals.get(period, _ab())
+
+        net = act["revenue"] - act["aiCost"] - act["infraCost"]
+        actual_margin = round(net / act["revenue"] * 100, 1) if act["revenue"] > 0 else None
+
+        target_rev = proj.target_revenue if proj else None
+        rev_var    = round(act["revenue"] - target_rev, 2) if target_rev is not None else None
+        rev_pct    = round((act["revenue"] / target_rev - 1) * 100, 1) if target_rev and target_rev > 0 else None
+
+        if target_rev is None:
+            status = "no_target"
+        elif rev_pct is None:
+            status = "no_data"
+        elif rev_pct >= 5:
+            status = "exceeded"
+        elif rev_pct >= -5:
+            status = "on_track"
+        elif rev_pct >= -20:
+            status = "behind"
+        else:
+            status = "far_behind"
+
+        rows.append({
+            "period":          period,
+            "target": {
+                "revenue":    target_rev,
+                "clients":    proj.target_clients if proj else None,
+                "marginPct":  proj.target_margin_pct if proj else None,
+                "notes":      proj.notes if proj else None,
+                "projectionId": proj.id if proj else None,
+            },
+            "actual": {
+                "revenue":    round(act["revenue"], 2),
+                "aiCost":     round(act["aiCost"], 4),
+                "infraCost":  round(act["infraCost"], 2),
+                "netProfit":  round(net, 2),
+                "marginPct":  actual_margin,
+                "newClients": act["newClients"],
+            },
+            "variance": {
+                "revenue":    rev_var,
+                "revenuePct": rev_pct,
+                "clients":    (act["newClients"] - proj.target_clients) if proj else None,
+                "status":     status,
+            },
+        })
+
+    return rows
