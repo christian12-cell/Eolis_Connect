@@ -268,4 +268,49 @@ La page se rafraîchit automatiquement toutes les **60 secondes**. Le compteur S
 
 ---
 
+---
+
+## Page Treated Tickets (Dossiers traités)
+
+Archive consultable de tous les dossiers clôturés dans le système.
+
+### Différence OPS Admin vs Agent simple
+
+| | OPS Admin | Agent simple |
+|---|---|---|
+| Titre | "Treated tickets" | "Mon historique" |
+| Dossiers visibles | **Tous** les dossiers clôturés du système | Uniquement **ses propres** dossiers |
+| Colonne "Agent" | ✅ Visible | ❌ Cachée |
+
+### Compteur
+
+`X result(s) / Y treated ticket(s)` — X = résultats après filtres appliqués, Y = total des dossiers clôturés.
+
+### Colonnes du tableau
+
+| Colonne | Description |
+|---|---|
+| **Reference** | Référence unique du dossier (REF-2026-XXXX) |
+| **Client** | Nom du client ayant soumis le dossier |
+| **Category** | Catégorie + sous-catégorie |
+| **Urgency** | Badge coloré (High / Medium / Low) |
+| **Agent** | Agent qui a traité le dossier *(OPS Admin uniquement)* |
+| **Closed on** | Date et heure de clôture |
+| **View** | Lien vers le dossier complet |
+
+### Filtres
+
+Tous les filtres sont **combinables** entre eux :
+- **Recherche textuelle** : par référence (ex: REF-2026-0001) ou nom du client
+- **Urgency** : multi-sélect — High, Medium, Low
+- **Year / Month / Day** : multi-sélect pour filtrer par période de clôture
+
+Le bouton **"Effacer les filtres"** réinitialise tout d'un coup (apparaît dès qu'un filtre est actif).
+
+### Tri
+
+Du plus récent au plus ancien (date de clôture).
+
+---
+
 *(Suite du manuel à venir — pages suivantes)*
