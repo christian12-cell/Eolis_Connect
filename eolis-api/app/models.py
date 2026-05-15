@@ -214,6 +214,23 @@ class BLDocument(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class InfrastructureCost(Base):
+    """Manual infrastructure cost entries (Vercel, Railway, Cloudflare, etc.)."""
+    __tablename__ = "infrastructure_costs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_id)
+    category: Mapped[str] = mapped_column(String(50))   # vercel, railway, cloudflare, domain, other
+    label: Mapped[str] = mapped_column(String(200))
+    amount_fcfa: Mapped[float] = mapped_column(nullable=False)
+    amount_usd: Mapped[float] = mapped_column(nullable=False)
+    period: Mapped[str] = mapped_column(String(20))     # ex: "2026-05"
+    invoice_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    added_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    added_by_user: Mapped["User"] = relationship("User", foreign_keys=[added_by])
+
+
 class SystemConfig(Base):
     """Key-value store for admin-configurable settings (e.g. fcfa_rate)."""
     __tablename__ = "system_config"

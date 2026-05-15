@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(dir /s /b \"C:\\\\Users\\\\Denmeko Dieu-Veille\\\\Downloads\\\\EolisProject\\\\eolis-connect\\\\src\\\\app\")",
+      "Bash(findstr /i \"cout cost premium credit ia\")",
+      "Bash(dir *)"
+    ]
+  }
+}

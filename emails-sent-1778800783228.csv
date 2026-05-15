@@ -1,0 +1,2 @@
+id,created_at,subject,from,to,cc,bcc,reply_to,last_event,sent_at,scheduled_at,api_key_id
+fa019eb3-ab5d-4021-8be5-bbc1a70dcb94,2026-05-14 23:13:05.402105+00,Hello World,Resend <onboarding@resend.dev>,christiandieuveillebetmbo@gmail.com,,,,delivered,2026-05-14 23:13:05.53+00,,101e0cb8-c304-4ed7-b026-dd3ac2ca9634

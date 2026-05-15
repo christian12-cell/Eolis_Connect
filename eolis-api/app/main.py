@@ -9,7 +9,7 @@ from sqlalchemy import text
 from .config import settings
 from .database import engine
 from .models import Base
-from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config, ws, whisper, credits
+from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config, ws, whisper, credits, finance
 
 app = FastAPI(title="Eolis Connect API", version="1.0.0")
 app.state.limiter = limiter
@@ -52,6 +52,7 @@ app.include_router(ai_usage.router, prefix="/api")
 app.include_router(admin_config.router, prefix="/api")
 app.include_router(whisper.router, prefix="/api")
 app.include_router(credits.router, prefix="/api")
+app.include_router(finance.router, prefix="/api")
 app.include_router(ws.router)  # WebSocket — no /api prefix, path is /ws/ticket/{id}
 
 
@@ -192,6 +193,19 @@ def startup():
                 validated_by VARCHAR(36) REFERENCES users(id),
                 validated_at TIMESTAMP,
                 rejection_reason TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS infrastructure_costs (
+                id VARCHAR(36) PRIMARY KEY,
+                category VARCHAR(50) NOT NULL,
+                label VARCHAR(200) NOT NULL,
+                amount_fcfa DOUBLE PRECISION NOT NULL DEFAULT 0,
+                amount_usd DOUBLE PRECISION NOT NULL DEFAULT 0,
+                period VARCHAR(20) NOT NULL,
+                invoice_url VARCHAR(500),
+                added_by VARCHAR(36) NOT NULL REFERENCES users(id),
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """))

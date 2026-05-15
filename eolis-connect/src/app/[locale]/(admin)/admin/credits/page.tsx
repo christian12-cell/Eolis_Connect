@@ -107,7 +107,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   useEffect(() => {
     const u = getUser()
     if (!u) { router.replace(`/${locale}/login`); return }
-    if (u.role !== 'SYSTEM_ADMIN' && u.role !== 'OPS_ADMIN') { router.replace(`/${locale}/accueil`); return }
+    if (!['SYSTEM_ADMIN', 'OPS_ADMIN', 'FINANCE_AGENT'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
     setUser(u)
   }, [locale])
 

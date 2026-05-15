@@ -151,7 +151,7 @@ def my_requests(current_user: User = Depends(get_current_user), db: Session = De
 @router.get("/admin/requests")
 def admin_list_requests(
     status: Optional[str] = None,
-    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN", "FINANCE_AGENT")),
     db: Session = Depends(get_db),
 ):
     q = db.query(CreditRequest).order_by(CreditRequest.created_at.desc())
@@ -171,7 +171,7 @@ def admin_list_requests(
 def approve_request(
     request_id: str,
     amount_received: float = Form(...),
-    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN", "FINANCE_AGENT")),
     db: Session = Depends(get_db),
 ):
     req = db.query(CreditRequest).filter(CreditRequest.id == request_id).first()
@@ -215,7 +215,7 @@ def approve_request(
 def reject_request(
     request_id: str,
     reason: str = Form(""),
-    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN", "FINANCE_AGENT")),
     db: Session = Depends(get_db),
 ):
     req = db.query(CreditRequest).filter(CreditRequest.id == request_id).first()
@@ -268,7 +268,7 @@ def _fmt_request(r: CreditRequest) -> dict:
 @router.get("/photo/{request_id}")
 def get_proof_photo(
     request_id: str,
-    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN", "FINANCE_AGENT")),
     db: Session = Depends(get_db),
 ):
     req = db.query(CreditRequest).filter(CreditRequest.id == request_id).first()
@@ -301,7 +301,7 @@ def get_proof_photo(
 
 @router.get("/admin/balances")
 def admin_balances(
-    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN", "FINANCE_AGENT")),
     db: Session = Depends(get_db),
 ):
     rows = db.query(CreditBalance).order_by(CreditBalance.updated_at.desc()).all()
@@ -327,7 +327,7 @@ def admin_benefits(
     from_date: Optional[str] = Query(None, alias="from"),
     to_date:   Optional[str] = Query(None, alias="to"),
     urgency:   Optional[str] = Query(None),
-    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN", "FINANCE_AGENT")),
     db: Session = Depends(get_db),
 ):
     def _parse_from(s: str):

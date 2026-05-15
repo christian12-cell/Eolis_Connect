@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   Home, FileText, PlusCircle, Settings, LayoutDashboard,
   List, Clock, BarChart2, Trophy, Users, ScrollText, X, Globe, Bell, BookOpen, Shield, Zap, Wallet,
+  TrendingUp, DollarSign, Receipt, PieChart, Building2,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -72,10 +73,23 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Notifications' : 'Notifications',     href: `${base}/agent/notifications`, icon: <Bell size={18} /> },
       { label: locale === 'fr' ? 'Coûts Premium' : 'Premium Costs',      href: `${base}/admin/ia-couts`,      icon: <Zap size={18} /> },
       { label: locale === 'fr' ? 'Crédits Premium' : 'Premium Credits', href: `${base}/admin/credits`,       icon: <Wallet size={18} /> },
+      { label: locale === 'fr' ? 'Finance (lecture)' : 'Finance (read)', href: `${base}/finance/dashboard`,  icon: <PieChart size={18} /> },
       { label: locale === 'fr' ? 'Sessions' : 'Sessions',               href: `${base}/admin/sessions`,      icon: <Shield size={18} /> },
       { label: locale === 'fr' ? 'Système' : 'System',                  href: `${base}/admin/systeme`,       icon: <Globe size={18} /> },
       { label: locale === 'fr' ? 'Paramètres' : 'Settings',             href: `${base}/agent/parametres`,    icon: <Settings size={18} /> },
       { label: locale === 'fr' ? 'Aide' : 'Help',                      href: `${base}/agent/aide`,          icon: <BookOpen size={18} /> },
+    ]
+  }
+
+  if (role === 'FINANCE_AGENT') {
+    return [
+      { label: locale === 'fr' ? 'Tableau de bord' : 'Dashboard',         href: `${base}/finance/dashboard`,   icon: <LayoutDashboard size={18} /> },
+      { label: locale === 'fr' ? 'Validation crédits' : 'Credit approval', href: `${base}/finance/credits`,    icon: <Wallet size={18} /> },
+      { label: locale === 'fr' ? 'Revenus & IA' : 'Revenue & AI',          href: `${base}/finance/revenus`,    icon: <TrendingUp size={18} /> },
+      { label: locale === 'fr' ? 'Charges infra' : 'Infra costs',          href: `${base}/finance/depenses`,   icon: <Building2 size={18} /> },
+      { label: locale === 'fr' ? 'Rapport P&L' : 'P&L Report',             href: `${base}/finance/rapport`,    icon: <PieChart size={18} /> },
+      { label: locale === 'fr' ? 'Notifications' : 'Notifications',        href: `${base}/agent/notifications`, icon: <Bell size={18} /> },
+      { label: locale === 'fr' ? 'Paramètres' : 'Settings',                href: `${base}/agent/parametres`,   icon: <Settings size={18} /> },
     ]
   }
 

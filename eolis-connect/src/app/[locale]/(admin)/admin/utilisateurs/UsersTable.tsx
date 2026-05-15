@@ -42,11 +42,12 @@ interface Props {
   onPageChange?: (p: number) => void
 }
 
-const ROLES = ['CLIENT', 'AGENT', 'OPS_ADMIN', 'SYSTEM_ADMIN']
+const ROLES = ['CLIENT', 'AGENT', 'OPS_ADMIN', 'FINANCE_AGENT', 'SYSTEM_ADMIN']
 const ROLE_LABELS: Record<string, { fr: string; en: string }> = {
-  CLIENT:       { fr: 'Client',       en: 'Client'     },
-  AGENT:        { fr: 'Agent',        en: 'Agent'      },
-  OPS_ADMIN:    { fr: 'Admin Ops',    en: 'Ops Admin'  },
+  CLIENT:        { fr: 'Client',          en: 'Client'         },
+  AGENT:         { fr: 'Agent',           en: 'Agent'          },
+  OPS_ADMIN:     { fr: 'Admin Ops',       en: 'Ops Admin'      },
+  FINANCE_AGENT: { fr: 'Agent Financier', en: 'Finance Agent'  },
   SYSTEM_ADMIN: { fr: 'Admin Sys.',   en: 'Sys Admin'  },
 }
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: { fr: string; en: string } }> = {

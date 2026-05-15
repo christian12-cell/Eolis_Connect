@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Eolis Connect — Modèle économique & Projections de bénéfices</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a2e44; background: #fff; font-size: 13px; }
+
+  .cover {
+    background: linear-gradient(135deg, #1B3A5C 0%, #0D1F33 60%, #1a4a7a 100%);
+    color: white; min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 60px 40px; page-break-after: always;
+  }
+  .cover .logo { font-size: 52px; font-weight: 900; letter-spacing: -1px; margin-bottom: 8px; }
+  .cover .logo span { color: #4A8FC4; }
+  .cover .tagline { font-size: 13px; color: #7ab3d8; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 50px; }
+  .cover h1 { font-size: 32px; font-weight: 800; line-height: 1.2; max-width: 600px; margin-bottom: 16px; }
+  .cover .sub { font-size: 15px; color: #94c4e8; max-width: 500px; line-height: 1.7; margin-bottom: 50px; }
+  .cover .idea-credit { background: rgba(74,143,196,0.15); border: 1px solid rgba(74,143,196,0.3); border-radius: 12px; padding: 18px 28px; max-width: 420px; margin-bottom: 40px; }
+  .cover .idea-credit p { font-size: 12px; color: #7ab3d8; }
+  .cover .idea-credit strong { color: #fff; font-size: 15px; }
+  .cover .meta { font-size: 11px; color: #5a8aaa; border-top: 1px solid #2a4a6a; padding-top: 20px; width: 100%; max-width: 500px; }
+
+  .page { padding: 40px 50px; page-break-after: always; max-width: 920px; margin: 0 auto; }
+  .page:last-child { page-break-after: avoid; }
+
+  .section-badge { display: inline-flex; align-items: center; gap: 8px; background: #EDF1F7; color: #1B3A5C; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 14px; border-radius: 20px; margin-bottom: 10px; }
+  h2 { font-size: 24px; font-weight: 800; color: #1B3A5C; margin-bottom: 6px; }
+  h3 { font-size: 15px; font-weight: 700; color: #1B3A5C; margin-bottom: 10px; margin-top: 22px; }
+  .intro-text { font-size: 13px; color: #4a6070; line-height: 1.7; margin-bottom: 20px; }
+  .divider { height: 3px; background: linear-gradient(90deg, #1B3A5C, #4A8FC4, transparent); border-radius: 2px; margin: 12px 0 26px; }
+
+  /* Prix triple (FCFA + USD + EUR) */
+  .price { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+  .price .fcfa { font-weight: 700; color: #1B3A5C; }
+  .price .fiat { font-size: 9px; color: #9ab0c4; font-weight: 400; font-family: monospace; white-space: nowrap; }
+  .price.green .fcfa { color: #16a34a; }
+  .price.violet .fcfa { color: #7c3aed; }
+  .price.red .fcfa { color: #dc2626; }
+  .price.orange .fcfa { color: #ea580c; }
+
+  .cards { display: grid; gap: 14px; margin-bottom: 20px; }
+  .cards-2 { grid-template-columns: 1fr 1fr; }
+  .cards-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .cards-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .card { background: #f8fafc; border: 1.5px solid #e2eaf4; border-radius: 14px; padding: 16px 18px; }
+  .card.blue { background: #EDF1F7; border-color: #4A8FC4; }
+  .card.green { background: #f0fdf4; border-color: #22c55e; }
+  .card.violet { background: #f5f3ff; border-color: #8b5cf6; }
+  .card .card-icon { font-size: 22px; margin-bottom: 7px; }
+  .card .card-label { font-size: 10px; font-weight: 700; color: #7a9ab8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .card .card-value { font-size: 20px; font-weight: 800; color: #1B3A5C; }
+  .card .card-value.green { color: #16a34a; }
+  .card .card-value.violet { color: #7c3aed; }
+  .card .card-sub { font-size: 10px; color: #9ab0c4; font-family: monospace; margin-top: 2px; }
+  .card p { font-size: 12px; color: #4a6070; line-height: 1.6; margin-top: 7px; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 12px; }
+  thead tr { background: #1B3A5C; color: white; }
+  thead th { padding: 10px 12px; text-align: left; font-weight: 700; font-size: 11px; letter-spacing: 0.5px; }
+  tbody tr:nth-child(even) { background: #f4f8fc; }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid #e8eef4; color: #2a3f55; vertical-align: top; }
+  .td-right { text-align: right; }
+  .td-center { text-align: center; }
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+  .tag-green { background: #dcfce7; color: #166534; }
+  .tag-blue { background: #dbeafe; color: #1e40af; }
+  .tag-orange { background: #ffedd5; color: #9a3412; }
+  .tag-violet { background: #ede9fe; color: #5b21b6; }
+  .tag-gray { background: #f1f5f9; color: #475569; }
+
+  .highlight { background: linear-gradient(135deg, #EDF1F7, #dbeafe); border: 2px solid #4A8FC4; border-radius: 14px; padding: 18px 22px; margin: 18px 0; }
+  .highlight .highlight-title { font-size: 13px; font-weight: 800; color: #1B3A5C; margin-bottom: 8px; }
+  .highlight p { font-size: 12px; color: #2a4a6a; line-height: 1.7; }
+  .info-box { background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 14px 0; }
+  .info-box p { font-size: 12px; color: #166534; line-height: 1.6; }
+  .warn-box { background: #fff7ed; border-left: 4px solid #f97316; border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 14px 0; }
+  .warn-box p { font-size: 12px; color: #9a3412; line-height: 1.6; }
+
+  .matrix-table thead tr { background: linear-gradient(90deg, #1B3A5C, #2a5a8c); }
+  .matrix-table td.highlight-cell { background: #f0fdf4; }
+  .matrix-table td.best-cell { background: #ede9fe; }
+  .matrix-table td.row-label { background: #EDF1F7; font-weight: 700; color: #1B3A5C; }
+
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 18px 0; }
+  .flow-step { background: #EDF1F7; border: 1.5px solid #4A8FC4; border-radius: 10px; padding: 10px 14px; text-align: center; }
+  .flow-step .step-num { font-size: 10px; color: #4A8FC4; font-weight: 700; margin-bottom: 3px; }
+  .flow-step .step-label { font-size: 11px; font-weight: 700; color: #1B3A5C; }
+  .flow-step .step-val { font-size: 11px; color: #4a6070; margin-top: 2px; }
+  .flow-arrow { font-size: 18px; color: #4A8FC4; }
+  .flow-profit { background: linear-gradient(135deg, #16a34a, #22c55e); border-radius: 10px; padding: 10px 14px; text-align: center; }
+  .flow-profit .step-num { font-size: 10px; color: #dcfce7; font-weight: 700; margin-bottom: 3px; }
+  .flow-profit .step-label { font-size: 11px; font-weight: 700; color: white; }
+  .flow-profit .step-val { font-size: 11px; color: #dcfce7; margin-top: 2px; }
+
+  .doc-footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid #e2eaf4; display: flex; justify-content: space-between; font-size: 10px; color: #9ab0c4; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { page-break-after: always; }
+    .cover { min-height: 100vh; }
+  }
+</style>
+<script>
+  const USD = 600, EUR = 655.957;
+  function u(f, d) { return '$' + (f/USD).toFixed(d||2); }
+  function e(f, d) { return '€' + (f/EUR).toFixed(d||2); }
+  function p(f, d) { return u(f,d) + ' · ' + e(f,d); }
+</script>
+</head>
+<body>
+
+<!-- COUVERTURE -->
+<div class="cover">
+  <div class="logo">Eolis<span>.</span>Connect</div>
+  <div class="tagline">Plateforme de gestion des dossiers clients</div>
+  <h1>Modèle économique<br>& Projections de bénéfices</h1>
+  <p class="sub">Comprendre concrètement comment la plateforme génère des revenus, quelles sont les marges réelles, et combien on peut gagner selon le nombre de clients et de dossiers.</p>
+  <div class="idea-credit">
+    <p>Concept & vision initiale du projet</p>
+    <strong>✨ Debora DENMEKO</strong>
+    <p style="margin-top:5px;font-size:11px;">Ce document vous est dédié pour vous aider à présenter le projet.</p>
+  </div>
+  <div class="meta"><p>Document confidentiel · Eolis Connect · Mai 2026</p></div>
+</div>
+
+<!-- PAGE 1 -->
+<div class="page">
+  <div class="section-badge">📋 Section 1</div>
+  <h2>Le modèle économique en une phrase</h2>
+  <div class="divider"></div>
+  <p class="intro-text">
+    Eolis Connect facture ses clients en <strong>crédits prépayés</strong> (1 crédit = 1 FCFA) pour utiliser ses fonctionnalités d'intelligence artificielle. Le coût réel que paie Eolis à OpenAI est <strong>très largement inférieur</strong> au prix facturé au client. La différence est notre bénéfice.
+  </p>
+
+  <h3>⚡ Les 2 fonctionnalités qui génèrent des revenus</h3>
+  <div class="cards cards-2">
+    <div class="card blue">
+      <div class="card-icon">📄</div>
+      <div class="card-label">BL Extraction</div>
+      <div class="card-value">50 crédits</div>
+      <div class="card-sub">= 50 FCFA · $0.08 · €0.08 par extraction</div>
+      <p>L'IA lit et extrait automatiquement toutes les informations d'un Bill of Lading. Ce qui prendrait 10 minutes à la main se fait en quelques secondes.</p>
+    </div>
+    <div class="card blue">
+      <div class="card-icon">🎙️</div>
+      <div class="card-label">Dictée vocale</div>
+      <div class="card-value">10 crédits/min</div>
+      <div class="card-sub">= 10 FCFA · $0.02 · €0.02 par minute</div>
+      <p>Le client parle, l'IA transcrit. 30 secondes de dictée = 1 minute facturée = 10 crédits. Idéal sur mobile, au port ou en déplacement.</p>
+    </div>
+  </div>
+
+  <h3>🔄 Le cycle économique</h3>
+  <div class="flow">
+    <div class="flow-step"><div class="step-num">ÉTAPE 1</div><div class="step-label">Client s'inscrit</div><div class="step-val">100 crédits offerts</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><div class="step-num">ÉTAPE 2</div><div class="step-label">Client recharge</div><div class="step-val">Orange Money / MTN</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><div class="step-num">ÉTAPE 3</div><div class="step-label">Client ouvre un dossier</div><div class="step-val">utilise BL + voix</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><div class="step-num">ÉTAPE 4</div><div class="step-label">Eolis paie OpenAI</div><div class="step-val">coût réel très faible</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-profit"><div class="step-num">BÉNÉFICE</div><div class="step-label">Prix client</div><div class="step-val">− Coût OpenAI</div></div>
+  </div>
+
+  <h3>💰 Combien gagne-t-on par dossier ?</h3>
+  <table>
+    <thead><tr><th>Opération</th><th>Prix client</th><th>Coût OpenAI réel</th><th>Bénéfice net</th><th>Marge</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>📄 1 extraction BL</td>
+        <td class="td-right"><div class="price"><span class="fcfa">50 FCFA</span><span class="fiat">$0.0833 · €0.0763</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">~0,60 FCFA</span><span class="fiat">$0.0010 · €0.0009</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">49,40 FCFA</span><span class="fiat">$0.0823 · €0.0753</span></div></td>
+        <td class="td-center"><strong>98,8%</strong></td>
+      </tr>
+      <tr>
+        <td>🎙️ 1 min de dictée vocale</td>
+        <td class="td-right"><div class="price"><span class="fcfa">10 FCFA</span><span class="fiat">$0.0167 · €0.0153</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">~3,60 FCFA</span><span class="fiat">$0.0060 · €0.0055</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">6,40 FCFA</span><span class="fiat">$0.0107 · €0.0098</span></div></td>
+        <td class="td-center"><strong>64%</strong></td>
+      </tr>
+      <tr style="background:#EDF1F7;">
+        <td><strong>1 dossier complet (1 BL + 1 min voix)</strong></td>
+        <td class="td-right"><div class="price"><span class="fcfa" style="font-weight:800;">60 FCFA</span><span class="fiat">$0.10 · €0.09</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">~4,20 FCFA</span><span class="fiat">$0.0070 · €0.0064</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa" style="font-weight:800;">55,80 FCFA</span><span class="fiat">$0.09 · €0.09</span></div></td>
+        <td class="td-center"><strong>93%</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="highlight">
+    <div class="highlight-title">🎯 Le principe fondamental</div>
+    <p><strong>1 client qui ouvre 1 seul dossier = 55,80 FCFA ($0.09 · €0.09) de bénéfice garanti.</strong><br>
+    C'est le minimum absolu. Un client actif à Douala gère plusieurs conteneurs et crée plusieurs dossiers par semaine.</p>
+  </div>
+
+  <div class="doc-footer"><span>Eolis Connect — Document confidentiel</span><span>Page 1 / 5</span></div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+  <div class="section-badge">👤 Section 2</div>
+  <h2>Bénéfice par client selon son activité</h2>
+  <div class="divider"></div>
+  <p class="intro-text">
+    Chaque client a un profil d'activité différent. Un petit importateur ouvrira 2–3 dossiers par mois. Un transitaire actif en ouvrira 20 ou 30. Voici ce que rapporte <strong>un seul client</strong> selon son niveau d'activité.
+  </p>
+
+  <h3>📊 Bénéfice mensuel par client selon le nombre de dossiers</h3>
+  <p style="font-size:11px;color:#7a9ab8;margin-bottom:10px;">Base : 1 extraction BL + 1 min de dictée vocale par dossier</p>
+  <table>
+    <thead><tr><th>Profil client</th><th class="td-center">Dossiers/mois</th><th class="td-right">Revenus</th><th class="td-right">Coût OpenAI</th><th class="td-right">Bénéfice/mois</th><th class="td-right">Bénéfice/an</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-gray">Minimum absolu</span></td>
+        <td class="td-center">1</td>
+        <td class="td-right"><div class="price"><span class="fcfa">60 FCFA</span><span class="fiat">$0.10 · €0.09</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">4,20 FCFA</span><span class="fiat">$0.01 · €0.01</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">55,80 FCFA</span><span class="fiat">$0.09 · €0.09</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">669,60 FCFA</span><span class="fiat">$1.12 · €1.02</span></div></td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">Petit importateur</span></td>
+        <td class="td-center">3</td>
+        <td class="td-right"><div class="price"><span class="fcfa">180 FCFA</span><span class="fiat">$0.30 · €0.27</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">12,60 FCFA</span><span class="fiat">$0.02 · €0.02</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">167,40 FCFA</span><span class="fiat">$0.28 · €0.26</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">2 008 FCFA</span><span class="fiat">$3.35 · €3.06</span></div></td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">Importateur régulier</span></td>
+        <td class="td-center">5</td>
+        <td class="td-right"><div class="price"><span class="fcfa">300 FCFA</span><span class="fiat">$0.50 · €0.46</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">21 FCFA</span><span class="fiat">$0.04 · €0.03</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">279 FCFA</span><span class="fiat">$0.47 · €0.43</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">3 348 FCFA</span><span class="fiat">$5.58 · €5.10</span></div></td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-orange">Transitaire actif</span></td>
+        <td class="td-center">10</td>
+        <td class="td-right"><div class="price"><span class="fcfa">600 FCFA</span><span class="fiat">$1.00 · €0.92</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">42 FCFA</span><span class="fiat">$0.07 · €0.06</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">558 FCFA</span><span class="fiat">$0.93 · €0.85</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">6 696 FCFA</span><span class="fiat">$11.16 · €10.21</span></div></td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-orange">Agent portuaire</span></td>
+        <td class="td-center">20</td>
+        <td class="td-right"><div class="price"><span class="fcfa">1 200 FCFA</span><span class="fiat">$2.00 · €1.83</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">84 FCFA</span><span class="fiat">$0.14 · €0.13</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">1 116 FCFA</span><span class="fiat">$1.86 · €1.70</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">13 392 FCFA</span><span class="fiat">$22.32 · €20.41</span></div></td>
+      </tr>
+      <tr style="background:#f5f3ff;">
+        <td><span class="tag tag-violet">Gros opérateur</span></td>
+        <td class="td-center">50</td>
+        <td class="td-right"><div class="price"><span class="fcfa">3 000 FCFA</span><span class="fiat">$5.00 · €4.57</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">210 FCFA</span><span class="fiat">$0.35 · €0.32</span></div></td>
+        <td class="td-right"><div class="price violet"><span class="fcfa">2 790 FCFA</span><span class="fiat">$4.65 · €4.25</span></div></td>
+        <td class="td-right"><div class="price violet"><span class="fcfa">33 480 FCFA</span><span class="fiat">$55.80 · €51.04</span></div></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <p><strong>📌 À retenir :</strong> Un seul gros opérateur (50 dossiers/mois) rapporte autant que <strong>50 petits clients à 1 dossier/mois</strong>. La qualité du portefeuille client compte autant que la quantité.</p>
+  </div>
+
+  <div class="doc-footer"><span>Eolis Connect — Document confidentiel</span><span>Page 2 / 5</span></div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page">
+  <div class="section-badge">📈 Section 3</div>
+  <h2>Matrice de projections — clients × dossiers</h2>
+  <div class="divider"></div>
+  <p class="intro-text">
+    Le tableau ci-dessous montre le <strong>bénéfice mensuel net</strong> selon deux variables : le nombre de clients actifs et le nombre de dossiers créés par client par mois. Chaque cellule affiche FCFA · $ · €.
+  </p>
+
+  <h3>💰 Bénéfice mensuel net — matrice clients × dossiers/client</h3>
+  <p style="font-size:11px;color:#7a9ab8;margin-bottom:10px;">Base : 1 BL extraction + 1 min dictée vocale par dossier = 55,80 FCFA de bénéfice par dossier</p>
+  <table class="matrix-table" style="font-size:11px;">
+    <thead>
+      <tr>
+        <th>↓ Dossiers/client · Clients →</th>
+        <th class="td-center">10</th>
+        <th class="td-center">20</th>
+        <th class="td-center">50</th>
+        <th class="td-center">100</th>
+        <th class="td-center">200</th>
+        <th class="td-center">500</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="row-label">1 dossier<br><small style="font-weight:400;color:#7a9ab8;">(minimum absolu)</small></td>
+        <td class="td-right"><div class="price"><span class="fcfa">558</span><span class="fiat">$0.93·€0.85</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">1 116</span><span class="fiat">$1.86·€1.70</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">2 790</span><span class="fiat">$4.65·€4.25</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">5 580</span><span class="fiat">$9.30·€8.51</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">11 160</span><span class="fiat">$18.60·€17.01</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">27 900</span><span class="fiat">$46.50·€42.53</span></div></td>
+      </tr>
+      <tr>
+        <td class="row-label">3 dossiers<br><small style="font-weight:400;color:#7a9ab8;">(petit importateur)</small></td>
+        <td class="td-right"><div class="price"><span class="fcfa">1 674</span><span class="fiat">$2.79·€2.55</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">3 348</span><span class="fiat">$5.58·€5.10</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">8 370</span><span class="fiat">$13.95·€12.76</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">16 740</span><span class="fiat">$27.90·€25.52</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">33 480</span><span class="fiat">$55.80·€51.04</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">83 700</span><span class="fiat">$139.50·€127.59</span></div></td>
+      </tr>
+      <tr>
+        <td class="row-label">5 dossiers<br><small style="font-weight:400;color:#7a9ab8;">(importateur régulier)</small></td>
+        <td class="td-right"><div class="price"><span class="fcfa">2 790</span><span class="fiat">$4.65·€4.25</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">5 580</span><span class="fiat">$9.30·€8.51</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">13 950</span><span class="fiat">$23.25·€21.27</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">27 900</span><span class="fiat">$46.50·€42.53</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">55 800</span><span class="fiat">$93.00·€85.07</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">139 500</span><span class="fiat">$232.50·€212.66</span></div></td>
+      </tr>
+      <tr>
+        <td class="row-label">10 dossiers<br><small style="font-weight:400;color:#7a9ab8;">(transitaire actif)</small></td>
+        <td class="td-right"><div class="price"><span class="fcfa">5 580</span><span class="fiat">$9.30·€8.51</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">11 160</span><span class="fiat">$18.60·€17.01</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">27 900</span><span class="fiat">$46.50·€42.53</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">55 800</span><span class="fiat">$93.00·€85.07</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">111 600</span><span class="fiat">$186.00·€170.13</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">279 000</span><span class="fiat">$465.00·€425.34</span></div></td>
+      </tr>
+      <tr>
+        <td class="row-label">20 dossiers<br><small style="font-weight:400;color:#7a9ab8;">(agent portuaire)</small></td>
+        <td class="td-right"><div class="price"><span class="fcfa">11 160</span><span class="fiat">$18.60·€17.01</span></div></td>
+        <td class="td-right highlight-cell"><div class="price green"><span class="fcfa">22 320</span><span class="fiat">$37.20·€34.03</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">55 800</span><span class="fiat">$93.00·€85.07</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">111 600</span><span class="fiat">$186.00·€170.13</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">223 200</span><span class="fiat">$372.00·€340.25</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">558 000</span><span class="fiat">$930.00·€850.67</span></div></td>
+      </tr>
+      <tr>
+        <td class="row-label">50 dossiers<br><small style="font-weight:400;color:#7a9ab8;">(gros opérateur)</small></td>
+        <td class="td-right"><div class="price"><span class="fcfa">27 900</span><span class="fiat">$46.50·€42.53</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">55 800</span><span class="fiat">$93.00·€85.07</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">139 500</span><span class="fiat">$232.50·€212.66</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">279 000</span><span class="fiat">$465.00·€425.34</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">558 000</span><span class="fiat">$930.00·€850.67</span></div></td>
+        <td class="td-right best-cell"><div class="price violet"><span class="fcfa">1 395 000</span><span class="fiat">$2 325·€2 126</span></div></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="doc-footer"><span>Eolis Connect — Document confidentiel</span><span>Page 3 / 5</span></div>
+</div>
+
+<!-- PAGE 4 -->
+<div class="page">
+  <div class="section-badge">📅 Section 4</div>
+  <h2>Projections dans le temps — montée en charge réaliste</h2>
+  <div class="divider"></div>
+  <p class="intro-text">
+    Scénario réaliste : démarrage à <strong>20 clients · 5 dossiers/mois</strong>, +10 clients par mois. Chaque client fidèle augmente progressivement son activité.
+  </p>
+
+  <h3>📆 Évolution mois par mois — Année 1</h3>
+  <table style="font-size:11px;">
+    <thead><tr><th>Mois</th><th class="td-center">Clients</th><th class="td-center">Dossiers</th><th class="td-right">Revenus bruts</th><th class="td-right">Coût OpenAI</th><th class="td-right">Bénéfice net</th><th class="td-right">Cumulé</th></tr></thead>
+    <tbody>
+      <tr><td>Mois 1</td><td class="td-center">20</td><td class="td-center">100</td>
+        <td class="td-right"><div class="price"><span class="fcfa">6 000</span><span class="fiat">$10.00·€9.15</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">420</span><span class="fiat">$0.70·€0.64</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">5 580</span><span class="fiat">$9.30·€8.51</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">5 580</span><span class="fiat">$9.30·€8.51</span></div></td></tr>
+      <tr><td>Mois 2</td><td class="td-center">30</td><td class="td-center">150</td>
+        <td class="td-right"><div class="price"><span class="fcfa">9 000</span><span class="fiat">$15.00·€13.72</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">630</span><span class="fiat">$1.05·€0.96</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">8 370</span><span class="fiat">$13.95·€12.76</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">13 950</span><span class="fiat">$23.25·€21.27</span></div></td></tr>
+      <tr><td>Mois 3</td><td class="td-center">40</td><td class="td-center">200</td>
+        <td class="td-right"><div class="price"><span class="fcfa">12 000</span><span class="fiat">$20.00·€18.29</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">840</span><span class="fiat">$1.40·€1.28</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">11 160</span><span class="fiat">$18.60·€17.01</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">25 110</span><span class="fiat">$41.85·€38.28</span></div></td></tr>
+      <tr><td>Mois 4</td><td class="td-center">50</td><td class="td-center">250</td>
+        <td class="td-right"><div class="price"><span class="fcfa">15 000</span><span class="fiat">$25.00·€22.87</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">1 050</span><span class="fiat">$1.75·€1.60</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">13 950</span><span class="fiat">$23.25·€21.27</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">39 060</span><span class="fiat">$65.10·€59.55</span></div></td></tr>
+      <tr><td>Mois 5</td><td class="td-center">60</td><td class="td-center">360</td>
+        <td class="td-right"><div class="price"><span class="fcfa">21 600</span><span class="fiat">$36.00·€32.93</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">1 512</span><span class="fiat">$2.52·€2.31</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">20 088</span><span class="fiat">$33.48·€30.62</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">59 148</span><span class="fiat">$98.58·€90.17</span></div></td></tr>
+      <tr><td>Mois 6</td><td class="td-center">70</td><td class="td-center">490</td>
+        <td class="td-right"><div class="price"><span class="fcfa">29 400</span><span class="fiat">$49.00·€44.82</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">2 058</span><span class="fiat">$3.43·€3.14</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">27 342</span><span class="fiat">$45.57·€41.68</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">86 490</span><span class="fiat">$144.15·€131.85</span></div></td></tr>
+      <tr><td>Mois 7</td><td class="td-center">80</td><td class="td-center">640</td>
+        <td class="td-right"><div class="price"><span class="fcfa">38 400</span><span class="fiat">$64.00·€58.54</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">2 688</span><span class="fiat">$4.48·€4.10</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">35 712</span><span class="fiat">$59.52·€54.44</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">122 202</span><span class="fiat">$203.67·€186.29</span></div></td></tr>
+      <tr><td>Mois 8</td><td class="td-center">90</td><td class="td-center">810</td>
+        <td class="td-right"><div class="price"><span class="fcfa">48 600</span><span class="fiat">$81.00·€74.09</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">3 402</span><span class="fiat">$5.67·€5.19</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">45 198</span><span class="fiat">$75.33·€68.91</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">167 400</span><span class="fiat">$279.00·€255.19</span></div></td></tr>
+      <tr><td>Mois 9</td><td class="td-center">100</td><td class="td-center">1 000</td>
+        <td class="td-right"><div class="price"><span class="fcfa">60 000</span><span class="fiat">$100.00·€91.47</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">4 200</span><span class="fiat">$7.00·€6.40</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">55 800</span><span class="fiat">$93.00·€85.07</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">223 200</span><span class="fiat">$372.00·€340.25</span></div></td></tr>
+      <tr><td>Mois 10</td><td class="td-center">110</td><td class="td-center">1 100</td>
+        <td class="td-right"><div class="price"><span class="fcfa">66 000</span><span class="fiat">$110.00·€100.62</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">4 620</span><span class="fiat">$7.70·€7.04</span></div></td>
+        <td class="td-right"><div class="price violet"><span class="fcfa">61 380</span><span class="fiat">$102.30·€93.57</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">284 580</span><span class="fiat">$474.30·€433.82</span></div></td></tr>
+      <tr><td>Mois 11</td><td class="td-center">120</td><td class="td-center">1 200</td>
+        <td class="td-right"><div class="price"><span class="fcfa">72 000</span><span class="fiat">$120.00·€109.77</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">5 040</span><span class="fiat">$8.40·€7.68</span></div></td>
+        <td class="td-right"><div class="price violet"><span class="fcfa">66 960</span><span class="fiat">$111.60·€102.09</span></div></td>
+        <td class="td-right"><div class="price"><span class="fcfa">351 540</span><span class="fiat">$585.90·€535.92</span></div></td></tr>
+      <tr style="background:#ede9fe;"><td><strong>Mois 12</strong></td><td class="td-center"><strong>130</strong></td><td class="td-center"><strong>1 300</strong></td>
+        <td class="td-right"><div class="price"><span class="fcfa" style="font-weight:800;">78 000</span><span class="fiat">$130.00·€118.91</span></div></td>
+        <td class="td-right"><div class="price red"><span class="fcfa">5 460</span><span class="fiat">$9.10·€8.32</span></div></td>
+        <td class="td-right"><div class="price violet"><span class="fcfa" style="font-weight:800;">72 540</span><span class="fiat">$120.90·€110.59</span></div></td>
+        <td class="td-right"><div class="price violet"><span class="fcfa" style="font-weight:800;">424 080</span><span class="fiat">$706.80·€646.51</span></div></td></tr>
+    </tbody>
+  </table>
+
+  <div class="doc-footer"><span>Eolis Connect — Document confidentiel</span><span>Page 4 / 5</span></div>
+</div>
+
+<!-- PAGE 5 -->
+<div class="page">
+  <div class="section-badge">🏆 Section 5</div>
+  <h2>Synthèse & projections années 2 et 3</h2>
+  <div class="divider"></div>
+
+  <h3>🚀 Vue à long terme</h3>
+  <table>
+    <thead><tr><th>Horizon</th><th class="td-center">Clients</th><th class="td-center">Dossiers/client</th><th class="td-right">Bénéfice mensuel</th><th class="td-right">Bénéfice annuel</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-gray">Fin année 1</span></td>
+        <td class="td-center">130</td>
+        <td class="td-center">10</td>
+        <td class="td-right"><div class="price green"><span class="fcfa">72 540 FCFA</span><span class="fiat">$120.90 · €110.59</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">424 080 FCFA</span><span class="fiat">$706.80 · €646.51</span></div></td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">Fin année 2</span></td>
+        <td class="td-center">300</td>
+        <td class="td-center">10</td>
+        <td class="td-right"><div class="price green"><span class="fcfa">167 400 FCFA</span><span class="fiat">$279.00 · €255.19</span></div></td>
+        <td class="td-right"><div class="price green"><span class="fcfa">2 008 800 FCFA</span><span class="fiat">$3 348 · €3 062</span></div></td>
+      </tr>
+      <tr style="background:#ede9fe;">
+        <td><span class="tag tag-violet">Fin année 3</span></td>
+        <td class="td-center">500</td>
+        <td class="td-center">15</td>
+        <td class="td-right"><div class="price violet"><span class="fcfa">418 500 FCFA</span><span class="fiat">$697.50 · €638.00</span></div></td>
+        <td class="td-right"><div class="price violet"><span class="fcfa">5 022 000 FCFA</span><span class="fiat">$8 370 · €7 656</span></div></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="cards cards-3" style="margin-top:16px;">
+    <div class="card">
+      <div class="card-label">Bénéfice mois 1</div>
+      <div class="card-value">5 580 FCFA</div>
+      <div class="card-sub">$9.30 · €8.51</div>
+      <p>20 clients · 5 dossiers/mois</p>
+    </div>
+    <div class="card green">
+      <div class="card-label">Bénéfice fin année 1</div>
+      <div class="card-value green">72 540 FCFA</div>
+      <div class="card-sub">$120.90 · €110.59 / mois</div>
+      <p>130 clients · 10 dossiers/mois</p>
+    </div>
+    <div class="card violet">
+      <div class="card-label">Bénéfice fin année 3</div>
+      <div class="card-value violet">5 022 000 FCFA</div>
+      <div class="card-sub">$8 370 · €7 656 / an</div>
+      <p>500 clients · 15 dossiers/mois</p>
+    </div>
+  </div>
+
+  <div class="highlight" style="margin-top:20px;">
+    <div class="highlight-title">✅ Ce qu'il faut retenir pour la présentation</div>
+    <p>
+      ▸ <strong>Minimum garanti par dossier : 55,80 FCFA ($0.09 · €0.09) de bénéfice — 93% de marge.</strong><br>
+      ▸ <strong>20 clients × 5 dossiers = 5 580 FCFA ($9.30 · €8.51) dès le mois 1.</strong><br>
+      ▸ À <strong>130 clients fin année 1</strong> : <strong>72 540 FCFA/mois ($120.90 · €110.59)</strong>.<br>
+      ▸ À <strong>500 clients</strong> : <strong>5 millions FCFA/an ($8 370 · €7 656)</strong>.<br>
+      ▸ Les coûts d'infrastructure ne croissent presque pas avec le nombre d'utilisateurs — c'est la force d'un modèle SaaS.<br><br>
+      <em>Ce projet repose sur une idée élégante : utiliser l'IA pour automatiser des tâches répétitives à forte valeur perçue, avec un coût réel infime et une facturation claire. C'est un modèle économique sain, scalable, et ancré dans un besoin concret du marché camerounais.</em>
+    </p>
+  </div>
+
+  <div class="doc-footer"><span>Eolis Connect — Document confidentiel · Concept original : Debora DENMEKO</span><span>Page 5 / 5</span></div>
+</div>
+
+</body>
+</html>
