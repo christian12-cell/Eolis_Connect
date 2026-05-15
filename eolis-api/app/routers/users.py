@@ -191,7 +191,7 @@ def admin_create_user(
     db.commit()
     _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
     setup_url = f"{_frontend}/{body.language}/account-setup/{token}"
-    background_tasks.add_task(send_account_created_by_admin, u.email, u.first_name, u.username, body.password, u.role, setup_url)
+    background_tasks.add_task(send_account_created_by_admin, u.email, u.first_name, u.username, body.password, u.role, setup_url, u.language or "fr")
     return u
 
 
@@ -211,9 +211,10 @@ def delete_user(
         raise HTTPException(status_code=400, detail="cannot_delete_self")
 
     # Save contact info before deletion
-    email = user.email
-    phone = user.phone
+    email      = user.email
+    phone      = user.phone
     first_name = user.first_name
+    lang       = user.language or "fr"
 
     # Cascade-delete user data
     for ticket_id, in db.query(Ticket.id).filter((Ticket.client_id == user_id) | (Ticket.agent_id == user_id)).all():
@@ -231,7 +232,7 @@ def delete_user(
     db.commit()
 
     # Notify the deleted user
-    background_tasks.add_task(send_account_deleted, email, first_name)
+    background_tasks.add_task(send_account_deleted, email, first_name, lang)
     if phone:
         background_tasks.add_task(sms_account_deleted, phone, first_name)
 
