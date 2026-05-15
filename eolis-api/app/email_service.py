@@ -22,8 +22,11 @@ def _send(to: str, subject: str, html: str):
         print(f"[email] Failed to send to {to}: {exc}")
 
 
-def _template(content: str) -> str:
+def _template(content: str, lang: str = "fr") -> str:
     """Base HTML email template with logo header and branded signature."""
+    en = lang == "en"
+    t_rights  = "© 2026 Eolis Connect — All rights reserved" if en else "© 2026 Eolis Connect — Tous droits réservés"
+    t_auto    = "This email was sent automatically. Please do not reply directly." if en else "Cet email a été envoyé automatiquement. Merci de ne pas y répondre directement."
     return f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -83,8 +86,8 @@ def _template(content: str) -> str:
   <!-- Footer -->
   <tr>
     <td style="padding:16px 40px;background:#1B3A5C;text-align:center;">
-      <p style="margin:0;color:#a8c8e8;font-size:11px;">© 2026 Eolis Connect — Tous droits réservés</p>
-      <p style="margin:4px 0 0;color:#6b90b0;font-size:10px;">Cet email a été envoyé automatiquement. Merci de ne pas y répondre directement.</p>
+      <p style="margin:0;color:#a8c8e8;font-size:11px;">{t_rights}</p>
+      <p style="margin:4px 0 0;color:#6b90b0;font-size:10px;">{t_auto}</p>
     </td>
   </tr>
 
@@ -139,7 +142,7 @@ def send_welcome_client(to_email: str, first_name: str, username: str, pwd_hint:
 
       <p style="margin:20px 0 0;font-size:13px;color:#9ca3af;">{'Questions? Our team is available at' if en else 'Des questions ? Notre équipe est disponible à'} <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a>.</p>
     """
-    _send(to_email, subject, _template(content))
+    _send(to_email, subject, _template(content, lang))
 
 
 def send_welcome_email(to_email: str, first_name: str, username: str):
@@ -236,7 +239,7 @@ def send_account_created_by_admin(to_email: str, first_name: str, username: str,
       </table>
       <p style="margin:0;font-size:13px;color:#9ca3af;">{t_help} <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a></p>
     """
-    _send(to_email, subject, _template(content))
+    _send(to_email, subject, _template(content, lang))
 
 
 def send_account_deleted(to_email: str, first_name: str, lang: str = "fr"):
@@ -267,6 +270,6 @@ def send_account_deleted(to_email: str, first_name: str, lang: str = "fr"):
       </table>
       <p style="margin:0;font-size:13px;color:#6b7280;">{t_thanks}</p>
     """
-    _send(to_email, subject, _template(content))
+    _send(to_email, subject, _template(content, lang))
 
 
