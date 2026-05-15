@@ -206,7 +206,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
 
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || password.length < 8 || password !== confirmPassword}
                       className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#1B3A5C] text-white font-semibold text-sm hover:bg-[#152d47] disabled:opacity-60 transition-all"
                     >
                       {loading && (
