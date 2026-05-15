@@ -108,4 +108,86 @@ Chaque carte mesure : *"quel pourcentage de dossiers de cette urgence ont été 
 
 ---
 
-*(Suite du manuel à venir — autres sections de l'Overview et pages suivantes)*
+---
+
+### Les filtres Year / Month / Day
+
+Trois menus multi-sélection qui filtrent les données affichées dans les 4 graphes ci-dessous (ils n'affectent PAS les 6 cartes KPI ni les 3 cartes SLA — celles-ci sont toujours en temps réel).
+
+| Filtre actif | Granularité des graphes |
+|---|---|
+| Aucun filtre | 30 derniers jours, un point par jour |
+| Mois sélectionné | Chaque jour du mois sélectionné |
+| Année sélectionnée | Chaque mois de l'année sélectionnée |
+| Combinaison | Intersection des filtres appliqués |
+
+Le bouton **"Effacer les filtres"** réinitialise tout d'un coup.
+
+---
+
+### Graphe 1 — Ticket Volume (grand graphe gauche)
+
+**C'est quoi :** Un graphe combiné barres + courbes montrant l'activité des dossiers dans le temps.
+
+- **Barres bleues** = nouveaux dossiers créés ce jour/semaine/mois
+- **Courbe rouge** = dossiers HIGH clôturés ce jour
+- **Courbe verte** = dossiers LOW clôturés ce jour
+- **Courbe orange** = dossiers MEDIUM clôturés ce jour
+
+**Utilité :** Visualiser les pics d'activité, voir si les dossiers sont traités aussi vite qu'ils arrivent (barres bleues vs courbes colorées).
+
+---
+
+### Graphe 2 — Status Breakdown (donut haut droit)
+
+**C'est quoi :** Répartition des dossiers par statut.
+
+| Couleur | Statut |
+|---|---|
+| 🟡 Jaune | Pending — en attente de prise en charge |
+| 🔵 Bleu | In progress — en cours de traitement |
+| 🟢 Vert | Treated / Closed — clôturés |
+
+**Note :** Soumis aux filtres. Si tous les dossiers sont traités → 100% vert.
+
+---
+
+### Graphe 3 — Global Performance by Urgency (graphe bas gauche)
+
+**C'est quoi :** Le graphe le plus important. Il affiche un **score composite 0–100** par niveau d'urgence, calculé à partir de deux critères : satisfaction client et vitesse de résolution.
+
+**Formule :**
+```
+Score satisfaction = (note moyenne / 5) × 100
+Score vitesse      = max(0, 100 − (temps résolution moyen / 24h) × 100)
+Score final        = (satisfaction × 50%) + (vitesse × 50%)
+```
+
+**Plafond vitesse :** Au-delà de 24h de résolution, le score vitesse tombe à 0.
+
+**Exemple :**
+- Note moyenne 4.8/5 → satisfaction = 96/100
+- Résolu en 0.5h → vitesse = 100 − (0.5/24 × 100) = 98/100
+- Score composite = (96 × 50% + 98 × 50%) = **97/100**
+
+| Ligne | Urgence |
+|---|---|
+| 🔴 Rouge | HIGH |
+| 🟡 Jaune | MEDIUM |
+| 🟢 Vert | LOW |
+
+**Utilité :** Suivre la qualité du service dans le temps par niveau d'urgence. Un score qui baisse indique soit des clients moins satisfaits, soit des délais de résolution qui s'allongent.
+
+---
+
+### Graphe 4 — By Category (donut bas droit)
+
+**C'est quoi :** Répartition des dossiers selon la catégorie choisie par le client lors de la soumission.
+
+Les catégories possibles : Livraison, Facturation, Dossier, Information, Autre (et sous-catégories).
+
+**Utilité :** Identifier les types de demandes les plus fréquents pour adapter les ressources ou la formation des agents.
+
+---
+
+*(Suite du manuel à venir — pages suivantes)*
