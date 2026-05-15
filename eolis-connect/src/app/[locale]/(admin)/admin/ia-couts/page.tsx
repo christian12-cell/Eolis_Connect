@@ -55,8 +55,18 @@ function MultiSelect({ label, options, selected, onToggle, onClear, isFr }: {
   )
 }
 
+const EUR_RATE = 655.957
 function fmt4(n: number) { return n.toFixed(4) }
 function fmt2(n: number) { return n.toFixed(2) }
+function toUsd(fcfa: number) { return (fcfa / 600).toFixed(2) }
+function toEur(fcfa: number) { return (fcfa / EUR_RATE).toFixed(2) }
+function toUsd4(fcfa: number) { return (fcfa / 600).toFixed(4) }
+function toEur4(fcfa: number) { return (fcfa / EUR_RATE).toFixed(4) }
+function FiatSub({ fcfa, precise }: { fcfa: number; precise?: boolean }) {
+  const u = precise ? toUsd4(fcfa) : toUsd(fcfa)
+  const e = precise ? toEur4(fcfa) : toEur(fcfa)
+  return <p className="text-[10px] text-gray-400 font-mono">${u} · €{e}</p>
+}
 
 export default function IACoutsPage({ params }: { params: Promise<{ locale: string }> }) {
   const router = useRouter()
@@ -191,28 +201,28 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                 {
                   label: isFr ? 'Revenus recharges' : 'Top-up revenue',
                   fcfa: fmt2(benefits.totalRevenue),
-                  usd: (benefits.totalRevenue / 600).toFixed(2),
+                  usd: toUsd(benefits.totalRevenue), eur: toEur(benefits.totalRevenue),
                   sub: `${benefits.approvedRequestsCount} ${isFr ? 'recharge(s) validée(s)' : 'approved top-up(s)'}`,
                   color: 'bg-emerald-50 text-emerald-700',
                 },
                 {
                   label: isFr ? 'Crédits consommés (prix client)' : 'Credits consumed (client cost)',
                   fcfa: fmt2(benefits.totalClientFcfa ?? 0),
-                  usd: ((benefits.totalClientFcfa ?? 0) / 600).toFixed(2),
+                  usd: toUsd(benefits.totalClientFcfa ?? 0), eur: toEur(benefits.totalClientFcfa ?? 0),
                   sub: `${fmt2(benefits.totalCreditsConsumed ?? 0)} crédits · ${fmt2(benefits.blCreditsConsumed ?? 0)} BL + ${fmt2(benefits.voiceCreditsConsumed ?? 0)} voix`,
                   color: 'bg-blue-50 text-blue-700',
                 },
                 {
                   label: isFr ? 'Coûts réels OpenAI' : 'Actual OpenAI costs',
                   fcfa: fmt4(benefits.totalApiCost),
-                  usd: (benefits.totalApiCost / 600).toFixed(4),
+                  usd: toUsd4(benefits.totalApiCost), eur: toEur4(benefits.totalApiCost),
                   sub: isFr ? 'Ce qu\'Eolis paie réellement' : 'What Eolis actually pays',
                   color: 'bg-red-50 text-red-600',
                 },
                 {
                   label: isFr ? 'Bénéfice sur usages' : 'Usage profit',
                   fcfa: fmt2(benefits.usageProfit ?? 0),
-                  usd: ((benefits.usageProfit ?? 0) / 600).toFixed(2),
+                  usd: toUsd(benefits.usageProfit ?? 0), eur: toEur(benefits.usageProfit ?? 0),
                   sub: benefits.totalClientFcfa > 0
                     ? `${(((benefits.usageProfit ?? 0) / benefits.totalClientFcfa) * 100).toFixed(1)}% ${isFr ? 'de marge' : 'margin'}`
                     : isFr ? 'Aucune consommation' : 'No usage yet',
@@ -221,7 +231,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
               ].map(card => (
                 <div key={card.label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                   <p className="text-xl font-bold text-gray-900">{card.fcfa} FCFA</p>
-                  <p className="text-xs text-gray-400 font-mono">${card.usd}</p>
+                  <p className="text-[10px] text-gray-400 font-mono">${card.usd} · €{card.eur}</p>
                   <p className="text-xs text-gray-500 mt-1 font-medium">{card.label}</p>
                   <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-2 ${card.color}`}>
                     {card.sub}
@@ -272,7 +282,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-gray-900">{r.amountValidated} FCFA</p>
-                        <p className="text-[10px] text-gray-400 font-mono">${(r.amountValidated / 600).toFixed(2)}</p>
+                        <p className="text-[10px] text-gray-400 font-mono">${toUsd(r.amountValidated)} · €{toEur(r.amountValidated)}</p>
                         <p className="text-xs text-emerald-600">+{r.creditsAdded} crédits</p>
                       </div>
                     </div>
@@ -302,14 +312,14 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                 {
                   label: isFr ? 'Coût réel OpenAI' : 'Actual OpenAI cost',
                   value: `${fmt4(data.totalFcfa ?? 0)} FCFA`,
-                  sub: `$${(data.totalUsd ?? 0).toFixed(8)}`,
+                  sub: `$${toUsd4(data.totalFcfa ?? 0)} · €${toEur4(data.totalFcfa ?? 0)}`,
                   icon: <TrendingUp size={18} className="text-violet-600" />,
                   bg: 'bg-violet-50',
                 },
                 {
                   label: isFr ? 'Crédits consommés' : 'Credits consumed',
                   value: `${fmt2(data.totalCredits ?? 0)} cr.`,
-                  sub: `${fmt2(data.totalClientFcfa ?? 0)} FCFA ${isFr ? 'côté client' : 'client-side'}`,
+                  sub: `${fmt2(data.totalClientFcfa ?? 0)} FCFA · $${toUsd(data.totalClientFcfa ?? 0)} · €${toEur(data.totalClientFcfa ?? 0)}`,
                   icon: <Zap size={18} className="text-blue-600" />,
                   bg: 'bg-blue-50',
                 },
@@ -317,7 +327,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                   label: isFr ? 'Bénéfice sur usages' : 'Usage profit',
                   value: `${fmt2(data.totalProfitFcfa ?? 0)} FCFA`,
                   sub: data.totalClientFcfa > 0
-                    ? `${(((data.totalProfitFcfa ?? 0) / (data.totalClientFcfa ?? 1)) * 100).toFixed(1)}% marge`
+                    ? `$${toUsd(data.totalProfitFcfa ?? 0)} · €${toEur(data.totalProfitFcfa ?? 0)} · ${(((data.totalProfitFcfa ?? 0) / (data.totalClientFcfa ?? 1)) * 100).toFixed(1)}% marge`
                     : '—',
                   icon: <TrendingDown size={18} className="text-emerald-600" />,
                   bg: 'bg-emerald-50',
@@ -415,15 +425,17 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-bold text-red-500">{fmt4(t.totalFcfa ?? 0)} FCFA</p>
-                            <p className="text-[10px] text-gray-400">${(t.totalUsd ?? 0).toFixed(8)}</p>
+                            <FiatSub fcfa={t.totalFcfa ?? 0} precise />
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-bold text-blue-600">{fmt2(t.clientFcfa ?? 0)} FCFA</p>
                             <p className="text-[10px] text-gray-400">{fmt2(t.totalCredits ?? 0)} cr.</p>
+                            <FiatSub fcfa={t.clientFcfa ?? 0} />
                           </div>
                           <div className="text-right flex items-center justify-end gap-2">
                             <div>
                               <p className="text-sm font-bold text-emerald-600">{fmt2(t.profitFcfa ?? 0)} FCFA</p>
+                              <FiatSub fcfa={t.profitFcfa ?? 0} />
                               {profitPct && <p className="text-[10px] text-gray-400">{profitPct}% marge</p>}
                             </div>
                             {isExpanded
@@ -454,9 +466,18 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                                     </p>
                                   </div>
                                 </div>
-                                <p className="text-xs font-bold text-red-500 text-right">{fmt4(item.costFcfa ?? 0)} FCFA</p>
-                                <p className="text-xs font-bold text-blue-600 text-right">{fmt2(item.creditsCost ?? 0)} cr.</p>
-                                <p className="text-xs font-bold text-emerald-600 text-right">{fmt2(item.profitFcfa ?? 0)} FCFA</p>
+                                <div className="text-right">
+                                  <p className="text-xs font-bold text-red-500">{fmt4(item.costFcfa ?? 0)} FCFA</p>
+                                  <FiatSub fcfa={item.costFcfa ?? 0} precise />
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs font-bold text-blue-600">{fmt2(item.creditsCost ?? 0)} cr.</p>
+                                  <FiatSub fcfa={item.creditsCost ?? 0} />
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs font-bold text-emerald-600">{fmt2(item.profitFcfa ?? 0)} FCFA</p>
+                                  <FiatSub fcfa={item.profitFcfa ?? 0} />
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -499,11 +520,18 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                               <p className="text-xs text-gray-400">{c.count} {isFr ? 'opération(s)' : 'operation(s)'}</p>
                             </div>
                           </div>
-                          <p className="text-sm font-bold text-red-500 text-right">{fmt4(c.totalFcfa ?? 0)} FCFA</p>
-                          <p className="text-sm font-bold text-blue-600 text-right">{fmt2(c.clientFcfa ?? 0)} FCFA</p>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-red-500">{fmt4(c.totalFcfa ?? 0)} FCFA</p>
+                            <FiatSub fcfa={c.totalFcfa ?? 0} precise />
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-blue-600">{fmt2(c.clientFcfa ?? 0)} FCFA</p>
+                            <FiatSub fcfa={c.clientFcfa ?? 0} />
+                          </div>
                           <div className="text-right flex items-center justify-end gap-2">
                             <div>
                               <p className="text-sm font-bold text-emerald-600">{fmt2(c.profitFcfa ?? 0)} FCFA</p>
+                              <FiatSub fcfa={c.profitFcfa ?? 0} />
                               {profitPct && <p className="text-[10px] text-gray-400">{profitPct}% marge</p>}
                             </div>
                             {isExpanded ? <ChevronDown size={15} className="text-gray-400" /> : <ChevronRight size={15} className="text-gray-400" />}
@@ -529,9 +557,18 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                                     </p>
                                   </div>
                                 </div>
-                                <p className="text-xs font-bold text-red-500 text-right">{fmt4(item.costFcfa ?? 0)} FCFA</p>
-                                <p className="text-xs font-bold text-blue-600 text-right">{fmt2(item.creditsCost ?? 0)} cr.</p>
-                                <p className="text-xs font-bold text-emerald-600 text-right">{fmt2(item.profitFcfa ?? 0)} FCFA</p>
+                                <div className="text-right">
+                                  <p className="text-xs font-bold text-red-500">{fmt4(item.costFcfa ?? 0)} FCFA</p>
+                                  <FiatSub fcfa={item.costFcfa ?? 0} precise />
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs font-bold text-blue-600">{fmt2(item.creditsCost ?? 0)} cr.</p>
+                                  <FiatSub fcfa={item.creditsCost ?? 0} />
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs font-bold text-emerald-600">{fmt2(item.profitFcfa ?? 0)} FCFA</p>
+                                  <FiatSub fcfa={item.profitFcfa ?? 0} />
+                                </div>
                               </div>
                             ))}
                           </div>
