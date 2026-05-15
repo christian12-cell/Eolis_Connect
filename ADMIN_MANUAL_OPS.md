@@ -190,4 +190,38 @@ Les catégories possibles : Livraison, Facturation, Dossier, Information, Autre 
 
 ---
 
+---
+
+### Les 3 cartes "Best time" — Records par urgence
+
+**C'est quoi :** Le record absolu de résolution le plus rapide pour chaque niveau d'urgence, tous agents et toutes périodes confondus.
+
+**Calcul :** Pour chaque urgence, le système prend tous les dossiers clôturés, calcule `date clôture − date création` pour chacun, et affiche celui avec le temps le plus court.
+
+Chaque carte affiche :
+- Le temps record (en minutes ou heures)
+- La référence du dossier
+- Le nom de l'agent qui l'a traité
+- La catégorie et sous-catégorie
+- La date de réception
+- Un lien direct vers le dossier ("View ticket")
+
+**Note :** Ces records **ne sont pas affectés par les filtres Year/Month/Day** — ils reflètent toujours le meilleur temps de toute l'histoire du système.
+
+**Utilité :** Référence de performance et reconnaissance des agents. Un record peut servir d'objectif pour l'équipe.
+
+---
+
+### Urgent queue — HIGH pending
+
+**C'est quoi :** Un tableau d'alerte montrant les 5 dossiers HIGH urgency les plus anciens encore ouverts (PENDING ou IN_PROGRESS), triés du plus ancien au plus récent.
+
+**"No urgent tickets pending ✓"** = aucun dossier HIGH en attente, situation normale.
+
+Si des dossiers apparaissent ici, chaque ligne affiche : référence, client, catégorie, agent assigné (ou "Non assigné"), temps de soumission. Le lien "View full queue" renvoie vers la file complète de l'agent dashboard.
+
+**À surveiller :** Si un dossier HIGH reste dans cette liste plus de 2 heures, une alerte rouge apparaît aussi en haut de la page Overview.
+
+---
+
 *(Suite du manuel à venir — pages suivantes)*
