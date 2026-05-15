@@ -94,11 +94,16 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
 
     // Auto-logout on 401 (token expired or revoked)
     if (res.status === 401 && typeof window !== 'undefined') {
+      const errData = await res.clone().json().catch(() => ({}))
       clearSession()
-      // Detect current locale from the URL
-      const localeSeg = window.location.pathname.split('/')[1]
-      const locale = ['fr', 'en'].includes(localeSeg) ? localeSeg : 'fr'
-      window.location.href = `/${locale}/login`
+      if (errData?.detail === 'account_deleted') {
+        // Show popup in the current layout — don't redirect yet
+        window.dispatchEvent(new CustomEvent('eolis:account_deleted'))
+      } else {
+        const localeSeg = window.location.pathname.split('/')[1]
+        const locale = ['fr', 'en'].includes(localeSeg) ? localeSeg : 'fr'
+        window.location.href = `/${locale}/login`
+      }
     }
 
     return res

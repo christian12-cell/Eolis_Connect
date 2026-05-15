@@ -286,32 +286,26 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
           </div>
         )}
 
-        {/* Mode d'emploi */}
-        <div className="bg-white rounded-2xl p-5 space-y-3 shadow-sm">
-          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-            {isFr ? 'Comment recharger' : 'How to top up'}
-          </h2>
-          <ol className="space-y-2 text-sm text-gray-600">
-            <li className="flex gap-2">
-              <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">1.</span>
-              {isFr ? 'Envoyez le montant via MTN MoMo ou Orange Money' : 'Send via MTN MoMo or Orange Money'}
-            </li>
-            <li className="flex gap-2">
-              <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">2.</span>
-              {isFr ? 'Prenez une capture ou téléchargez le reçu (image ou PDF)' : 'Screenshot or download the receipt (image or PDF)'}
-            </li>
-            <li className="flex gap-2">
-              <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">3.</span>
-              {isFr ? 'Remplissez le formulaire et soumettez votre demande' : 'Fill in the form and submit your request'}
-            </li>
-          </ol>
-          <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
-            {isFr ? '1 crédit = 1 FCFA · minimum 500 FCFA' : '1 credit = 1 FCFA · minimum 500 FCFA'}
-          </p>
+        {/* Avertissement paiement externe */}
+        <div className="bg-amber-500/20 border border-amber-400/40 rounded-2xl px-4 py-4 flex gap-3">
+          <span className="text-2xl flex-shrink-0">📱</span>
+          <div>
+            <p className="text-sm font-bold text-white mb-1">
+              {isFr ? 'Paiement hors application' : 'Payment outside the app'}
+            </p>
+            <p className="text-xs text-blue-100 leading-relaxed">
+              {isFr
+                ? 'Le paiement s\'effectue directement depuis votre application Orange Money ou MTN MoMo sur votre téléphone — pas ici. Revenez ensuite soumettre votre reçu.'
+                : 'The payment is made directly from your Orange Money or MTN MoMo app on your phone — not here. Then come back to submit your receipt.'}
+            </p>
+          </div>
         </div>
 
         {/* Numéros de paiement */}
         <div className="space-y-2">
+          <p className="text-xs font-bold text-white/70 uppercase tracking-wide px-1">
+            {isFr ? 'Envoyez votre paiement à l\'un de ces numéros :' : 'Send your payment to one of these numbers:'}
+          </p>
           {[
             { op: 'Orange Money', num: payInfo.orangeNumber, bg: 'bg-orange-50', border: 'border-orange-200', dot: 'bg-orange-400' },
             { op: 'MTN MoMo',     num: payInfo.mtnNumber,    bg: 'bg-yellow-50', border: 'border-yellow-200', dot: 'bg-yellow-400' },
@@ -325,6 +319,46 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
               </div>
             </div>
           ))}
+          <div className="bg-blue-500/20 border border-blue-400/30 rounded-xl px-4 py-3 flex gap-2">
+            <span className="text-base flex-shrink-0">💡</span>
+            <p className="text-xs text-blue-100 leading-relaxed">
+              {isFr
+                ? `Lors de votre transfert, indiquez votre nom complet comme référence afin que l'administrateur puisse identifier votre paiement facilement.`
+                : `When making your transfer, enter your full name as the reference so the administrator can identify your payment easily.`}
+            </p>
+          </div>
+        </div>
+
+        {/* Mode d'emploi */}
+        <div className="bg-white rounded-2xl p-5 space-y-3 shadow-sm">
+          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+            {isFr ? 'Étapes à suivre' : 'Steps to follow'}
+          </h2>
+          <ol className="space-y-2 text-sm text-gray-600">
+            <li className="flex gap-2">
+              <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">1.</span>
+              {isFr
+                ? 'Ouvrez Orange Money ou MTN MoMo sur votre téléphone et envoyez le montant au numéro ci-dessus'
+                : 'Open Orange Money or MTN MoMo on your phone and send the amount to the number above'}
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">2.</span>
+              {isFr
+                ? 'Notez votre nom complet comme référence du transfert'
+                : 'Enter your full name as the transfer reference'}
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">3.</span>
+              {isFr ? 'Prenez une capture d\'écran ou téléchargez le reçu (image ou PDF)' : 'Take a screenshot or download the receipt (image or PDF)'}
+            </li>
+            <li className="flex gap-2">
+              <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">4.</span>
+              {isFr ? 'Revenez ici, remplissez le formulaire et soumettez votre demande' : 'Come back here, fill in the form and submit your request'}
+            </li>
+          </ol>
+          <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
+            {isFr ? '1 crédit = 1 FCFA · minimum 500 FCFA' : '1 credit = 1 FCFA · minimum 500 FCFA'}
+          </p>
         </div>
 
         {/* Formulaire */}

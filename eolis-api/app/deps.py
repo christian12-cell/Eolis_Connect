@@ -18,7 +18,7 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="account_deleted")
     if user.status in ("REJECTED", "SUSPENDED"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account blocked")
     # Throttled last_active_at update — at most once every 2 minutes per user

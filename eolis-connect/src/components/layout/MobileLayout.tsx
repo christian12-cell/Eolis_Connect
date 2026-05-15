@@ -31,6 +31,13 @@ export function MobileLayout({
   const [isOffline, setIsOffline]       = useState(false)
   const [toast, setToast]               = useState<string | null>(null)
   const [liveUnread, setLiveUnread]     = useState(unreadCount)
+  const [accountDeleted, setAccountDeleted] = useState(false)
+
+  useEffect(() => {
+    const handler = () => setAccountDeleted(true)
+    window.addEventListener('eolis:account_deleted', handler)
+    return () => window.removeEventListener('eolis:account_deleted', handler)
+  }, [])
 
   function showToast(msg: string) {
     setToast(msg)
@@ -104,6 +111,33 @@ export function MobileLayout({
 
   return (
     <div className="flex flex-col min-h-screen" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+
+      {accountDeleted && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl p-7 max-w-sm w-full text-center shadow-2xl">
+            <div className="text-5xl mb-4">🚫</div>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">
+              {isFr ? 'Compte supprimé' : 'Account deleted'}
+            </h2>
+            <p className="text-sm text-gray-500 mb-1">
+              {isFr
+                ? 'Votre compte a été supprimé par un administrateur.'
+                : 'Your account has been deleted by an administrator.'}
+            </p>
+            <p className="text-sm text-gray-500 mb-5">
+              {isFr
+                ? 'Vous avez reçu un email et un SMS de confirmation. Pour toute question, contactez notre support.'
+                : 'You received a confirmation email and SMS. For any questions, contact our support.'}
+            </p>
+            <button
+              onClick={() => { window.location.href = `/${locale}/login` }}
+              className="w-full py-3 rounded-xl bg-[#1B3A5C] text-white font-bold text-sm">
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Background */}
       <div className="fixed inset-0 -z-10">
         <Image src="/bg-auth.jpg" alt="" fill className="object-cover" priority />
