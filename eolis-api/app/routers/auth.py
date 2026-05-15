@@ -117,7 +117,7 @@ def login(request: Request, body: LoginRequest, background_tasks: BackgroundTask
             )
             db.add(otp)
             db.commit()
-            background_tasks.add_task(sms_otp, user.phone, code, user.language or "fr")
+            background_tasks.add_task(sms_otp, user.phone, code)
             pre_token = _sign_pre_auth(user.id)
             return {"requires_2fa": True, "pre_token": pre_token, "masked_phone": _mask_phone(user.phone)}
 
@@ -126,7 +126,7 @@ def login(request: Request, body: LoginRequest, background_tasks: BackgroundTask
     db.commit()
     db.refresh(user)
     token = create_access_token({"sub": user.id, "role": user.role, "username": user.username}, role=user.role)
-    return {"access_token": token, "token_type": "bearer", "user": user}
+    return {"access_token": token, "token_type": "bearer", "user": UserResponse.model_validate(user).model_dump(by_alias=True)}
 
 
 @router.post("/2fa/verify")
@@ -164,7 +164,7 @@ def verify_2fa(request: Request, body: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     token = create_access_token({"sub": user.id, "role": user.role, "username": user.username}, role=user.role)
-    return {"access_token": token, "token_type": "bearer", "user": user}
+    return {"access_token": token, "token_type": "bearer", "user": UserResponse.model_validate(user).model_dump(by_alias=True)}
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
