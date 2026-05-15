@@ -272,8 +272,9 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     ref: true, vessel: true, pickup: true, turnin: false, items: true, containers: true, remarks: false,
   })
   const [blManualSections, setBlManualSections] = useState<Record<string,boolean>>({
-    refs: false, transport: false, pickup: false, delays: false, goods: false,
+    refs: true, transport: true, pickup: true, delays: true, goods: true,
   })
+  const [showBlFrictionPopup, setShowBlFrictionPopup] = useState(false)
   const [prevBLs, setPrevBLs]           = useState<any[] | null>(null)
   const [prevBLsLoading, setPrevBLsLoading] = useState(false)
   const [blDocumentId, setBlDocumentId] = useState<string | null>(null)
@@ -2464,12 +2465,65 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 className="flex items-center gap-1 px-4 py-3.5 rounded-2xl border-2 border-white/30 text-white font-medium text-sm">
                 <ChevronLeft size={16} /> {t.back}
               </button>
-              <button onClick={() => setStep('description')}
+              <button
                 disabled={!canStep3}
+                onClick={() => {
+                  if (mode === 'simple') {
+                    const blFilled = [
+                      form.eta, form.portOfLoading, form.portOfDischarge, form.placeOfReceipt, form.placeOfDelivery,
+                      form.customerRef, form.service, form.blDate, form.bookingPartyName, form.bookingPartyRegion,
+                      form.pickupRef, form.pickupQty, form.pickupSizeType, form.pickupUsage, form.pickupDepot, form.pickupReleaseDate,
+                      form.terminal, form.terminalClosing, form.vgmClosing, form.customsClosing,
+                      form.descriptionOfGoods, form.noOfPacks, form.kindOfPack, form.linerTerms, form.imo, form.grossWeightTons, form.measurementCbm,
+                      form.containerTemp,
+                    ].filter(v => v.trim()).length
+                    if (blFilled === 0) { setShowBlFrictionPopup(true); return }
+                  }
+                  setStep('description')
+                }}
                 className="flex-1 py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">
                 {t.next} <ChevronRight size={18} />
               </button>
             </div>
+
+            {/* Popup friction Premium */}
+            {showBlFrictionPopup && (
+              <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-8 bg-black/50" onClick={() => setShowBlFrictionPopup(false)}>
+                <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                  <div className="flex flex-col items-center text-center gap-3 mb-5">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-2xl">⚡</div>
+                    <h3 className="text-base font-bold text-[#1B3A5C]">
+                      {isFr ? 'Dossier presque vide' : 'Almost empty file'}
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {isFr
+                        ? 'Vous n\'avez renseigné que les informations de base. Avec Premium, les 28 autres champs sont extraits automatiquement de votre BL en quelques secondes.'
+                        : 'You only filled in the basic information. With Premium, the other 28 fields are extracted automatically from your BL in seconds.'}
+                    </p>
+                    <div className="w-full bg-[#EDF1F7] rounded-xl px-4 py-3 text-left space-y-1">
+                      {[
+                        isFr ? '✓ ETA, ports, lieux de livraison' : '✓ ETA, ports, delivery places',
+                        isFr ? '✓ Références pickup et release' : '✓ Pickup and release references',
+                        isFr ? '✓ Délais terminal, VGM, douane' : '✓ Terminal, VGM, customs deadlines',
+                        isFr ? '✓ Description et poids des marchandises' : '✓ Goods description and weight',
+                      ].map(item => (
+                        <p key={item} className="text-xs font-medium text-[#1B3A5C]">{item}</p>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setShowBlFrictionPopup(false); setPageMode('bl'); setBlStep('pick') }}
+                    className="w-full py-3.5 rounded-2xl bg-[#1B3A5C] text-white font-bold mb-3 active:opacity-80">
+                    {isFr ? 'Scanner mon BL' : 'Scan my BL'}
+                  </button>
+                  <button
+                    onClick={() => { setShowBlFrictionPopup(false); setStep('description') }}
+                    className="w-full py-3 rounded-2xl border-2 border-gray-200 text-gray-500 font-medium text-sm active:bg-gray-50">
+                    {isFr ? 'Continuer quand même' : 'Continue anyway'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2607,6 +2661,44 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               <h2 className="text-base font-bold text-white mb-0.5">{t.recap}</h2>
               <p className="text-sm text-blue-100">{t.recapSub}</p>
             </div>
+
+            {/* Avertissement dossier incomplet — mode simple sans champs BL */}
+            {mode === 'simple' && (() => {
+              const blFilled = [
+                form.eta, form.portOfLoading, form.portOfDischarge, form.placeOfReceipt, form.placeOfDelivery,
+                form.customerRef, form.service, form.blDate, form.bookingPartyName, form.bookingPartyRegion,
+                form.pickupRef, form.pickupQty, form.pickupSizeType, form.pickupUsage, form.pickupDepot, form.pickupReleaseDate,
+                form.terminal, form.terminalClosing, form.vgmClosing, form.customsClosing,
+                form.descriptionOfGoods, form.noOfPacks, form.kindOfPack, form.linerTerms, form.imo, form.grossWeightTons, form.measurementCbm,
+                form.containerTemp,
+              ].filter(v => v.trim()).length
+              const missing = 28 - blFilled
+              if (missing <= 0) return null
+              return (
+                <div className="bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3.5">
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg mt-0.5">⚠️</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-orange-800">
+                        {isFr
+                          ? `Dossier incomplet — ${missing} information${missing > 1 ? 's' : ''} manquante${missing > 1 ? 's' : ''}`
+                          : `Incomplete file — ${missing} missing field${missing > 1 ? 's' : ''}`}
+                      </p>
+                      <p className="text-xs text-orange-700 mt-1 leading-relaxed">
+                        {isFr
+                          ? 'Les agents devront vous recontacter pour obtenir ces informations, allongeant le délai de traitement.'
+                          : 'Agents will need to contact you to obtain this information, increasing processing time.'}
+                      </p>
+                      <button
+                        onClick={() => { setPageMode('bl'); setBlStep('pick') }}
+                        className="mt-2.5 inline-flex items-center gap-1.5 bg-orange-100 text-orange-800 text-xs font-bold px-3 py-1.5 rounded-xl active:opacity-70">
+                        ⚡ {isFr ? 'Scanner mon BL à la place' : 'Scan my BL instead'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Catégorie */}
             <RecapSection title={t.catLabel} isOpen={openRecap.cat} onToggle={() => toggleRecap('cat')}>
