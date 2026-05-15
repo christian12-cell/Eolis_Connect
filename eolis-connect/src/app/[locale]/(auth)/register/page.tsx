@@ -136,6 +136,14 @@ export default function RegisterPage({ params }: RegisterPageProps) {
   }
   const text = t[locale as keyof typeof t] ?? t.fr
 
+  const formValid =
+    form.firstName.trim() !== '' &&
+    form.lastName.trim() !== '' &&
+    form.email.trim() !== '' &&
+    phoneValid &&
+    form.password.length >= 8 &&
+    form.password === form.confirmPassword
+
   function update(key: string, val: string) { setForm(f => ({ ...f, [key]: val })); setError('') }
 
   async function copyUsername() {
@@ -412,7 +420,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
                 <p className="text-xs">{error}</p>
               </div>
             )}
-            <button type="submit" disabled={loading || isOffline}
+            <button type="submit" disabled={!formValid || loading || isOffline}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#1B3A5C] text-white font-semibold text-sm hover:bg-[#152d47] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm">
               {loading ? (
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
