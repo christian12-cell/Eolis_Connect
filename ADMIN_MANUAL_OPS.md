@@ -1,0 +1,111 @@
+# Manuel Administrateur — OPS Admin
+## Eolis Connect
+
+---
+
+## Page Overview (Vue d'ensemble)
+
+La page Overview est le tableau de bord principal de l'OPS Admin. Elle se rafraîchit automatiquement toutes les **60 secondes** et affiche l'état en temps réel de toute l'activité des dossiers.
+
+---
+
+### Les 6 cartes KPI (ligne du haut)
+
+#### 1. Total tickets
+**Ce que c'est :** Le nombre total de dossiers dans le système, tous statuts confondus (en attente, en cours, traités).
+
+**Calcul :** `nombre de tous les tickets dans la base`
+
+**Indicateur de tendance (texte en dessous) :**
+- `↑ +X new vs last week` (rouge) → plus de dossiers cette semaine que la semaine dernière
+- `↓ -X new vs last week` (vert) → moins de nouveaux dossiers qu'avant
+- `→ stable vs last week` (gris) → même volume
+
+**Comment c'est calculé :** Comparaison entre les 7 derniers jours et les 7 jours précédents.
+
+---
+
+#### 2. Pending (En attente)
+**Ce que c'est :** Dossiers soumis par les clients mais pas encore pris en charge par un agent.
+
+**Calcul :** `tickets avec statut === 'PENDING'`
+
+**Sous-texte (si applicable) :** "X non assigné(s)" — dossiers PENDING sans agent assigné. Ces dossiers sont prioritaires car personne ne les traite.
+
+---
+
+#### 3. In progress (En cours)
+**Ce que c'est :** Dossiers en cours de traitement — un agent les a pris en charge et travaille dessus.
+
+**Calcul :** `tickets avec statut === 'IN_PROGRESS'`
+
+---
+
+#### 4. Treated today (Traités aujourd'hui)
+**Ce que c'est :** Dossiers clôturés aujourd'hui (à partir de minuit, heure de Douala WAT).
+
+**Calcul :** Tickets avec statut `TREATED` ou `CLOSED` dont la date de clôture (`closedAt`) est après minuit WAT (West Africa Time = UTC+1) du jour en cours.
+
+**Note :** Ce compteur repart à 0 chaque nuit à minuit.
+
+---
+
+#### 5. Avg satisfaction (Satisfaction moyenne)
+**Ce que c'est :** La note moyenne laissée par les clients après la clôture de leurs dossiers.
+
+**Calcul :**
+1. Récupère tous les tickets ayant reçu une note de satisfaction
+2. Additionne toutes les notes (sur 5)
+3. Divise par le nombre d'avis
+4. Arrondi à 1 décimale
+
+**Exemple :** 4.8/5 avec "4 reviews" = 4 clients ont noté, la moyenne est 4.8/5.
+
+**Affiché "—"** si aucun dossier n'a encore été noté.
+
+---
+
+#### 6. Avg resolution (Délai résolution moyen)
+**Ce que c'est :** Le temps moyen entre la création d'un dossier et sa clôture.
+
+**Calcul :**
+1. Pour chaque dossier clôturé : `(date clôture - date création)` en heures
+2. Moyenne de tous ces temps
+3. Affiché en heures (ex: 0.5h = 30 minutes, 2h 30min, etc.)
+
+**Affiché "—"** si aucun dossier n'est encore traité.
+
+---
+
+### Les 3 cartes SLA (ligne du bas)
+
+**SLA = Service Level Agreement** — les engagements de délai de résolution selon l'urgence du dossier.
+
+Chaque carte mesure : *"quel pourcentage de dossiers de cette urgence ont été résolus dans le délai cible ?"*
+
+| Urgence | Délai cible | Couleur |
+|---|---|---|
+| 🔴 High | < 3 heures | Rouge |
+| 🟡 Medium | < 5 heures | Orange |
+| 🟢 Low | < 10 heures | Vert |
+
+**Calcul du pourcentage :**
+```
+% SLA = (dossiers résolus dans le délai / total dossiers résolus) × 100
+```
+
+**Code couleur du score :**
+- **Vert** : ≥ 80% — objectif atteint
+- **Orange** : 60–79% — attention
+- **Rouge** : < 60% — objectif non atteint
+
+**Exemple (screenshot) :**
+- High 100% — 1/1 ticket(s) : le seul dossier HIGH a été résolu en moins de 3h ✓
+- Medium 100% — 2/2 ticket(s) : les 2 dossiers MEDIUM ont été résolus en moins de 5h ✓
+- Low 100% — 1/1 ticket(s) : le seul dossier LOW a été résolu en moins de 10h ✓
+
+**"No data"** apparaît si aucun dossier de cette urgence n'a encore été clôturé.
+
+---
+
+*(Suite du manuel à venir — autres sections de l'Overview et pages suivantes)*
