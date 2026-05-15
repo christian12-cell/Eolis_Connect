@@ -27,9 +27,10 @@ class InfraCostIn(BaseModel):
 
 
 class ProjectionIn(BaseModel):
-    period: str                          # YYYY-MM
+    period: str                           # YYYY-MM
     target_revenue: float
     target_clients: int = 0
+    target_net_profit: Optional[float] = None
     target_margin_pct: Optional[float] = None
     notes: Optional[str] = None
     period: str
@@ -564,9 +565,10 @@ def list_projections(
         {
             "id":              r.id,
             "period":          r.period,
-            "targetRevenue":   r.target_revenue,
-            "targetClients":   r.target_clients,
-            "targetMarginPct": r.target_margin_pct,
+            "targetRevenue":    r.target_revenue,
+            "targetClients":    r.target_clients,
+            "targetNetProfit":  r.target_net_profit,
+            "targetMarginPct":  r.target_margin_pct,
             "notes":           r.notes,
             "createdBy":       f"{r.creator.first_name} {r.creator.last_name}" if r.creator else None,
             "updatedAt":       r.updated_at.isoformat() + "Z",
@@ -587,6 +589,7 @@ def upsert_projection(
     if existing:
         existing.target_revenue    = body.target_revenue
         existing.target_clients    = body.target_clients
+        existing.target_net_profit = body.target_net_profit
         existing.target_margin_pct = body.target_margin_pct
         existing.notes             = body.notes
         existing.updated_at        = datetime.utcnow()
@@ -595,7 +598,8 @@ def upsert_projection(
         return {"id": existing.id, "period": existing.period}
     proj = FinancialProjection(
         period=body.period, target_revenue=body.target_revenue,
-        target_clients=body.target_clients, target_margin_pct=body.target_margin_pct,
+        target_clients=body.target_clients, target_net_profit=body.target_net_profit,
+        target_margin_pct=body.target_margin_pct,
         notes=body.notes, created_by=current_user.id,
     )
     db.add(proj)
@@ -709,6 +713,7 @@ def projection_comparison(
             "target": {
                 "revenue":    target_rev,
                 "clients":    proj.target_clients if proj else None,
+                "netProfit":  proj.target_net_profit if proj else None,
                 "marginPct":  proj.target_margin_pct if proj else None,
                 "notes":      proj.notes if proj else None,
                 "projectionId": proj.id if proj else None,
@@ -722,10 +727,12 @@ def projection_comparison(
                 "newClients": act["newClients"],
             },
             "variance": {
-                "revenue":    rev_var,
-                "revenuePct": rev_pct,
-                "clients":    (act["newClients"] - proj.target_clients) if proj else None,
-                "status":     status,
+                "revenue":       rev_var,
+                "revenuePct":    rev_pct,
+                "clients":       (act["newClients"] - proj.target_clients) if proj else None,
+                "netProfit":     round(net - proj.target_net_profit, 2) if proj and proj.target_net_profit is not None else None,
+                "netProfitPct":  round((net / proj.target_net_profit - 1) * 100, 1) if proj and proj.target_net_profit and proj.target_net_profit != 0 else None,
+                "status":        status,
             },
         })
 

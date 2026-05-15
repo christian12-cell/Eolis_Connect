@@ -188,12 +188,16 @@ def startup():
                 target_revenue DOUBLE PRECISION NOT NULL DEFAULT 0,
                 target_clients INTEGER NOT NULL DEFAULT 0,
                 target_margin_pct DOUBLE PRECISION,
+                target_net_profit DOUBLE PRECISION,
                 notes TEXT,
                 created_by VARCHAR(36) NOT NULL REFERENCES users(id),
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         """))
+        conn.execute(text(
+            "ALTER TABLE financial_projections ADD COLUMN IF NOT EXISTS target_net_profit DOUBLE PRECISION"
+        ))
         conn.execute(text(
             "ALTER TABLE credit_requests ADD COLUMN IF NOT EXISTS admin_confirmed_by VARCHAR(36)"
         ))

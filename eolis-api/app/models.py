@@ -256,6 +256,7 @@ class FinancialProjection(Base):
     target_revenue: Mapped[float] = mapped_column(default=0.0, server_default="0")
     target_clients: Mapped[int]   = mapped_column(Integer, default=0, server_default="0")
     target_margin_pct: Mapped[float | None] = mapped_column(nullable=True)
+    target_net_profit: Mapped[float | None] = mapped_column(nullable=True)
     notes: Mapped[str | None]  = mapped_column(Text, nullable=True)
     created_by: Mapped[str]    = mapped_column(String(36), ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

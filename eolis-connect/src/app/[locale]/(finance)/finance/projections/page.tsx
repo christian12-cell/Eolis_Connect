@@ -59,6 +59,7 @@ export default function ProjectionsPage({ params }: { params: Promise<{ locale: 
     period: new Date().toISOString().slice(0, 7),
     target_revenue: '',
     target_clients: '',
+    target_net_profit: '',
     target_margin_pct: '',
     notes: '',
   })
@@ -115,13 +116,14 @@ export default function ProjectionsPage({ params }: { params: Promise<{ locale: 
         period: form.period,
         target_revenue: parseFloat(form.target_revenue),
         target_clients: parseInt(form.target_clients) || 0,
+        target_net_profit: form.target_net_profit ? parseFloat(form.target_net_profit) : null,
         target_margin_pct: form.target_margin_pct ? parseFloat(form.target_margin_pct) : null,
         notes: form.notes || null,
       }),
     })
     setSaving(false)
     setShowForm(false)
-    setForm({ period: new Date().toISOString().slice(0, 7), target_revenue: '', target_clients: '', target_margin_pct: '', notes: '' })
+    setForm({ period: new Date().toISOString().slice(0, 7), target_revenue: '', target_clients: '', target_net_profit: '', target_margin_pct: '', notes: '' })
     load()
   }
 
@@ -136,6 +138,7 @@ export default function ProjectionsPage({ params }: { params: Promise<{ locale: 
       period: r.period,
       target_revenue: String(r.target.revenue ?? ''),
       target_clients: String(r.target.clients ?? ''),
+      target_net_profit: String(r.target.netProfit ?? ''),
       target_margin_pct: String(r.target.marginPct ?? ''),
       notes: r.target.notes ?? '',
     })
@@ -196,6 +199,12 @@ export default function ProjectionsPage({ params }: { params: Promise<{ locale: 
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{isFr ? 'Objectif nouveaux clients' : 'New clients target'}</label>
                 <input type="number" min="0" value={form.target_clients} onChange={e => setForm(f => ({ ...f, target_clients: e.target.value }))}
                   placeholder="5" className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{isFr ? 'Objectif bénéfice net (FCFA)' : 'Net profit target (FCFA)'}</label>
+                <input type="number" step="100" value={form.target_net_profit} onChange={e => setForm(f => ({ ...f, target_net_profit: e.target.value }))}
+                  placeholder="40 000" className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
+                <p className="text-[10px] text-gray-400 mt-0.5">{isFr ? 'Revenus − Coûts IA − Charges infra' : 'Revenue − AI costs − Infra costs'}</p>
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{isFr ? 'Objectif marge % (optionnel)' : 'Margin % target (optional)'}</label>
@@ -343,7 +352,9 @@ export default function ProjectionsPage({ params }: { params: Promise<{ locale: 
                         <th className="px-4 py-3 text-left">{isFr ? 'Mois' : 'Month'}</th>
                         <th className="px-3 py-3 text-right">{isFr ? 'Objectif' : 'Target'}</th>
                         <th className="px-3 py-3 text-right">{isFr ? 'Réel' : 'Actual'}</th>
-                        <th className="px-3 py-3 text-right">{isFr ? 'Écart' : 'Variance'}</th>
+                        <th className="px-3 py-3 text-right">{isFr ? 'Écart revenus' : 'Rev. variance'}</th>
+                        <th className="px-3 py-3 text-right">{isFr ? 'Bén. net obj.' : 'Net profit tgt'}</th>
+                        <th className="px-3 py-3 text-right">{isFr ? 'Bén. net réel' : 'Actual net'}</th>
                         <th className="px-3 py-3 text-right">{isFr ? 'Clients obj.' : 'Clients tgt'}</th>
                         <th className="px-3 py-3 text-right">{isFr ? 'Clients réels' : 'Actual clients'}</th>
                         <th className="px-3 py-3 text-center">{isFr ? 'Statut' : 'Status'}</th>
@@ -378,6 +389,20 @@ export default function ProjectionsPage({ params }: { params: Promise<{ locale: 
                                 <VarBadge pct={r.variance.revenuePct} />
                               </>
                             ) : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                          {/* Bénéfice net cible */}
+                          <td className="px-3 py-3 text-right">
+                            {r.target.netProfit != null ? (
+                              <>
+                                <p className="font-semibold text-violet-600">{f0(r.target.netProfit)}</p>
+                                <p className="text-[10px] text-gray-400">${toUsd(r.target.netProfit)}</p>
+                              </>
+                            ) : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                          {/* Bénéfice net réel */}
+                          <td className="px-3 py-3 text-right">
+                            <p className={`font-semibold ${r.actual.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{f0(r.actual.netProfit)}</p>
+                            {r.variance.netProfitPct != null && <VarBadge pct={r.variance.netProfitPct} />}
                           </td>
                           <td className="px-3 py-3 text-right text-gray-500 text-xs">{r.target.clients ?? '—'}</td>
                           <td className="px-3 py-3 text-right">
