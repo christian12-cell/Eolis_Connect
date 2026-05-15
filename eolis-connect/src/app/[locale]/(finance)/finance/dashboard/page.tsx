@@ -126,6 +126,27 @@ export default function FinanceDashboardPage({ params }: { params: Promise<{ loc
               <KpiCard icon={<Building2 size={18} className="text-amber-600" />}    label={isFr ? 'Charges infra' : 'Infra costs'}                   fcfa={data.totalInfraFcfa}        sub={`$${f2(data.totalInfraUsd)}`}         color="bg-amber-50" />
             </div>
 
+            {/* Acquisition cost */}
+            {data.acquisitionCostFcfa > 0 && (
+              <div className="bg-white rounded-2xl border border-purple-100 p-4 shadow-sm flex items-center gap-4">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
+                  <Wallet size={18} className="text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-900">
+                    {isFr ? 'Crédits offerts (acquisition)' : 'Free credits (acquisition)'}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {data.newClientsCount} {isFr ? 'nouveau(x) client(s)' : 'new client(s)'} × {isFr ? '100 FCFA offerts à l\'inscription' : '100 FCFA given at signup'}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-base font-bold text-purple-600">−{f2(data.acquisitionCostFcfa)} <span className="text-xs font-normal text-gray-400">FCFA</span></p>
+                  <p className="text-[10px] text-gray-400 font-mono">${toUsd(data.acquisitionCostFcfa)} · €{toEur(data.acquisitionCostFcfa)}</p>
+                </div>
+              </div>
+            )}
+
             {/* KPI row 2 — profits */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">

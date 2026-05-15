@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import User, AIUsage, CreditRequest, InfrastructureCost, FinancialAuditLog
 from ..deps import get_current_user, require_roles
+from ..credit_service import FREE_CREDITS_ON_SIGNUP
 
 def _client_ip(request: Request) -> str | None:
     fwd = request.headers.get("x-forwarded-for")
@@ -79,28 +80,36 @@ def finance_dashboard(
     pending = db.query(CreditRequest).filter(CreditRequest.status == "pending").all()
     pending_amount = sum(r.amount_declared for r in pending)
 
+    # Acquisition cost — crédits offerts aux nouveaux clients inscrits sur la période
+    new_clients_q = db.query(User).filter(User.role == "CLIENT")
+    new_clients_q = _apply_date_filter(new_clients_q, User.created_at, from_date, to_date)
+    new_clients_count   = new_clients_q.count()
+    acquisition_cost    = new_clients_count * FREE_CREDITS_ON_SIGNUP
+
     # P&L
-    total_costs     = total_ai_fcfa + total_infra_fcfa
+    total_costs     = total_ai_fcfa + total_infra_fcfa + acquisition_cost
     gross_profit    = total_revenue - total_ai_fcfa
     net_profit      = total_revenue - total_costs
     usage_profit    = total_credits - total_ai_fcfa
     margin_pct      = round((net_profit / total_revenue * 100), 1) if total_revenue > 0 else None
 
     return {
-        "totalRevenue":      round(total_revenue,     2),
-        "totalAiCostFcfa":   round(total_ai_fcfa,     4),
-        "totalAiCostUsd":    round(total_ai_fcfa / 600, 6),
-        "totalCreditsConsumed": round(total_credits,  2),
-        "usageProfit":       round(usage_profit,      4),
-        "totalInfraFcfa":    round(total_infra_fcfa,  2),
-        "totalInfraUsd":     round(total_infra_usd,   4),
-        "totalCosts":        round(total_costs,       2),
-        "grossProfit":       round(gross_profit,      2),
-        "netProfit":         round(net_profit,        2),
-        "marginPct":         margin_pct,
-        "approvedCount":     len(approved),
-        "pendingCount":      len(pending),
-        "pendingAmount":     round(pending_amount,    2),
+        "totalRevenue":        round(total_revenue,       2),
+        "totalAiCostFcfa":     round(total_ai_fcfa,       4),
+        "totalAiCostUsd":      round(total_ai_fcfa / 600, 6),
+        "totalCreditsConsumed": round(total_credits,      2),
+        "usageProfit":         round(usage_profit,        4),
+        "totalInfraFcfa":      round(total_infra_fcfa,    2),
+        "totalInfraUsd":       round(total_infra_usd,     4),
+        "newClientsCount":     new_clients_count,
+        "acquisitionCostFcfa": round(acquisition_cost,    2),
+        "totalCosts":          round(total_costs,         2),
+        "grossProfit":         round(gross_profit,        2),
+        "netProfit":           round(net_profit,          2),
+        "marginPct":           margin_pct,
+        "approvedCount":       len(approved),
+        "pendingCount":        len(pending),
+        "pendingAmount":       round(pending_amount,      2),
         "infraBreakdown":    [
             {
                 "id":          c.id,
@@ -241,39 +250,52 @@ def pnl_report(
 
     infra = db.query(InfrastructureCost).all()
 
+    def _blank():
+        return {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0, "acquisitionCost": 0}
+
     # Group by month
     months: dict = {}
 
     for r in approved:
         if not r.validated_at: continue
         key = r.validated_at.strftime("%Y-%m")
-        months.setdefault(key, {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0})
+        months.setdefault(key, _blank())
         months[key]["revenue"] += r.amount_validated or 0
 
     for u in usages:
         key = u.created_at.strftime("%Y-%m")
-        months.setdefault(key, {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0})
+        months.setdefault(key, _blank())
         months[key]["aiCost"]  += u.cost_fcfa
         months[key]["credits"] += float(getattr(u, "credits_cost", 0) or 0)
 
     for c in infra:
         key = c.period
-        months.setdefault(key, {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0})
+        months.setdefault(key, _blank())
         months[key]["infraCost"] += c.amount_fcfa
+
+    # Acquisition cost — nouveaux clients par mois
+    new_clients_q = db.query(User).filter(User.role == "CLIENT")
+    new_clients_q = _apply_date_filter(new_clients_q, User.created_at, from_date, to_date)
+    for client in new_clients_q.all():
+        key = client.created_at.strftime("%Y-%m")
+        months.setdefault(key, _blank())
+        months[key]["acquisitionCost"] += FREE_CREDITS_ON_SIGNUP
 
     rows = []
     for month, v in sorted(months.items()):
-        net = v["revenue"] - v["aiCost"] - v["infraCost"]
+        acq = v["acquisitionCost"]
+        net = v["revenue"] - v["aiCost"] - v["infraCost"] - acq
         rows.append({
-            "month":      month,
-            "revenue":    round(v["revenue"],   2),
-            "aiCost":     round(v["aiCost"],    4),
-            "infraCost":  round(v["infraCost"], 2),
-            "totalCost":  round(v["aiCost"] + v["infraCost"], 2),
-            "grossProfit": round(v["revenue"] - v["aiCost"], 2),
-            "netProfit":  round(net,             2),
-            "credits":    round(v["credits"],    2),
-            "marginPct":  round(net / v["revenue"] * 100, 1) if v["revenue"] > 0 else None,
+            "month":           month,
+            "revenue":         round(v["revenue"],   2),
+            "aiCost":          round(v["aiCost"],    4),
+            "infraCost":       round(v["infraCost"], 2),
+            "acquisitionCost": round(acq,            2),
+            "totalCost":       round(v["aiCost"] + v["infraCost"] + acq, 2),
+            "grossProfit":     round(v["revenue"] - v["aiCost"], 2),
+            "netProfit":       round(net,             2),
+            "credits":         round(v["credits"],    2),
+            "marginPct":       round(net / v["revenue"] * 100, 1) if v["revenue"] > 0 else None,
         })
 
     return rows
