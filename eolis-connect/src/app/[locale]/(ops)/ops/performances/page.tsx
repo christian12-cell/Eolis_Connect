@@ -350,9 +350,11 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
     .sort((a, b) => {
       // 1. Volume traité (décroissant)
       if (b.stats.count !== a.stats.count) return b.stats.count - a.stats.count
-      // 2. Satisfaction (décroissant)
-      const satDiff = (b.stats.avgSat ?? 0) - (a.stats.avgSat ?? 0)
-      if (Math.abs(satDiff) > 0.05) return satDiff
+      // 2. Satisfaction — ignoré si l'un des deux n'a pas encore de note (pas de pénalité pour oubli client)
+      if (a.stats.avgSat !== null && b.stats.avgSat !== null) {
+        const satDiff = b.stats.avgSat - a.stats.avgSat
+        if (Math.abs(satDiff) > 0.05) return satDiff
+      }
       // 3. SLA global % (décroissant)
       const slaDiff = (b.stats.slaGlobal ?? 0) - (a.stats.slaGlobal ?? 0)
       if (slaDiff !== 0) return slaDiff
