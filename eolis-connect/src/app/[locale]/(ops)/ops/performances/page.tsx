@@ -192,6 +192,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   const [yearFilter, setYearFilter]     = useState<number[]>([])
   const [monthFilter, setMonthFilter]   = useState<number[]>([])
   const [urgencyFilter, setUrgencyFilter] = useState<string[]>([])
+  const [commentsOpen, setCommentsOpen]   = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -570,28 +571,43 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
           {/* Charts */}
           <AgentPerformanceCharts trendData={trendData} urgencyData={urgencyData} locale={locale} />
 
-          {/* Comments */}
-          <div className="bg-white rounded-2xl border border-gray-100 card-shadow mt-5 p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">{L.comments}</h3>
-            {selStats.comments.length === 0 ? (
-              <p className="text-sm text-gray-400">{L.noComments}</p>
-            ) : (
-              <div className="space-y-3">
-                {selStats.comments.slice(0, 8).map((c, i) => (
-                  <div key={i} className="flex gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
-                    <div className="flex-shrink-0">
-                      <div className="flex gap-0.5 mt-0.5">
-                        {[1,2,3,4,5].map(s => (
-                          <Star key={s} size={11} className={s <= c.score ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
-                        ))}
+          {/* Comments — accordion */}
+          <div className="bg-white rounded-2xl border border-gray-100 card-shadow mt-5">
+            <button
+              onClick={() => setCommentsOpen(o => !o)}
+              className="w-full flex items-center justify-between px-5 py-4 text-left"
+            >
+              <span className="text-sm font-semibold text-gray-900">
+                {L.comments}
+                {selStats.comments.length > 0 && (
+                  <span className="ml-2 text-xs font-normal text-gray-400">({selStats.comments.length})</span>
+                )}
+              </span>
+              <ChevronDown size={16} className={`text-gray-400 transition-transform ${commentsOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {commentsOpen && (
+              <div className="px-5 pb-5">
+                {selStats.comments.length === 0 ? (
+                  <p className="text-sm text-gray-400">{L.noComments}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {selStats.comments.map((c, i) => (
+                      <div key={i} className="flex gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+                        <div className="flex-shrink-0">
+                          <div className="flex gap-0.5 mt-0.5">
+                            {[1,2,3,4,5].map(s => (
+                              <Star key={s} size={11} className={s <= c.score ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 italic">&ldquo;{c.comment}&rdquo;</p>
+                          <p className="text-xs text-gray-400 mt-1">{c.ref} · {formatDate(c.date, locale)}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-700 italic">&ldquo;{c.comment}&rdquo;</p>
-                      <p className="text-xs text-gray-400 mt-1">{c.ref} · {formatDate(c.date, locale)}</p>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -692,37 +708,54 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
             </div>
           </div>
 
-          {/* All comments */}
-          <div className="bg-white rounded-2xl border border-gray-100 card-shadow mt-5 p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">{L.comments}</h3>
-            {(() => {
-              const allComments = allAgentStats.flatMap(a =>
-                a.stats.comments.map((c: any) => ({ ...c, agentName: `${a.firstName} ${a.lastName}` }))
-              ).slice(0, 10)
-              return allComments.length === 0 ? (
-                <p className="text-sm text-gray-400">{L.noComments}</p>
-              ) : (
-                <div className="space-y-3">
-                  {allComments.map((c, i) => (
-                    <div key={i} className="flex gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
-                      <div className="flex-shrink-0">
-                        <p className="text-xs font-semibold text-gray-600 mb-1">{c.agentName}</p>
-                        <div className="flex gap-0.5">
-                          {[1,2,3,4,5].map(s => (
-                            <Star key={s} size={11} className={s <= c.score ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
-                          ))}
-                        </div>
+          {/* All comments — accordion */}
+          {(() => {
+            const allComments = allAgentStats.flatMap(a =>
+              a.stats.comments.map((c: any) => ({ ...c, agentName: `${a.firstName} ${a.lastName}` }))
+            )
+            return (
+              <div className="bg-white rounded-2xl border border-gray-100 card-shadow mt-5">
+                <button
+                  onClick={() => setCommentsOpen(o => !o)}
+                  className="w-full flex items-center justify-between px-5 py-4 text-left"
+                >
+                  <span className="text-sm font-semibold text-gray-900">
+                    {L.comments}
+                    {allComments.length > 0 && (
+                      <span className="ml-2 text-xs font-normal text-gray-400">({allComments.length})</span>
+                    )}
+                  </span>
+                  <ChevronDown size={16} className={`text-gray-400 transition-transform ${commentsOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {commentsOpen && (
+                  <div className="px-5 pb-5">
+                    {allComments.length === 0 ? (
+                      <p className="text-sm text-gray-400">{L.noComments}</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {allComments.map((c, i) => (
+                          <div key={i} className="flex gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+                            <div className="flex-shrink-0">
+                              <p className="text-xs font-semibold text-gray-600 mb-1">{c.agentName}</p>
+                              <div className="flex gap-0.5">
+                                {[1,2,3,4,5].map(s => (
+                                  <Star key={s} size={11} className={s <= c.score ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'} />
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-700 italic">&ldquo;{c.comment}&rdquo;</p>
+                              <p className="text-xs text-gray-400 mt-1">{c.ref} · {formatDate(c.date, locale)}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-700 italic">&ldquo;{c.comment}&rdquo;</p>
-                        <p className="text-xs text-gray-400 mt-1">{c.ref} · {formatDate(c.date, locale)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            })()}
-          </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </>
       )}
 

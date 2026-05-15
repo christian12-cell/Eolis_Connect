@@ -551,7 +551,12 @@ export default function AgentTicketActions({
       })
       if (res.ok) {
         const msg = await res.json()
-        setMessages(prev => prev.map(m => m.id === tempId ? { ...msg, _previewData: previewData } : m))
+        setMessages(prev => {
+          // Replace temp, then dedup: WS may have added the real msg before POST response arrived
+          const replaced = prev.map(m => m.id === tempId ? { ...msg, _previewData: previewData } : m)
+          const seen = new Set<string>()
+          return replaced.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true })
+        })
         const tkt = await apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()).catch(() => null)
         if (tkt?.attachments) {
           setAttachments(tkt.attachments)

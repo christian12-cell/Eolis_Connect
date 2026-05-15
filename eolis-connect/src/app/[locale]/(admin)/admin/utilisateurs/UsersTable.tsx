@@ -150,10 +150,10 @@ function CreateModal({ locale, onClose, onDone }: { locale: string; onClose: () 
         <form onSubmit={submit} className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <Field label={isFr ? 'Prénom *' : 'First name *'}>
-              <Input value={firstName} onChange={setFirstName} placeholder="Jean" />
+              <Input value={firstName} onChange={setFirstName} placeholder="Debora" />
             </Field>
             <Field label={isFr ? 'Nom *' : 'Last name *'}>
-              <Input value={lastName} onChange={setLastName} placeholder="MBARGA" />
+              <Input value={lastName} onChange={setLastName} placeholder="DENMEKO" />
             </Field>
           </div>
 
@@ -161,7 +161,7 @@ function CreateModal({ locale, onClose, onDone }: { locale: string; onClose: () 
             <div>
               <Input value={username}
                 onChange={v => { setUsername(v); setUsernameEdited(true) }}
-                placeholder="Jean.MBARGA" />
+                placeholder="Debora.DENMEKO" />
               {!usernameEdited && username && (
                 <p className="text-[10px] text-[#4A8FC4] mt-1">
                   ✨ {isFr ? 'Généré automatiquement — modifiable' : 'Auto-generated — editable'}
@@ -171,7 +171,7 @@ function CreateModal({ locale, onClose, onDone }: { locale: string; onClose: () 
           </Field>
 
           <Field label="Email *">
-            <Input value={email} onChange={setEmail} type="email" placeholder="jean.mbarga@eolisgroup.com" />
+            <Input value={email} onChange={setEmail} type="email" placeholder="debora.denmeko@eolisgroup.com" />
           </Field>
 
           <Field label={isFr ? 'Téléphone *' : 'Phone *'}>
@@ -275,7 +275,7 @@ function EditModal({ user, locale, onClose, onDone }: { user: User; locale: stri
         </div>
         <form onSubmit={submit} className="px-6 py-5 space-y-4">
           <Field label={isFr ? 'Identifiant (login)' : 'Username (login)'}>
-            <Input value={username} onChange={setUsername} placeholder="Jean.MBARGA" />
+            <Input value={username} onChange={setUsername} placeholder="Debora.DENMEKO" />
           </Field>
           <Field label="Email">
             <Input value={email} onChange={setEmail} type="email" />
