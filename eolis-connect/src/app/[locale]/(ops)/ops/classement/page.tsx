@@ -127,6 +127,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   const [monthFilter, setMonthFilter] = useState<number[]>([])
   const [dayFilter, setDayFilter]     = useState<number[]>([])
   const [urgencyFilter, setUrgencyFilter]   = useState<string[]>([])
+  const [tableOpen, setTableOpen]           = useState(false)
   const [expandedBadge, setExpandedBadge]   = useState<string | null>(null)
   const [expandedStrip, setExpandedStrip]   = useState<string | null>(null)
 
@@ -464,12 +465,19 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
             </div>
           )}
 
-          {/* ── Full table ── */}
+          {/* ── Full table — accordion ── */}
           <div className="bg-white rounded-2xl border border-gray-100 card-shadow overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900">{L.table}</h2>
-            </div>
-            <div className="overflow-x-auto">
+            <button
+              onClick={() => setTableOpen(o => !o)}
+              className="w-full flex items-center justify-between px-5 py-4 text-left"
+            >
+              <span className="font-semibold text-gray-900">
+                {L.table}
+                <span className="ml-2 text-xs font-normal text-gray-400">({ranked.length})</span>
+              </span>
+              <ChevronDown size={16} className={`text-gray-400 transition-transform ${tableOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {tableOpen && <div className="overflow-x-auto border-t border-gray-100">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wide bg-gray-50">
@@ -593,7 +601,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                   })}
                 </tbody>
               </table>
-            </div>
+            </div>}
           </div>
         </>
       )}
