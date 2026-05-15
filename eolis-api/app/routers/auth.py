@@ -1,18 +1,58 @@
 import re
 import secrets
+import random as _random
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
+from jose import jwt as _jose_jwt, JWTError as _JWTError
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..limiter import limiter
-from ..models import User, Log, AccountSetupToken, CreditBalance, PasswordReset
+from ..models import User, Log, AccountSetupToken, CreditBalance, PasswordReset, OtpCode
 from ..credit_service import FREE_CREDITS_ON_SIGNUP
 from ..schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from ..security import hash_password, verify_password, create_access_token
 from ..deps import get_current_user
 from ..config import settings
-from ..email_service import send_welcome_email, send_welcome_client, send_password_reset
-from ..sms_service import sms_password_reset
+from ..email_service import send_welcome_email, send_welcome_client, send_password_reset, send_otp_email
+from ..sms_service import sms_password_reset, sms_otp
+
+
+# ── Forgot-password helpers ────────────────────────────────────────────────────
+
+def _mask_email(email: str) -> str:
+    if '@' not in email:
+        return email
+    local, domain = email.split('@', 1)
+    ml = local[:2] + '*' * max(1, len(local) - 2)
+    if '.' in domain:
+        dname, dtld = domain.rsplit('.', 1)
+        md = dname[:1] + '*' * max(0, len(dname) - 1) + '.' + dtld[:1] + '*' * max(1, len(dtld) - 1)
+    else:
+        md = domain[:1] + '*' * max(1, len(domain) - 1)
+    return f"{ml}@{md}"
+
+def _mask_phone(phone: str) -> str:
+    if len(phone) < 7:
+        return phone
+    return phone[:3] + '*' * max(1, len(phone) - 6) + phone[-3:]
+
+def _mask_username(username: str) -> str:
+    if len(username) <= 3:
+        return username[0] + '*' * (len(username) - 1)
+    return username[:2] + '*' * max(1, len(username) - 4) + username[-2:]
+
+def _sign_lookup(user_id: str, mode: str) -> str:
+    return _jose_jwt.encode(
+        {"sub": user_id, "fp_mode": mode, "exp": datetime.utcnow() + timedelta(minutes=15)},
+        settings.SECRET_KEY, algorithm=settings.ALGORITHM,
+    )
+
+def _verify_lookup(token: str) -> dict | None:
+    try:
+        data = _jose_jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return data if "fp_mode" in data else None
+    except _JWTError:
+        return None
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -100,33 +140,102 @@ def get_account_setup(token: str, db: Session = Depends(get_db)):
     return {"username": user.username, "tempPassword": temp_pw, "firstName": user.first_name}
 
 
-@router.post("/forgot-password")
-@limiter.limit("3/minute")
-def forgot_password(request: Request, body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    email = (body.get("email") or "").strip().lower()
-    phone = (body.get("phone") or "").strip()
-    print(f"[forgot-pw] email={email!r} phone={phone!r}")
-    user = db.query(User).filter(User.email == email, User.status == "ACTIVE").first()
-    print(f"[forgot-pw] user_found={user is not None} mail_enabled={settings.MAIL_ENABLED} resend_key_set={bool(settings.RESEND_API_KEY)}")
-    if user:
-        # Invalidate any existing unused tokens
-        db.query(PasswordReset).filter(PasswordReset.user_id == user.id, PasswordReset.used == False).update({"used": True})
-        token = secrets.token_urlsafe(32)
-        pr = PasswordReset(
-            user_id=user.id,
-            token=token,
-            expires_at=datetime.utcnow() + timedelta(hours=48),
-        )
-        db.add(pr)
+@router.post("/forgot-password/lookup")
+@limiter.limit("5/minute")
+def fp_lookup(request: Request, body: dict, db: Session = Depends(get_db)):
+    mode  = (body.get("mode") or "").strip()
+    value = (body.get("value") or "").strip()
+    if mode not in ("email", "phone") or not value:
+        raise HTTPException(400, "invalid_request")
+    user = None
+    if mode == "email":
+        user = db.query(User).filter(User.email == value.lower(), User.status == "ACTIVE").first()
+    else:
+        user = db.query(User).filter(User.phone == value, User.status == "ACTIVE").first()
+        if not user:
+            norm = re.sub(r'\s', '', value)
+            user = db.query(User).filter(User.phone == norm, User.status == "ACTIVE").first()
+    if not user:
+        return {"found": False}
+    masked = _mask_email(user.email) if mode == "email" else _mask_phone(user.phone or value)
+    return {"found": True, "masked": masked, "lookupToken": _sign_lookup(user.id, mode)}
+
+
+@router.post("/forgot-password/send-otp")
+@limiter.limit("5/minute")
+def fp_send_otp(request: Request, body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    payload = _verify_lookup(body.get("lookupToken", ""))
+    if not payload:
+        raise HTTPException(401, "invalid_token")
+    user = db.query(User).filter(User.id == payload["sub"], User.status == "ACTIVE").first()
+    if not user:
+        raise HTTPException(404, "user_not_found")
+    mode   = payload["fp_mode"]
+    fp_key = f"fp:{user.id}"
+    db.query(OtpCode).filter(OtpCode.phone == fp_key, OtpCode.used == False).update({"used": True})
+    code = str(_random.randint(100000, 999999))
+    db.add(OtpCode(user_id=user.id, phone=fp_key, code=code,
+                   expires_at=datetime.utcnow() + timedelta(minutes=10)))
+    db.commit()
+    lang = user.language or "fr"
+    if mode == "email":
+        background_tasks.add_task(send_otp_email, user.email, user.first_name, code, lang)
+    elif user.phone:
+        background_tasks.add_task(sms_otp, user.phone, code)
+    return {"ok": True}
+
+
+@router.post("/forgot-password/verify-otp")
+def fp_verify_otp(body: dict, db: Session = Depends(get_db)):
+    payload = _verify_lookup(body.get("lookupToken", ""))
+    if not payload:
+        raise HTTPException(401, "invalid_token")
+    user = db.query(User).filter(User.id == payload["sub"], User.status == "ACTIVE").first()
+    if not user:
+        raise HTTPException(404, "user_not_found")
+    code   = (body.get("code") or "").strip()
+    fp_key = f"fp:{user.id}"
+    otp = (db.query(OtpCode)
+           .filter(OtpCode.phone == fp_key, OtpCode.used == False,
+                   OtpCode.expires_at > datetime.utcnow())
+           .order_by(OtpCode.created_at.desc()).first())
+    if not otp:
+        raise HTTPException(400, "otp_expired")
+    otp.attempts += 1
+    if otp.attempts >= 3 and otp.code != code:
+        otp.used = True
         db.commit()
-        _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
-        lang = user.language or "fr"
-        reset_url = f"{_frontend}/{lang}/reset-password?token={token}"
-        print(f"[forgot-pw] reset_url={reset_url}")
+        raise HTTPException(400, "otp_max_attempts")
+    if otp.code != code:
+        db.commit()
+        raise HTTPException(400, f"otp_wrong:{3 - otp.attempts}")
+    otp.used = True
+    db.commit()
+    verified_token = _sign_lookup(user.id, payload["fp_mode"] + ":verified")
+    return {"ok": True, "maskedUsername": _mask_username(user.username), "verifiedToken": verified_token}
+
+
+@router.post("/forgot-password/send-reset")
+def fp_send_reset(body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    payload = _verify_lookup(body.get("verifiedToken", ""))
+    if not payload or not payload.get("fp_mode", "").endswith(":verified"):
+        raise HTTPException(401, "invalid_token")
+    user = db.query(User).filter(User.id == payload["sub"], User.status == "ACTIVE").first()
+    if not user:
+        raise HTTPException(404, "user_not_found")
+    db.query(PasswordReset).filter(PasswordReset.user_id == user.id, PasswordReset.used == False).update({"used": True})
+    token = secrets.token_urlsafe(32)
+    db.add(PasswordReset(user_id=user.id, token=token,
+                         expires_at=datetime.utcnow() + timedelta(hours=48)))
+    db.commit()
+    _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
+    lang = user.language or "fr"
+    reset_url = f"{_frontend}/{lang}/reset-password?token={token}"
+    mode = payload["fp_mode"].replace(":verified", "")
+    if mode == "email":
         background_tasks.add_task(send_password_reset, user.email, user.first_name, reset_url, lang)
-        sms_to = phone or user.phone
-        if sms_to:
-            background_tasks.add_task(sms_password_reset, sms_to, user.first_name, reset_url, lang)
+    elif user.phone:
+        background_tasks.add_task(sms_password_reset, user.phone, user.first_name, reset_url, lang)
     return {"ok": True}
 
 

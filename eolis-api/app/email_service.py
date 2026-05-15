@@ -273,6 +273,29 @@ def send_account_deleted(to_email: str, first_name: str, lang: str = "fr"):
     _send(to_email, subject, _template(content, lang))
 
 
+def send_otp_email(to_email: str, first_name: str, code: str, lang: str = "fr"):
+    en = lang == "en"
+    subject = "Your verification code — Eolis Connect" if en else "Votre code de vérification — Eolis Connect"
+    t_greeting = "Hello" if en else "Bonjour"
+    t_label    = "Your verification code" if en else "Votre code de vérification"
+    t_valid    = "Valid for 10 minutes. Do not share it." if en else "Valable 10 minutes. Ne le partagez pas."
+    t_no_req   = "If you did not request this code, ignore this email." if en else "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email."
+    content = f"""
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_greeting} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFF6FF;border:1px solid #bfdbfe;border-radius:12px;margin:20px 0;">
+        <tr>
+          <td style="padding:28px;text-align:center;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;">{t_label}</p>
+            <p style="margin:0;font-size:48px;font-weight:800;color:#1B3A5C;font-family:monospace;letter-spacing:8px;">{code}</p>
+            <p style="margin:10px 0 0;font-size:12px;color:#6b7280;">{t_valid}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0;font-size:13px;color:#9ca3af;">{t_no_req}</p>
+    """
+    _send(to_email, subject, _template(content, lang))
+
+
 def send_password_reset(to_email: str, first_name: str, reset_url: str, lang: str = "fr"):
     en = lang == "en"
     subject = "Reset your Eolis Connect password" if en else "Réinitialisez votre mot de passe Eolis Connect"
