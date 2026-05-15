@@ -339,6 +339,8 @@ Du plus récent au plus ancien (date de clôture).
 
 Page d'analyse approfondie des performances individuelles et collectives.
 
+> **Note importante — dossiers traités par un admin :** Quand un OPS_ADMIN ou SYSTEM_ADMIN prend en charge et clôture un dossier directement, ce dossier **n'entre pas** dans les statistiques de performance ni dans le classement des agents. Seuls les comptes de rôle `AGENT` sont analysés ici. En revanche, ces dossiers sont bien comptabilisés dans les cartes globales de l'**Overview** (volume total, SLA global, etc.), car l'Overview mesure la santé du service dans son ensemble, indépendamment de qui a traité le dossier.
+
 ### Filtres
 
 - **Sélecteur d'agent** : bascule entre la vue globale ("All agents") et la fiche d'un agent spécifique
