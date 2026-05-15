@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { PeriodFilter, DateRange } from '@/components/ui/PeriodFilter'
-import { apiFetch, getUser } from '@/lib/api-client'
+import { apiFetch, getUser, getToken, apiUrl } from '@/lib/api-client'
 import { PieChart, Loader2, TrendingUp, TrendingDown, AlertCircle, Download, ChevronDown, X } from 'lucide-react'
 import FinanceCharts from '../FinanceCharts'
 
@@ -54,18 +54,22 @@ function UrgencySelect({ selected, onToggle, onClear, isFr }: {
   )
 }
 
-function exportCsv(rows: any[], isFr: boolean) {
-  const headers = ['Mois','Revenus FCFA','Revenus USD','Revenus EUR','Coûts IA FCFA','Charges infra FCFA','Coûts totaux FCFA','Bénéfice brut FCFA','Bénéfice net FCFA','Bénéfice net USD','Bénéfice net EUR','Marge %']
-  const lines = rows.map(r => [
-    r.month, f2(r.revenue), toUsd(r.revenue), toEur(r.revenue),
-    r.aiCost.toFixed(4), f2(r.infraCost), f2(r.totalCost),
-    f2(r.grossProfit), f2(r.netProfit), toUsd(r.netProfit), toEur(r.netProfit),
-    r.marginPct !== null ? `${r.marginPct}%` : '—',
-  ])
-  const csv = [headers, ...lines].map(row => row.map(v => `"${v}"`).join(',')).join('\n')
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
-  a.download = `eolis-pnl-${new Date().toISOString().slice(0,10)}.csv`; a.click()
+async function exportXlsx(range: DateRange | null, urgency: string[]) {
+  const qs = new URLSearchParams()
+  if (range) { qs.set('from', range.from); qs.set('to', range.to) }
+  if (urgency.length) qs.set('urgency', urgency.join(','))
+  const token = getToken()
+  const res = await fetch(apiUrl(`/api/finance/pnl/export-xlsx?${qs.toString()}`), {
+    headers: { Authorization: `Bearer ${token ?? ''}` },
+  })
+  if (!res.ok) return
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `eolis-pnl-${new Date().toISOString().slice(0, 10)}.xlsx`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export default function FinanceRapportPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -156,9 +160,9 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
             <PeriodFilter onChange={(r) => { setRange(r); load(r, urgencyFilter) }} isFr={isFr} />
             <UrgencySelect selected={urgencyFilter} onToggle={toggleUrg} onClear={clearUrg} isFr={isFr} />
             {rows.length > 0 && (
-              <button onClick={() => exportCsv(rows, isFr)}
+              <button onClick={() => exportXlsx(range, urgencyFilter)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:border-gray-300">
-                <Download size={14} /> CSV
+                <Download size={14} /> Excel
               </button>
             )}
           </div>
@@ -239,8 +243,8 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <p className="font-bold text-gray-900">{isFr ? 'Détail mensuel' : 'Monthly breakdown'}</p>
-                <button onClick={() => exportCsv(rows, isFr)} className="flex items-center gap-1.5 text-xs text-[#4A8FC4] font-medium hover:underline">
-                  <Download size={13} /> {isFr ? 'Exporter CSV' : 'Export CSV'}
+                <button onClick={() => exportXlsx(range, urgencyFilter)} className="flex items-center gap-1.5 text-xs text-[#4A8FC4] font-medium hover:underline">
+                  <Download size={13} /> {isFr ? 'Exporter Excel' : 'Export Excel'}
                 </button>
               </div>
               <div className="overflow-x-auto">

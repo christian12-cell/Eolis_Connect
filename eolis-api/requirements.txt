@@ -15,3 +15,4 @@ openai>=1.0.0
 pypdf>=4.0.0
 slowapi>=0.1.9
 resend>=2.0.0
+openpyxl>=3.1.0

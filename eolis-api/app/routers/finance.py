@@ -1,6 +1,8 @@
+import io
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -275,3 +277,233 @@ def pnl_report(
         })
 
     return rows
+
+
+@router.get("/pnl/export-xlsx")
+def export_pnl_xlsx(
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date:   Optional[str] = Query(None, alias="to"),
+    urgency:   Optional[str] = Query(None),
+    current_user: User = Depends(require_roles(*FINANCE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    """Export P&L report as formatted Excel (.xlsx)."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        raise HTTPException(500, "openpyxl not installed — run: pip install openpyxl")
+
+    # ── Reuse pnl_report logic ─────────────────────────────────────────────────
+    from ..models import Ticket
+    req_q = db.query(CreditRequest).filter(CreditRequest.status == "approved")
+    req_q = _apply_date_filter(req_q, CreditRequest.validated_at, from_date, to_date)
+    approved = req_q.all()
+
+    ai_q = db.query(AIUsage)
+    ai_q = _apply_date_filter(ai_q, AIUsage.created_at, from_date, to_date)
+    usages = ai_q.all()
+
+    urgency_list = [u.strip() for u in urgency.split(",")] if urgency else None
+    if urgency_list:
+        filtered = []
+        for u in usages:
+            ticket = None
+            if u.ticket_id:
+                ticket = db.query(Ticket).filter(Ticket.id == u.ticket_id).first()
+            elif u.bl_document_id:
+                ticket = db.query(Ticket).filter(Ticket.bl_document_id == u.bl_document_id).first()
+            if ticket and ticket.urgency in urgency_list:
+                filtered.append(u)
+        usages = filtered
+
+    infra = db.query(InfrastructureCost).all()
+
+    months: dict = {}
+    for r in approved:
+        if not r.validated_at: continue
+        key = r.validated_at.strftime("%Y-%m")
+        months.setdefault(key, {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0})
+        months[key]["revenue"] += r.amount_validated or 0
+    for u in usages:
+        key = u.created_at.strftime("%Y-%m")
+        months.setdefault(key, {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0})
+        months[key]["aiCost"]  += u.cost_fcfa
+        months[key]["credits"] += float(getattr(u, "credits_cost", 0) or 0)
+    for c in infra:
+        key = c.period
+        months.setdefault(key, {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0})
+        months[key]["infraCost"] += c.amount_fcfa
+
+    rows = []
+    for month, v in sorted(months.items()):
+        net = v["revenue"] - v["aiCost"] - v["infraCost"]
+        rows.append({
+            "month": month,
+            "revenue":    round(v["revenue"],   2),
+            "aiCost":     round(v["aiCost"],    4),
+            "infraCost":  round(v["infraCost"], 2),
+            "totalCost":  round(v["aiCost"] + v["infraCost"], 2),
+            "grossProfit": round(v["revenue"] - v["aiCost"], 2),
+            "netProfit":  round(net, 2),
+            "credits":    round(v["credits"], 2),
+            "marginPct":  round(net / v["revenue"] * 100, 1) if v["revenue"] > 0 else None,
+        })
+
+    USD_RATE = 600.0
+    EUR_RATE = 655.957
+
+    def to_usd(f): return round(f / USD_RATE, 2)
+    def to_eur(f): return round(f / EUR_RATE, 2)
+
+    # ── Build workbook ─────────────────────────────────────────────────────────
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Rapport P&L"
+    ws.sheet_properties.tabColor = "1B3A5C"
+
+    BLUE       = "1B3A5C"
+    LIGHT_BLUE = "4A8FC4"
+    WHITE      = "FFFFFF"
+    GREEN_BG   = "ECFDF5"
+    RED_BG     = "FEF2F2"
+    ALT_BG     = "F0F4F8"
+    TOTAL_BG   = "0F2A47"
+
+    thin = Side(style="thin", color="D1DAE3")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    def fill(hex_color: str) -> PatternFill:
+        return PatternFill("solid", fgColor=hex_color)
+
+    def font(bold=False, color=None, size=10, italic=False) -> Font:
+        return Font(name="Calibri", size=size, bold=bold, italic=italic,
+                    color=color or "1A202C")
+
+    def align(h="left", v="center", wrap=False) -> Alignment:
+        return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
+
+    HEADERS = [
+        "Mois", "Revenus (FCFA)", "Revenus ($)", "Revenus (€)",
+        "Coûts IA (FCFA)", "Charges infra (FCFA)", "Coûts totaux (FCFA)",
+        "Bénéfice brut (FCFA)", "Bénéfice net (FCFA)", "Bénéf. net ($)", "Bénéf. net (€)", "Marge %",
+    ]
+    NUM_COLS = len(HEADERS)
+
+    # Row 1 — Title
+    ws.merge_cells(f"A1:{get_column_letter(NUM_COLS)}1")
+    c = ws["A1"]
+    period_label = f"{from_date} → {to_date}" if from_date and to_date else "Toute la période"
+    c.value = f"EOLIS CONNECT — Rapport Financier P&L  ·  {period_label}"
+    c.font  = font(bold=True, color=WHITE, size=14)
+    c.fill  = fill(BLUE)
+    c.alignment = align("center")
+    ws.row_dimensions[1].height = 36
+
+    # Row 2 — Subtitle
+    ws.merge_cells(f"A2:{get_column_letter(NUM_COLS)}2")
+    c = ws["A2"]
+    c.value = f"Exporté le {datetime.utcnow().strftime('%d/%m/%Y à %H:%M')} UTC  ·  {len(rows)} mois"
+    c.font  = font(italic=True, color=LIGHT_BLUE, size=9)
+    c.fill  = fill("E8EEF4")
+    c.alignment = align("center")
+    ws.row_dimensions[2].height = 18
+
+    # Row 3 — Column headers
+    for col, h in enumerate(HEADERS, 1):
+        c = ws.cell(row=3, column=col, value=h)
+        c.font      = font(bold=True, color=WHITE, size=10)
+        c.fill      = fill(LIGHT_BLUE)
+        c.alignment = align("center", wrap=True)
+        c.border    = border
+    ws.row_dimensions[3].height = 40
+    ws.freeze_panes = "A4"
+
+    # Data rows
+    for i, row in enumerate(rows):
+        r = 4 + i
+        net = row["netProfit"]
+        row_fill = fill(GREEN_BG if net >= 0 else RED_BG) if i % 2 == 0 else fill("FFFFFF" if net >= 0 else "FFF5F5")
+
+        values = [
+            row["month"],
+            row["revenue"],    to_usd(row["revenue"]),    to_eur(row["revenue"]),
+            row["aiCost"],     row["infraCost"],           row["totalCost"],
+            row["grossProfit"],row["netProfit"],           to_usd(row["netProfit"]), to_eur(row["netProfit"]),
+            f"{row['marginPct']}%" if row["marginPct"] is not None else "—",
+        ]
+
+        for col, val in enumerate(values, 1):
+            c = ws.cell(row=r, column=col, value=val)
+            c.fill   = row_fill
+            c.border = border
+            if col == 1:
+                c.font      = font(bold=True)
+                c.alignment = align("center")
+            elif col == NUM_COLS:
+                c.font      = font(bold=(row["marginPct"] is not None and row["marginPct"] >= 50),
+                                   color="15803D" if (row["marginPct"] or 0) >= 50 else
+                                         "B45309" if (row["marginPct"] or 0) >= 0 else "DC2626")
+                c.alignment = align("right")
+            else:
+                c.number_format = '#,##0.00'
+                c.alignment     = align("right")
+                if col in (9,) and net < 0:
+                    c.font = font(bold=True, color="DC2626")
+                elif col in (9,):
+                    c.font = font(bold=True, color="15803D")
+                else:
+                    c.font = font()
+        ws.row_dimensions[r].height = 20
+
+    # Totals row
+    if rows:
+        tr = 4 + len(rows)
+        t_rev   = sum(r["revenue"]    for r in rows)
+        t_ai    = sum(r["aiCost"]     for r in rows)
+        t_infra = sum(r["infraCost"]  for r in rows)
+        t_cost  = sum(r["totalCost"]  for r in rows)
+        t_gross = sum(r["grossProfit"]for r in rows)
+        t_net   = sum(r["netProfit"]  for r in rows)
+        t_marg  = round(t_net / t_rev * 100, 1) if t_rev > 0 else None
+
+        totals = [
+            "TOTAL",
+            t_rev, to_usd(t_rev), to_eur(t_rev),
+            t_ai,  t_infra, t_cost,
+            t_gross, t_net, to_usd(t_net), to_eur(t_net),
+            f"{t_marg}%" if t_marg is not None else "—",
+        ]
+        for col, val in enumerate(totals, 1):
+            c = ws.cell(row=tr, column=col, value=val)
+            c.fill      = fill(TOTAL_BG)
+            c.font      = font(bold=True, color=WHITE, size=10)
+            c.border    = border
+            c.alignment = align("right" if col > 1 else "center")
+            if col not in (1, NUM_COLS) and isinstance(val, float):
+                c.number_format = '#,##0.00'
+        ws.row_dimensions[tr].height = 24
+
+        # Footer note
+        ws.merge_cells(f"A{tr+2}:{get_column_letter(NUM_COLS)}{tr+2}")
+        c = ws.cell(row=tr+2, column=1, value="Généré automatiquement par Eolis Connect — Ne pas modifier")
+        c.font      = font(italic=True, color="9CA3AF", size=8)
+        c.alignment = align("center")
+
+    # Column widths
+    col_widths = [12, 18, 13, 13, 18, 20, 18, 20, 20, 13, 13, 10]
+    for col, width in enumerate(col_widths, 1):
+        ws.column_dimensions[get_column_letter(col)].width = width
+
+    # Stream response
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"eolis-pnl-{datetime.utcnow().strftime('%Y-%m-%d')}.xlsx"
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
