@@ -50,7 +50,7 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
   useEffect(() => {
     const u = getUser()
     if (!u) { router.replace(`/${locale}/login`); return }
-    if (!['AGENT', 'OPS_ADMIN', 'SYSTEM_ADMIN'].includes(u.role)) { router.replace(`/${locale}/login`); return }
+    if (!['AGENT', 'OPS_ADMIN', 'SYSTEM_ADMIN', 'FINANCE_AGENT'].includes(u.role)) { router.replace(`/${locale}/login`); return }
     setUser(u)
     setUsername(u.username ?? '')
     setFirstName(u.firstName ?? '')

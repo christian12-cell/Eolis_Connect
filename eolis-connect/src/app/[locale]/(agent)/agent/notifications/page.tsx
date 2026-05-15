@@ -31,7 +31,7 @@ export default function StaffNotificationsPage({ params }: { params: Promise<{ l
   useEffect(() => {
     const u = getUser()
     if (!u) { router.replace(`/${locale}/login`); return }
-    if (!['AGENT', 'OPS_ADMIN', 'SYSTEM_ADMIN'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
+    if (!['AGENT', 'OPS_ADMIN', 'SYSTEM_ADMIN', 'FINANCE_AGENT'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
     setUser(u)
     apiFetch('/api/notifications').then(r => r.json()).then(data => {
       setNotifications(Array.isArray(data) ? data : [])

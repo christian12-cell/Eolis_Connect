@@ -2,7 +2,7 @@
 
 import {
   ComposedChart, Line, Bar, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
+  Tooltip, Legend, ResponsiveContainer, Cell,
   ReferenceLine,
 } from 'recharts'
 
@@ -91,21 +91,6 @@ export default function FinanceCharts({ rows, isFr }: Props) {
     marginTitle:isFr ? 'Taux de marge mensuel' : 'Monthly margin rate',
   }
 
-  // Cost structure for pie
-  const totalAi    = rows.reduce((s, r) => s + r.aiCost, 0)
-  const totalInfra = rows.reduce((s, r) => s + r.infraCost, 0)
-  const pieData = [
-    { name: L.aiCost,    value: +f2(totalAi),    color: '#ef4444' },
-    { name: L.infraCost, value: +f2(totalInfra), color: '#f97316' },
-  ].filter(d => d.value > 0)
-
-  // Margin data
-  const marginData = rows.map(r => ({
-    month: r.month,
-    margin: r.marginPct ?? 0,
-    netProfit: r.netProfit,
-  }))
-
   const chartStyle = { fontSize: 11, fill: '#9ab0c4' }
 
   return (
@@ -158,67 +143,6 @@ export default function FinanceCharts({ rows, isFr }: Props) {
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
-
-        {/* ── Chart 3: Cost structure pie ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <p className="text-sm font-bold text-gray-900 mb-4">{L.structTitle}</p>
-          {pieData.length > 0 ? (
-            <div className="flex items-center gap-4">
-              <ResponsiveContainer width="60%" height={160}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
-                    {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: any) => [`${f2(v)} FCFA`, '']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-2 flex-1">
-                {pieData.map(d => (
-                  <div key={d.name}>
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{background: d.color}} />
-                      <span className="text-xs text-gray-600">{d.name}</span>
-                    </div>
-                    <p className="text-sm font-bold text-gray-800 ml-4">{f2(d.value)} FCFA</p>
-                    <p className="text-[10px] text-gray-400 font-mono ml-4">${toUsd(d.value)} · €{toEur(d.value)}</p>
-                  </div>
-                ))}
-                <div className="border-t border-gray-100 pt-2 ml-0">
-                  <p className="text-xs font-bold text-gray-700">{isFr ? 'Total charges' : 'Total costs'}</p>
-                  <p className="text-sm font-bold text-gray-900">{f2(totalAi + totalInfra)} FCFA</p>
-                  <p className="text-[10px] text-gray-400 font-mono">${toUsd(totalAi + totalInfra)} · €{toEur(totalAi + totalInfra)}</p>
-                </div>
-              </div>
-            </div>
-          ) : <p className="text-sm text-gray-400 text-center py-8">{isFr ? 'Aucune charge' : 'No costs'}</p>}
-        </div>
-
-        {/* ── Chart 4: Monthly margin bars ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <p className="text-sm font-bold text-gray-900 mb-4">{L.marginTitle}</p>
-          <ResponsiveContainer width="100%" height={160}>
-            <ComposedChart data={marginData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f8" />
-              <XAxis dataKey="month" tick={chartStyle} />
-              <YAxis tick={chartStyle} unit="%" width={35} />
-              <Tooltip formatter={(v: any) => [`${v}%`, L.margin]} />
-              <ReferenceLine y={0} stroke="#e2e8f0" />
-              <Bar dataKey="margin" name={L.margin} radius={[3, 3, 0, 0]}>
-                {marginData.map((d, i) => (
-                  <Cell key={i} fill={d.margin >= 70 ? '#22c55e' : d.margin >= 30 ? '#f59e0b' : d.margin >= 0 ? '#8b5cf6' : '#ef4444'} />
-                ))}
-              </Bar>
-            </ComposedChart>
-          </ResponsiveContainer>
-          <div className="flex gap-3 mt-2 text-[10px] text-gray-400 flex-wrap">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>≥70%</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>30–69%</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-500 inline-block"/>0–29%</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/>{isFr ? 'négatif' : 'negative'}</span>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
