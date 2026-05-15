@@ -206,10 +206,24 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
     })
     .filter(Boolean)
     .sort((a: any, b: any) => {
-      if (b.composite !== null && a.composite !== null) return b.composite - a.composite
-      if (b.composite !== null) return 1
-      if (a.composite !== null) return -1
-      return b.count - a.count
+      // 1. Score composite (décroissant)
+      if (b.composite !== null && a.composite !== null) {
+        const diff = b.composite - a.composite
+        if (Math.abs(diff) > 0.05) return diff
+      } else {
+        if (b.composite !== null) return 1
+        if (a.composite !== null) return -1
+      }
+      // 2. Satisfaction — ignoré si l'un n'a pas de notes
+      if (a.avgSat !== null && b.avgSat !== null) {
+        const satDiff = b.avgSat - a.avgSat
+        if (Math.abs(satDiff) > 0.05) return satDiff
+      }
+      // 3. SLA %
+      const slaDiff = (b.slaGlobal ?? 0) - (a.slaGlobal ?? 0)
+      if (slaDiff !== 0) return slaDiff
+      // 4. Délai moyen (croissant — plus rapide = meilleur)
+      return (a.avgTime ?? Infinity) - (b.avgTime ?? Infinity)
     }) as any[]
 
   // Previous period ranks
@@ -219,7 +233,16 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
       return stats ? { id: a.id, ...stats } : null
     })
     .filter(Boolean)
-    .sort((a: any, b: any) => (b.composite ?? 0) - (a.composite ?? 0)) as any[]
+    .sort((a: any, b: any) => {
+      if (b.composite !== null && a.composite !== null) {
+        const diff = b.composite - a.composite
+        if (Math.abs(diff) > 0.05) return diff
+      } else {
+        if (b.composite !== null) return 1
+        if (a.composite !== null) return -1
+      }
+      return (a.avgTime ?? Infinity) - (b.avgTime ?? Infinity)
+    }) as any[]
 
   // ── Badges ───────────────────────────────────────────────────────────────
   const badges: Record<string, string[]> = {}
