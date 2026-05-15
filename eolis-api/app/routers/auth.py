@@ -99,6 +99,30 @@ def get_account_setup(token: str, db: Session = Depends(get_db)):
     return {"username": user.username, "tempPassword": temp_pw, "firstName": user.first_name}
 
 
+@router.patch("/update-contact")
+def update_contact(body: dict, db: Session = Depends(get_db)):
+    """Allow a newly registered user to fix their phone/email within 1h of creation."""
+    user_id = body.get("userId")
+    if not user_id:
+        raise HTTPException(400, "userId_required")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "not_found")
+    if (datetime.utcnow() - user.created_at).total_seconds() > 3600:
+        raise HTTPException(403, "too_late")
+    phone = body.get("phone")
+    email = body.get("email")
+    if phone:
+        user.phone = phone
+        user.phone_verified = False
+    if email:
+        if db.query(User).filter(User.email == email, User.id != user_id).first():
+            raise HTTPException(409, "email_taken")
+        user.email = email
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/check-username")
 def check_username(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()

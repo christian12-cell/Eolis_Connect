@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Eye, EyeOff, UserPlus, CheckCircle, AlertCircle, ArrowLeft, Copy, Check, Phone, RefreshCw, WifiOff } from 'lucide-react'
+import { Eye, EyeOff, UserPlus, CheckCircle, AlertCircle, ArrowLeft, Copy, Check, Phone, RefreshCw, WifiOff, Pencil } from 'lucide-react'
 import { apiUrl } from '@/lib/api-client'
 import { PhoneInput } from '@/components/ui/PhoneInput'
 
@@ -69,6 +69,13 @@ export default function RegisterPage({ params }: RegisterPageProps) {
 
   const [phoneValid, setPhoneValid] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
+  const [editingPhone, setEditingPhone] = useState(false)
+  const [editingEmail, setEditingEmail] = useState(false)
+  const [newPhone, setNewPhone] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newPhoneValid, setNewPhoneValid] = useState(false)
+  const [contactLoading, setContactLoading] = useState(false)
+  const [contactError, setContactError] = useState('')
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   useEffect(() => {
@@ -175,6 +182,44 @@ export default function RegisterPage({ params }: RegisterPageProps) {
     setOtpLoading(false)
   }
 
+  async function updateContact(type: 'phone' | 'email') {
+    setContactLoading(true)
+    setContactError('')
+    const payload: Record<string, string> = { userId: createdUserId }
+    if (type === 'phone') payload.phone = newPhone
+    if (type === 'email') payload.email = newEmail
+    const res = await fetch(apiUrl('/api/auth/update-contact'), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (res.ok) {
+      if (type === 'phone') {
+        setForm(f => ({ ...f, phone: newPhone }))
+        setEditingPhone(false)
+        setOtpVerified(false)
+        setOtpCode('')
+        setOtpError('')
+        await fetch(apiUrl('/api/auth/otp/resend'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: newPhone, userId: createdUserId }),
+        }).catch(() => {})
+        setOtpResent(true)
+        setTimeout(() => setOtpResent(false), 3000)
+      } else {
+        setForm(f => ({ ...f, email: newEmail }))
+        setEditingEmail(false)
+      }
+    } else {
+      const data = await res.json().catch(() => ({}))
+      if (data.detail === 'email_taken') setContactError(isFr ? 'Cet email est déjà utilisé.' : 'This email is already in use.')
+      else if (data.detail === 'too_late') setContactError(isFr ? 'Délai de modification dépassé (1h).' : 'Edit window expired (1h).')
+      else setContactError(isFr ? 'Erreur. Réessayez.' : 'Error. Please try again.')
+    }
+    setContactLoading(false)
+  }
+
   async function resendOtp() {
     await fetch(apiUrl('/api/auth/otp/resend'), {
       method: 'POST',
@@ -251,6 +296,38 @@ export default function RegisterPage({ params }: RegisterPageProps) {
               </div>
               <p className="text-xs text-gray-400 mt-2">{text.usernameHint}</p>
             </div>
+            {/* Email edit */}
+            <div className="mb-4 p-4 rounded-xl bg-gray-50 border border-gray-200">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">{isFr ? 'Adresse email' : 'Email address'}</p>
+                {!editingEmail && (
+                  <button onClick={() => { setNewEmail(form.email); setEditingEmail(true); setContactError('') }}
+                    className="flex items-center gap-1 text-xs text-[#4A8FC4] hover:underline">
+                    <Pencil size={11} /> {isFr ? 'Modifier' : 'Edit'}
+                  </button>
+                )}
+              </div>
+              {!editingEmail ? (
+                <p className="text-sm font-mono text-gray-700 break-all">{form.email}</p>
+              ) : (
+                <div className="space-y-2 mt-2">
+                  <input type="email" value={newEmail} onChange={e => { setNewEmail(e.target.value); setContactError('') }}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A8FC4]" />
+                  {contactError && <p className="text-xs text-red-500">{contactError}</p>}
+                  <div className="flex gap-2">
+                    <button onClick={() => updateContact('email')} disabled={!newEmail.includes('@') || !newEmail.includes('.') || contactLoading}
+                      className="flex-1 py-1.5 rounded-lg bg-[#1B3A5C] text-white text-xs font-semibold disabled:opacity-50">
+                      {contactLoading ? '...' : isFr ? 'Confirmer' : 'Confirm'}
+                    </button>
+                    <button onClick={() => { setEditingEmail(false); setContactError('') }}
+                      className="flex-1 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold">
+                      {isFr ? 'Annuler' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="mb-4 p-4 rounded-xl bg-gray-50 border border-gray-200">
               <p className="text-xs text-gray-400 mb-1 font-semibold uppercase tracking-wide">{text.yourPassword}</p>
               <p className="text-lg tracking-widest text-gray-400">{'•'.repeat(10)}</p>
@@ -273,11 +350,32 @@ export default function RegisterPage({ params }: RegisterPageProps) {
                 </div>
                 {!otpVerified ? (
                   <>
-                    <p className="text-xs text-gray-500 mb-3">
-                      {isFr
-                        ? `Un code à 6 chiffres a été envoyé au ${form.phone}`
-                        : `A 6-digit code was sent to ${form.phone}`}
-                    </p>
+                    {!editingPhone ? (
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs text-gray-500">
+                          {isFr ? `Un code à 6 chiffres a été envoyé au ${form.phone}` : `A 6-digit code was sent to ${form.phone}`}
+                        </p>
+                        <button onClick={() => { setNewPhone(form.phone); setEditingPhone(true); setContactError('') }}
+                          className="flex-shrink-0 flex items-center gap-1 text-xs text-[#4A8FC4] hover:underline ml-2">
+                          <Pencil size={11} /> {isFr ? 'Modifier' : 'Edit'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 mb-3">
+                        <PhoneInput value={newPhone} onChange={v => { setNewPhone(v); setContactError('') }} onValidChange={setNewPhoneValid} required />
+                        {contactError && <p className="text-xs text-red-500">{contactError}</p>}
+                        <div className="flex gap-2">
+                          <button onClick={() => updateContact('phone')} disabled={!newPhoneValid || contactLoading}
+                            className="flex-1 py-1.5 rounded-lg bg-[#1B3A5C] text-white text-xs font-semibold disabled:opacity-50">
+                            {contactLoading ? '...' : isFr ? 'Confirmer & renvoyer' : 'Confirm & resend'}
+                          </button>
+                          <button onClick={() => { setEditingPhone(false); setContactError('') }}
+                            className="flex-1 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold">
+                            {isFr ? 'Annuler' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <form onSubmit={verifyOtp} className="flex gap-2">
                       <input type="text" inputMode="numeric" maxLength={6} value={otpCode}
                         onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '')); setOtpError('') }}
