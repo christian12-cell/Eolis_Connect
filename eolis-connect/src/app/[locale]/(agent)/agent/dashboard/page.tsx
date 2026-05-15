@@ -218,7 +218,14 @@ export default function AgentDashboardPage({ params }: { params: Promise<{ local
                 {filtered.map((ticket: any) => (
                   <tr key={ticket.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3"><div className={`w-3 h-3 rounded-full ${urgencyDot[ticket.urgency] ?? 'bg-gray-300'}`} /></td>
-                    <td className="px-3 py-3 font-mono text-xs font-bold text-gray-500">{ticket.ref}</td>
+                    <td className="px-3 py-3">
+                      <span className="font-mono text-xs font-bold text-gray-500">{ticket.ref}</span>
+                      {ticket.blDocumentId && (
+                        <span className="ml-1.5 inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                          ⚡ Premium
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-3">
                       <p className="font-medium text-gray-900">{ticket.client?.firstName} {ticket.client?.lastName}</p>
                       <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded mt-0.5 ${

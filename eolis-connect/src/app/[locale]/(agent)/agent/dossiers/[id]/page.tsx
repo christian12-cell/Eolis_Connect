@@ -166,8 +166,13 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
       <div className="bg-white rounded-2xl border border-gray-100 card-shadow p-5 mb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <span className="font-mono text-sm font-bold text-gray-400">{ticket.ref}</span>
+              {ticket.blDocumentId && (
+                <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                  ⚡ Premium
+                </span>
+              )}
               <UrgencyBadge urgency={ticket.urgency} locale={locale} />
               <StatusBadge status={ticket.status} locale={locale} />
             </div>
