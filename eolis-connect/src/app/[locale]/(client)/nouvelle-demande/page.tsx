@@ -2488,7 +2488,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
             {/* Popup friction Premium */}
             {showBlFrictionPopup && (
-              <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-8 bg-black/50" onClick={() => setShowBlFrictionPopup(false)}>
+              <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50" onClick={() => setShowBlFrictionPopup(false)}>
                 <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
                   <div className="flex flex-col items-center text-center gap-3 mb-5">
                     <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-2xl">⚡</div>
