@@ -49,6 +49,17 @@ interface FormState {
   shipName: string; voyageNumber: string; shipDate: string
   code: string
   description: string
+  // BL manual fields
+  eta: string; portOfLoading: string; portOfDischarge: string
+  placeOfReceipt: string; placeOfDelivery: string
+  customerRef: string; service: string; blDate: string
+  bookingPartyName: string; bookingPartyRegion: string
+  pickupRef: string; pickupQty: string; pickupSizeType: string
+  pickupUsage: string; pickupDepot: string; pickupReleaseDate: string
+  terminal: string; terminalClosing: string; vgmClosing: string; customsClosing: string
+  descriptionOfGoods: string; noOfPacks: string; kindOfPack: string
+  linerTerms: string; imo: string; grossWeightTons: string; measurementCbm: string
+  containerTemp: string
 }
 
 interface ContainerEntry {
@@ -213,6 +224,17 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     shipName: '', voyageNumber: '', shipDate: '',
     code: '',
     description: '',
+    // BL manual fields
+    eta: '', portOfLoading: '', portOfDischarge: '',
+    placeOfReceipt: '', placeOfDelivery: '',
+    customerRef: '', service: '', blDate: '',
+    bookingPartyName: '', bookingPartyRegion: '',
+    pickupRef: '', pickupQty: '', pickupSizeType: '',
+    pickupUsage: '', pickupDepot: '', pickupReleaseDate: '',
+    terminal: '', terminalClosing: '', vgmClosing: '', customsClosing: '',
+    descriptionOfGoods: '', noOfPacks: '', kindOfPack: '',
+    linerTerms: '', imo: '', grossWeightTons: '', measurementCbm: '',
+    containerTemp: '',
   })
 
   const [mode, setMode]             = useState<'simple' | 'multi' | 'conventionnel'>('simple')
@@ -248,6 +270,9 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [blError, setBlError]           = useState<string | null>(null)
   const [blOpenSection, setBlOpenSection] = useState<Record<string,boolean>>({
     ref: true, vessel: true, pickup: true, turnin: false, items: true, containers: true, remarks: false,
+  })
+  const [blManualSections, setBlManualSections] = useState<Record<string,boolean>>({
+    refs: false, transport: false, pickup: false, delays: false, goods: false,
   })
   const [prevBLs, setPrevBLs]           = useState<any[] | null>(null)
   const [prevBLsLoading, setPrevBLsLoading] = useState(false)
@@ -659,7 +684,64 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             shipDate:      v.shipDate || null,
             code:          v.code.trim() || null,
           })))
-        : (blVesselData || undefined)
+        : blVesselData
+        ? blVesselData
+        : (() => {
+            const hasAny = [
+              form.eta, form.portOfLoading, form.portOfDischarge,
+              form.placeOfReceipt, form.placeOfDelivery,
+              form.customerRef, form.service, form.blDate,
+              form.bookingPartyName, form.bookingPartyRegion,
+              form.pickupRef, form.pickupQty, form.pickupSizeType,
+              form.pickupUsage, form.pickupDepot, form.pickupReleaseDate,
+              form.terminal, form.terminalClosing, form.vgmClosing, form.customsClosing,
+              form.descriptionOfGoods, form.noOfPacks, form.kindOfPack,
+              form.linerTerms, form.imo, form.grossWeightTons, form.measurementCbm,
+              form.containerTemp,
+            ].some(v => v.trim())
+            if (!hasAny) return undefined
+            return JSON.stringify({
+              vessel:             form.shipName      || null,
+              voyage:             form.voyageNumber  || null,
+              eta:                form.eta           || null,
+              port_of_loading:    form.portOfLoading || null,
+              port_of_discharge:  form.portOfDischarge || null,
+              place_of_receipt:   form.placeOfReceipt  || null,
+              place_of_delivery:  form.placeOfDelivery || null,
+              customer_ref:       form.customerRef   || null,
+              service:            form.service       || null,
+              date:               form.blDate        || null,
+              booking_party_name:   form.bookingPartyName   || null,
+              booking_party_region: form.bookingPartyRegion || null,
+              pickup: {
+                reference:       form.pickupRef        || null,
+                quantity:        form.pickupQty        || null,
+                size_type:       form.pickupSizeType   || null,
+                container_usage: form.pickupUsage      || null,
+                depot:           form.pickupDepot      || null,
+                release_date:    form.pickupReleaseDate || null,
+              },
+              turn_in: {
+                terminal:         form.terminal        || null,
+                terminal_closing: form.terminalClosing || null,
+                vgm_closing:      form.vgmClosing      || null,
+                customs_closing:  form.customsClosing  || null,
+              },
+              booking_items: [{
+                description_of_goods: form.descriptionOfGoods || null,
+                no_of_packs:          form.noOfPacks          || null,
+                kind_of_pack:         form.kindOfPack         || null,
+                liner_terms:          form.linerTerms         || null,
+                imo:                  form.imo                || null,
+                gross_weight_tons:    form.grossWeightTons    || null,
+                measurement_cbm:      form.measurementCbm     || null,
+              }],
+              container_details: form.containerTemp ? [{
+                container_no: form.containerNumber || null,
+                set_point:    form.containerTemp   || null,
+              }] : [],
+            })
+          })()
 
       const body = {
         category:       finalCategory,
@@ -2171,6 +2253,162 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               </div>
             )}
 
+            {/* BL manual fields — mode simple uniquement */}
+            {mode === 'simple' && (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-3">
+                  <span className="text-base mt-0.5">⚡</span>
+                  <div>
+                    <p className="text-xs font-bold text-amber-800">
+                      {isFr ? 'Ces informations sont extraites automatiquement avec Premium' : 'These fields are auto-filled with Premium BL extraction'}
+                    </p>
+                    <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed">
+                      {isFr
+                        ? 'Renseignez-les manuellement ou importez votre BL pour un traitement accéléré.'
+                        : 'Fill them manually or import your BL for faster processing.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Références */}
+                <div className="bg-white rounded-2xl overflow-hidden">
+                  <button type="button"
+                    onClick={() => setBlManualSections(p => ({ ...p, refs: !p.refs }))}
+                    className="w-full flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+                    <p className="text-sm font-bold text-[#1B3A5C]">{isFr ? 'Références BL' : 'BL References'}</p>
+                    <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${blManualSections.refs ? '' : '-rotate-90'}`} />
+                  </button>
+                  {blManualSections.refs && (
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+                      {([
+                        { key: 'customerRef',      label: isFr ? 'Réf. client' : 'Customer ref',        type: 'text' },
+                        { key: 'service',           label: 'Service',                                    type: 'text' },
+                        { key: 'blDate',            label: isFr ? 'Date du BL' : 'BL date',              type: 'date' },
+                        { key: 'bookingPartyName',  label: isFr ? 'Booking party (nom)' : 'Booking party (name)', type: 'text' },
+                        { key: 'bookingPartyRegion',label: isFr ? 'Région booking party' : 'Booking party region', type: 'text' },
+                      ] as { key: keyof FormState; label: string; type: string }[]).map(f => (
+                        <div key={f.key}>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">{f.label}</label>
+                          <input type={f.type} value={form[f.key]} onChange={e => set(f.key, e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C]" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Transport */}
+                <div className="bg-white rounded-2xl overflow-hidden">
+                  <button type="button"
+                    onClick={() => setBlManualSections(p => ({ ...p, transport: !p.transport }))}
+                    className="w-full flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+                    <p className="text-sm font-bold text-[#1B3A5C]">Transport</p>
+                    <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${blManualSections.transport ? '' : '-rotate-90'}`} />
+                  </button>
+                  {blManualSections.transport && (
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+                      {([
+                        { key: 'eta',             label: isFr ? 'ETA (arrivée estimée)' : 'ETA (estimated arrival)', type: 'date' },
+                        { key: 'portOfLoading',   label: isFr ? 'Port de chargement' : 'Port of loading',           type: 'text' },
+                        { key: 'portOfDischarge', label: isFr ? 'Port de déchargement' : 'Port of discharge',       type: 'text' },
+                        { key: 'placeOfReceipt',  label: isFr ? 'Lieu de réception' : 'Place of receipt',           type: 'text' },
+                        { key: 'placeOfDelivery', label: isFr ? 'Lieu de livraison' : 'Place of delivery',          type: 'text' },
+                      ] as { key: keyof FormState; label: string; type: string }[]).map(f => (
+                        <div key={f.key}>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">{f.label}</label>
+                          <input type={f.type} value={form[f.key]} onChange={e => set(f.key, e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C]" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pickup / Conteneur */}
+                <div className="bg-white rounded-2xl overflow-hidden">
+                  <button type="button"
+                    onClick={() => setBlManualSections(p => ({ ...p, pickup: !p.pickup }))}
+                    className="w-full flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+                    <p className="text-sm font-bold text-[#1B3A5C]">{isFr ? 'Pickup / Conteneur' : 'Pickup / Container'}</p>
+                    <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${blManualSections.pickup ? '' : '-rotate-90'}`} />
+                  </button>
+                  {blManualSections.pickup && (
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+                      {([
+                        { key: 'pickupRef',        label: isFr ? 'Référence pickup' : 'Pickup reference',      type: 'text' },
+                        { key: 'pickupQty',        label: isFr ? 'Quantité' : 'Quantity',                      type: 'text' },
+                        { key: 'pickupSizeType',   label: isFr ? 'Size/Type conteneur' : 'Container size/type',type: 'text' },
+                        { key: 'pickupUsage',      label: isFr ? 'Usage conteneur' : 'Container usage',        type: 'text' },
+                        { key: 'pickupDepot',      label: isFr ? 'Dépôt pickup' : 'Pickup depot',              type: 'text' },
+                        { key: 'pickupReleaseDate',label: isFr ? 'Date de release' : 'Release date',           type: 'date' },
+                        { key: 'containerTemp',    label: isFr ? 'Température (reefer)' : 'Temperature (reefer)', type: 'text' },
+                      ] as { key: keyof FormState; label: string; type: string }[]).map(f => (
+                        <div key={f.key}>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">{f.label}</label>
+                          <input type={f.type} value={form[f.key]} onChange={e => set(f.key, e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C]" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Délais terminal */}
+                <div className="bg-white rounded-2xl overflow-hidden">
+                  <button type="button"
+                    onClick={() => setBlManualSections(p => ({ ...p, delays: !p.delays }))}
+                    className="w-full flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+                    <p className="text-sm font-bold text-[#1B3A5C]">{isFr ? 'Délais terminal' : 'Terminal deadlines'}</p>
+                    <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${blManualSections.delays ? '' : '-rotate-90'}`} />
+                  </button>
+                  {blManualSections.delays && (
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+                      {([
+                        { key: 'terminal',        label: 'Terminal',                                          type: 'text' },
+                        { key: 'terminalClosing', label: isFr ? 'Fermeture terminal' : 'Terminal closing',    type: 'text' },
+                        { key: 'vgmClosing',      label: 'VGM closing',                                       type: 'text' },
+                        { key: 'customsClosing',  label: isFr ? 'Clôture douane' : 'Customs closing',         type: 'text' },
+                      ] as { key: keyof FormState; label: string; type: string }[]).map(f => (
+                        <div key={f.key}>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">{f.label}</label>
+                          <input type={f.type} value={form[f.key]} onChange={e => set(f.key, e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C]" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Marchandises */}
+                <div className="bg-white rounded-2xl overflow-hidden">
+                  <button type="button"
+                    onClick={() => setBlManualSections(p => ({ ...p, goods: !p.goods }))}
+                    className="w-full flex items-center justify-between px-4 py-3.5 active:bg-gray-50 transition-colors">
+                    <p className="text-sm font-bold text-[#1B3A5C]">{isFr ? 'Marchandises' : 'Goods'}</p>
+                    <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${blManualSections.goods ? '' : '-rotate-90'}`} />
+                  </button>
+                  {blManualSections.goods && (
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+                      {([
+                        { key: 'descriptionOfGoods', label: isFr ? 'Description des marchandises' : 'Description of goods', type: 'text' },
+                        { key: 'noOfPacks',          label: isFr ? 'Nombre de colis' : 'Number of packs',                  type: 'text' },
+                        { key: 'kindOfPack',         label: isFr ? 'Type de colis' : 'Kind of pack',                       type: 'text' },
+                        { key: 'linerTerms',         label: 'Liner terms',                                                  type: 'text' },
+                        { key: 'imo',                label: isFr ? 'IMO / Marchandise dangereuse' : 'IMO / Hazardous goods', type: 'text' },
+                        { key: 'grossWeightTons',    label: isFr ? 'Poids brut (tonnes)' : 'Gross weight (tons)',           type: 'text' },
+                        { key: 'measurementCbm',     label: isFr ? 'Volume (m³)' : 'Measurement (CBM)',                    type: 'text' },
+                      ] as { key: keyof FormState; label: string; type: string }[]).map(f => (
+                        <div key={f.key}>
+                          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">{f.label}</label>
+                          <input type={f.type} value={form[f.key]} onChange={e => set(f.key, e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C]" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Multiple vessel blocks — multi+separateVessels */}
             {isMultiSeparate && (
@@ -2483,7 +2721,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                       )}
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                         {[
-                          { l: t.shipLine, v: v.shipLine },
+                          { l: isFr ? 'Armateur' : 'Shipping line', v: v.shipLine },
                           { l: t.shipName, v: v.shipName },
                           { l: t.voyageNo, v: v.voyageNumber },
                           { l: t.shipDate, v: v.shipDate },
@@ -2497,6 +2735,89 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     </div>
                   </div>
                 ))}
+
+                {/* BL manual fields recap — mode simple */}
+                {mode === 'simple' && (() => {
+                  const hasRefs     = form.customerRef || form.service || form.blDate || form.bookingPartyName || form.bookingPartyRegion
+                  const hasTransport = form.eta || form.portOfLoading || form.portOfDischarge || form.placeOfReceipt || form.placeOfDelivery
+                  const hasPickup   = form.pickupRef || form.pickupQty || form.pickupSizeType || form.pickupUsage || form.pickupDepot || form.pickupReleaseDate || form.containerTemp
+                  const hasDelays   = form.terminal || form.terminalClosing || form.vgmClosing || form.customsClosing
+                  const hasGoods    = form.descriptionOfGoods || form.noOfPacks || form.kindOfPack || form.linerTerms || form.imo || form.grossWeightTons || form.measurementCbm
+                  if (!hasRefs && !hasTransport && !hasPickup && !hasDelays && !hasGoods) return null
+                  const Row = ({ label, value }: { label: string; value: string }) => (
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-medium">{label}</p>
+                      <p className="text-xs font-semibold text-gray-800 mt-0.5">{value}</p>
+                    </div>
+                  )
+                  return (
+                    <div className="space-y-3 mt-1 pt-3 border-t border-gray-100">
+                      {hasRefs && (
+                        <div>
+                          <p className="text-[10px] font-bold text-[#1B3A5C] uppercase tracking-wide mb-2">{isFr ? 'Références BL' : 'BL References'}</p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {form.customerRef    && <Row label={isFr ? 'Réf. client' : 'Customer ref'} value={form.customerRef} />}
+                            {form.service        && <Row label="Service"                                value={form.service} />}
+                            {form.blDate         && <Row label={isFr ? 'Date BL' : 'BL date'}          value={form.blDate} />}
+                            {form.bookingPartyName   && <Row label={isFr ? 'Booking party' : 'Booking party'} value={form.bookingPartyName} />}
+                            {form.bookingPartyRegion && <Row label={isFr ? 'Région' : 'Region'}          value={form.bookingPartyRegion} />}
+                          </div>
+                        </div>
+                      )}
+                      {hasTransport && (
+                        <div>
+                          <p className="text-[10px] font-bold text-[#1B3A5C] uppercase tracking-wide mb-2">Transport</p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {form.eta             && <Row label="ETA"                                           value={form.eta} />}
+                            {form.portOfLoading   && <Row label={isFr ? 'Port chargement' : 'Port of loading'} value={form.portOfLoading} />}
+                            {form.portOfDischarge && <Row label={isFr ? 'Port déchargement' : 'Port of discharge'} value={form.portOfDischarge} />}
+                            {form.placeOfReceipt  && <Row label={isFr ? 'Lieu réception' : 'Place of receipt'} value={form.placeOfReceipt} />}
+                            {form.placeOfDelivery && <Row label={isFr ? 'Lieu livraison' : 'Place of delivery'} value={form.placeOfDelivery} />}
+                          </div>
+                        </div>
+                      )}
+                      {hasPickup && (
+                        <div>
+                          <p className="text-[10px] font-bold text-[#1B3A5C] uppercase tracking-wide mb-2">{isFr ? 'Pickup / Conteneur' : 'Pickup / Container'}</p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {form.pickupRef        && <Row label={isFr ? 'Référence' : 'Reference'}          value={form.pickupRef} />}
+                            {form.pickupQty        && <Row label={isFr ? 'Quantité' : 'Quantity'}            value={form.pickupQty} />}
+                            {form.pickupSizeType   && <Row label="Size/Type"                                   value={form.pickupSizeType} />}
+                            {form.pickupUsage      && <Row label="Usage"                                       value={form.pickupUsage} />}
+                            {form.pickupDepot      && <Row label="Dépôt"                                       value={form.pickupDepot} />}
+                            {form.pickupReleaseDate && <Row label="Release"                                   value={form.pickupReleaseDate} />}
+                            {form.containerTemp    && <Row label={isFr ? 'Température' : 'Temperature'}      value={form.containerTemp} />}
+                          </div>
+                        </div>
+                      )}
+                      {hasDelays && (
+                        <div>
+                          <p className="text-[10px] font-bold text-[#1B3A5C] uppercase tracking-wide mb-2">{isFr ? 'Délais terminal' : 'Terminal deadlines'}</p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {form.terminal        && <Row label="Terminal"                                             value={form.terminal} />}
+                            {form.terminalClosing && <Row label={isFr ? 'Fermeture terminal' : 'Terminal closing'}    value={form.terminalClosing} />}
+                            {form.vgmClosing      && <Row label="VGM"                                                 value={form.vgmClosing} />}
+                            {form.customsClosing  && <Row label={isFr ? 'Douane' : 'Customs'}                        value={form.customsClosing} />}
+                          </div>
+                        </div>
+                      )}
+                      {hasGoods && (
+                        <div>
+                          <p className="text-[10px] font-bold text-[#1B3A5C] uppercase tracking-wide mb-2">{isFr ? 'Marchandises' : 'Goods'}</p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {form.descriptionOfGoods && <Row label={isFr ? 'Description' : 'Description'} value={form.descriptionOfGoods} />}
+                            {form.noOfPacks          && <Row label={isFr ? 'Nb. colis' : 'No. of packs'}  value={form.noOfPacks} />}
+                            {form.kindOfPack         && <Row label={isFr ? 'Type colis' : 'Kind of pack'} value={form.kindOfPack} />}
+                            {form.linerTerms         && <Row label="Liner terms"                           value={form.linerTerms} />}
+                            {form.imo                && <Row label="IMO"                                   value={form.imo} />}
+                            {form.grossWeightTons    && <Row label={isFr ? 'Poids (t)' : 'Weight (t)'}   value={form.grossWeightTons} />}
+                            {form.measurementCbm     && <Row label={isFr ? 'Volume (m³)' : 'Volume (CBM)'} value={form.measurementCbm} />}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             </RecapSection>
 
