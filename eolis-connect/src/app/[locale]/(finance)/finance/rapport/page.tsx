@@ -80,6 +80,7 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
   const [loading, setLoading]       = useState(true)
   const [range, setRange]           = useState<DateRange | null>(null)
   const [urgencyFilter, setUrg]     = useState<string[]>([])
+  const [tableOpen, setTableOpen]   = useState(false)
   const [showForecast, setForecast] = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
@@ -206,6 +207,81 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
               ))}
             </div>
 
+            {/* Monthly breakdown — accordion */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <button onClick={() => setTableOpen(o => !o)}
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors">
+                <p className="font-bold text-gray-900">{isFr ? 'Détail mensuel' : 'Monthly breakdown'}</p>
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${tableOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {tableOpen && (
+                <div className="border-t border-gray-100 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-[#1B3A5C] text-white text-xs">
+                        <th className="px-4 py-3 text-left">{isFr ? 'Mois' : 'Month'}</th>
+                        <th className="px-3 py-3 text-right">{isFr ? 'Revenus' : 'Revenue'}</th>
+                        <th className="px-3 py-3 text-right">{isFr ? 'Coûts IA' : 'AI costs'}</th>
+                        <th className="px-3 py-3 text-right">{isFr ? 'Infra' : 'Infra'}</th>
+                        <th className="px-3 py-3 text-right">{isFr ? 'Bén. brut' : 'Gross'}</th>
+                        <th className="px-3 py-3 text-right">{isFr ? 'Bén. net' : 'Net'}</th>
+                        <th className="px-3 py-3 text-right">Marge</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {rows.map((r, i) => (
+                        <tr key={i} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-semibold text-gray-800">{r.month}</td>
+                          <td className="px-3 py-3 text-right">
+                            <p className="font-semibold text-emerald-600">{f2(r.revenue)}</p>
+                            <p className="text-[10px] text-gray-400">${toUsd(r.revenue)}·€{toEur(r.revenue)}</p>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <p className="font-semibold text-red-500">{r.aiCost.toFixed(4)}</p>
+                            <p className="text-[10px] text-gray-400">${(r.aiCost/USD).toFixed(4)}</p>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <p className="font-semibold text-amber-600">{f2(r.infraCost)}</p>
+                            <p className="text-[10px] text-gray-400">${toUsd(r.infraCost)}·€{toEur(r.infraCost)}</p>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <p className="font-semibold text-blue-600">{f2(r.grossProfit)}</p>
+                            <p className="text-[10px] text-gray-400">${toUsd(r.grossProfit)}·€{toEur(r.grossProfit)}</p>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <p className={`font-bold ${r.netProfit >= 0 ? 'text-violet-600' : 'text-red-500'}`}>{f2(r.netProfit)}</p>
+                            <p className="text-[10px] text-gray-400">${toUsd(r.netProfit)}·€{toEur(r.netProfit)}</p>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            {r.marginPct !== null ? (
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.marginPct >= 70 ? 'bg-emerald-100 text-emerald-700' : r.marginPct >= 30 ? 'bg-amber-100 text-amber-700' : r.marginPct >= 0 ? 'bg-violet-100 text-violet-700' : 'bg-red-100 text-red-600'}`}>
+                                {r.marginPct}%
+                              </span>
+                            ) : <span className="text-gray-300">—</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-[#EDF1F7] font-bold">
+                        <td className="px-4 py-3 text-[#1B3A5C]">TOTAL</td>
+                        <td className="px-3 py-3 text-right text-emerald-600">{f2(totals.revenue)}<br/><span className="text-[10px] font-normal text-gray-400">${toUsd(totals.revenue)}·€{toEur(totals.revenue)}</span></td>
+                        <td className="px-3 py-3 text-right text-red-500">{totals.aiCost.toFixed(4)}</td>
+                        <td className="px-3 py-3 text-right text-amber-600">{f2(totals.infraCost)}<br/><span className="text-[10px] font-normal text-gray-400">${toUsd(totals.infraCost)}·€{toEur(totals.infraCost)}</span></td>
+                        <td className="px-3 py-3 text-right text-blue-600">{f2(totals.grossProfit)}</td>
+                        <td className="px-3 py-3 text-right" style={{color: totals.netProfit >= 0 ? '#7c3aed' : '#ef4444'}}>
+                          {f2(totals.netProfit)}<br/><span className="text-[10px] font-normal text-gray-400">${toUsd(totals.netProfit)}·€{toEur(totals.netProfit)}</span>
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          {totals.revenue > 0 && <span className="text-xs font-bold text-violet-600">{((totals.netProfit/totals.revenue)*100).toFixed(1)}%</span>}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+
             {/* Prévisionnel */}
             {forecast && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -239,79 +315,6 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
             {/* Charts */}
             <FinanceCharts rows={rows} isFr={isFr} />
 
-            {/* Table */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <p className="font-bold text-gray-900">{isFr ? 'Détail mensuel' : 'Monthly breakdown'}</p>
-                <button onClick={() => exportXlsx(range, urgencyFilter)} className="flex items-center gap-1.5 text-xs text-[#4A8FC4] font-medium hover:underline">
-                  <Download size={13} /> {isFr ? 'Exporter Excel' : 'Export Excel'}
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-[#1B3A5C] text-white text-xs">
-                      <th className="px-4 py-3 text-left">{isFr ? 'Mois' : 'Month'}</th>
-                      <th className="px-3 py-3 text-right">{isFr ? 'Revenus' : 'Revenue'}</th>
-                      <th className="px-3 py-3 text-right">{isFr ? 'Coûts IA' : 'AI costs'}</th>
-                      <th className="px-3 py-3 text-right">{isFr ? 'Infra' : 'Infra'}</th>
-                      <th className="px-3 py-3 text-right">{isFr ? 'Bén. brut' : 'Gross'}</th>
-                      <th className="px-3 py-3 text-right">{isFr ? 'Bén. net' : 'Net'}</th>
-                      <th className="px-3 py-3 text-right">Marge</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {rows.map((r, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-semibold text-gray-800">{r.month}</td>
-                        <td className="px-3 py-3 text-right">
-                          <p className="font-semibold text-emerald-600">{f2(r.revenue)}</p>
-                          <p className="text-[10px] text-gray-400">${toUsd(r.revenue)}·€{toEur(r.revenue)}</p>
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <p className="font-semibold text-red-500">{r.aiCost.toFixed(4)}</p>
-                          <p className="text-[10px] text-gray-400">${(r.aiCost/USD).toFixed(4)}</p>
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <p className="font-semibold text-amber-600">{f2(r.infraCost)}</p>
-                          <p className="text-[10px] text-gray-400">${toUsd(r.infraCost)}·€{toEur(r.infraCost)}</p>
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <p className="font-semibold text-blue-600">{f2(r.grossProfit)}</p>
-                          <p className="text-[10px] text-gray-400">${toUsd(r.grossProfit)}·€{toEur(r.grossProfit)}</p>
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <p className={`font-bold ${r.netProfit >= 0 ? 'text-violet-600' : 'text-red-500'}`}>{f2(r.netProfit)}</p>
-                          <p className="text-[10px] text-gray-400">${toUsd(r.netProfit)}·€{toEur(r.netProfit)}</p>
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          {r.marginPct !== null ? (
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.marginPct >= 70 ? 'bg-emerald-100 text-emerald-700' : r.marginPct >= 30 ? 'bg-amber-100 text-amber-700' : r.marginPct >= 0 ? 'bg-violet-100 text-violet-700' : 'bg-red-100 text-red-600'}`}>
-                              {r.marginPct}%
-                            </span>
-                          ) : <span className="text-gray-300">—</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-[#EDF1F7] font-bold">
-                      <td className="px-4 py-3 text-[#1B3A5C]">TOTAL</td>
-                      <td className="px-3 py-3 text-right text-emerald-600">{f2(totals.revenue)}<br/><span className="text-[10px] font-normal text-gray-400">${toUsd(totals.revenue)}·€{toEur(totals.revenue)}</span></td>
-                      <td className="px-3 py-3 text-right text-red-500">{totals.aiCost.toFixed(4)}</td>
-                      <td className="px-3 py-3 text-right text-amber-600">{f2(totals.infraCost)}<br/><span className="text-[10px] font-normal text-gray-400">${toUsd(totals.infraCost)}·€{toEur(totals.infraCost)}</span></td>
-                      <td className="px-3 py-3 text-right text-blue-600">{f2(totals.grossProfit)}</td>
-                      <td className="px-3 py-3 text-right" style={{color: totals.netProfit >= 0 ? '#7c3aed' : '#ef4444'}}>
-                        {f2(totals.netProfit)}<br/><span className="text-[10px] font-normal text-gray-400">${toUsd(totals.netProfit)}·€{toEur(totals.netProfit)}</span>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        {totals.revenue > 0 && <span className="text-xs font-bold text-violet-600">{((totals.netProfit/totals.revenue)*100).toFixed(1)}%</span>}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
           </>
         )}
       </div>

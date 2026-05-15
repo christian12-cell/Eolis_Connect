@@ -45,7 +45,7 @@ export default function FinanceDepensesPage({ params }: { params: Promise<{ loca
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving]   = useState(false)
-  const [form, setForm]       = useState({ category: 'vercel', label: '', amount_fcfa: '', amount_usd: '', period: new Date().toISOString().slice(0,7), invoice_url: '' })
+  const [form, setForm]       = useState({ category: 'vercel', label: '', currency: 'eur', amount: '', period: new Date().toISOString().slice(0,7), invoice_url: '' })
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   useEffect(() => {
@@ -65,23 +65,28 @@ export default function FinanceDepensesPage({ params }: { params: Promise<{ loca
   const isFr = locale === 'fr'
   const isReadOnly = user?.role === 'SYSTEM_ADMIN'
 
+  const amtNum  = parseFloat(form.amount) || 0
+  const amtFcfa = form.currency === 'fcfa' ? amtNum : form.currency === 'eur' ? amtNum * EUR : amtNum * USD
+  const amtUsd  = amtFcfa / USD
+  const amtEur  = amtFcfa / EUR
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.label || !form.amount_fcfa || !form.period) return
+    if (!form.label || !form.amount || !form.period) return
     setSaving(true)
     const res = await apiFetch('/api/finance/infra-costs', {
       method: 'POST',
       body: JSON.stringify({
         category: form.category,
         label: form.label,
-        amount_fcfa: parseFloat(form.amount_fcfa),
-        amount_usd: parseFloat(form.amount_usd) || parseFloat(form.amount_fcfa) / USD,
+        amount_fcfa: amtFcfa,
+        amount_usd: amtUsd,
         period: form.period,
         invoice_url: form.invoice_url || null,
       }),
     })
     setSaving(false)
-    if (res.ok) { setShowForm(false); setForm({ category:'vercel',label:'',amount_fcfa:'',amount_usd:'',period:new Date().toISOString().slice(0,7),invoice_url:'' }); load() }
+    if (res.ok) { setShowForm(false); setForm({ category:'vercel',label:'',currency:'eur',amount:'',period:new Date().toISOString().slice(0,7),invoice_url:'' }); load() }
   }
 
   async function del(id: string) {
@@ -153,15 +158,25 @@ export default function FinanceDepensesPage({ params }: { params: Promise<{ loca
                   placeholder={isFr ? 'Ex: Vercel Pro — mai 2026' : 'Ex: Vercel Pro — May 2026'}
                   className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]" required />
               </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Montant FCFA</label>
-                <input type="number" step="0.01" value={form.amount_fcfa} onChange={e => setForm(f => ({...f, amount_fcfa:e.target.value, amount_usd: String((parseFloat(e.target.value)||0)/USD)}))}
-                  placeholder="0.00" className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]" required />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Montant USD</label>
-                <input type="number" step="0.0001" value={form.amount_usd} onChange={e => setForm(f => ({...f, amount_usd:e.target.value}))}
-                  placeholder="0.0000" className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]" />
+              <div className="col-span-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{isFr ? 'Montant' : 'Amount'}</label>
+                <div className="mt-1 flex gap-2">
+                  <select value={form.currency} onChange={e => setForm(f => ({...f, currency: e.target.value}))}
+                    className="w-28 border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]">
+                    <option value="eur">€ EUR</option>
+                    <option value="usd">$ USD</option>
+                    <option value="fcfa">FCFA</option>
+                  </select>
+                  <input type="number" step="0.01" value={form.amount} onChange={e => setForm(f => ({...f, amount: e.target.value}))}
+                    placeholder="0.00" className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A5C]" required />
+                </div>
+                {amtNum > 0 && (
+                  <div className="mt-2 flex gap-4 text-xs font-mono text-gray-500 bg-gray-50 rounded-xl px-3 py-2">
+                    {form.currency !== 'fcfa' && <span className="text-amber-600 font-semibold">{f2(amtFcfa)} FCFA</span>}
+                    {form.currency !== 'usd'  && <span>${toUsd(amtFcfa)}</span>}
+                    {form.currency !== 'eur'  && <span>€{toEur(amtFcfa)}</span>}
+                  </div>
+                )}
               </div>
               <div className="col-span-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{isFr ? 'URL de la facture (optionnel)' : 'Invoice URL (optional)'}</label>
