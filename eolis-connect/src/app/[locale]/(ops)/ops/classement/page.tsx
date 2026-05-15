@@ -126,6 +126,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   const [yearFilter, setYearFilter]   = useState<number[]>([])
   const [monthFilter, setMonthFilter] = useState<number[]>([])
   const [dayFilter, setDayFilter]     = useState<number[]>([])
+  const [urgencyFilter, setUrgencyFilter]   = useState<string[]>([])
   const [expandedBadge, setExpandedBadge]   = useState<string | null>(null)
   const [expandedStrip, setExpandedStrip]   = useState<string | null>(null)
 
@@ -152,7 +153,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   const MONTHS = isFr ? MONTHS_FR : MONTHS_EN
   const now    = new Date()
 
-  const hasFilter = !!(yearFilter.length || monthFilter.length || dayFilter.length)
+  const hasFilter = !!(yearFilter.length || monthFilter.length || dayFilter.length || urgencyFilter.length)
   const closedAll = tickets.filter(t => t.status === 'TREATED' || t.status === 'CLOSED')
 
   // ── Filter helper ────────────────────────────────────────────────────────
@@ -170,6 +171,10 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   }
 
   const periodClosed = filterByDate(closedAll, 'closed')
+
+  const filteredClosed = urgencyFilter.length > 0
+    ? periodClosed.filter(t => urgencyFilter.includes(t.urgency))
+    : periodClosed
 
   // ── Previous period ──────────────────────────────────────────────────────
   const prevClosed = (() => {
@@ -189,10 +194,14 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
     })
   })()
 
+  const filteredPrevClosed = urgencyFilter.length > 0
+    ? prevClosed.filter(t => urgencyFilter.includes(t.urgency))
+    : prevClosed
+
   // ── Build ranked list ─────────────────────────────────────────────────────
   const ranked = agents
     .map(a => {
-      const stats = computeAgentStats(a.id, periodClosed, tickets)
+      const stats = computeAgentStats(a.id, filteredClosed, tickets)
       return stats ? { ...a, ...stats } : null
     })
     .filter(Boolean)
@@ -206,7 +215,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   // Previous period ranks
   const prevRanked = agents
     .map(a => {
-      const stats = computeAgentStats(a.id, prevClosed, tickets)
+      const stats = computeAgentStats(a.id, filteredPrevClosed, tickets)
       return stats ? { id: a.id, ...stats } : null
     })
     .filter(Boolean)
@@ -296,8 +305,17 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
           selected={dayFilter}
           onToggle={v => setDayFilter(p => p.includes(v as number) ? p.filter(x => x !== v) : [...p, v as number])}
           onClear={() => setDayFilter([])} />
+        <MultiSelect label={isFr ? 'Urgence' : 'Urgency'} isFr={isFr}
+          options={[
+            { value: 'HIGH',   label: isFr ? '🔴 Élevée'  : '🔴 High'   },
+            { value: 'MEDIUM', label: isFr ? '🟡 Moyenne' : '🟡 Medium' },
+            { value: 'LOW',    label: isFr ? '🟢 Faible'  : '🟢 Low'    },
+          ]}
+          selected={urgencyFilter}
+          onToggle={v => setUrgencyFilter(p => p.includes(v as string) ? p.filter(x => x !== v) : [...p, v as string])}
+          onClear={() => setUrgencyFilter([])} />
         {hasFilter && (
-          <button onClick={() => { setYearFilter([]); setMonthFilter([]); setDayFilter([]) }}
+          <button onClick={() => { setYearFilter([]); setMonthFilter([]); setDayFilter([]); setUrgencyFilter([]) }}
             className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 font-medium">
             <X size={14} /> {L.clearAll}
           </button>
