@@ -201,7 +201,6 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
             </>
           )}
         </div>
-        </div>
       </div>
     </div>
   )
