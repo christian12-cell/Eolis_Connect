@@ -72,6 +72,38 @@ Format : `[Date] — Type — Description`
 
 ---
 
+## [2026-05-15] — Session BL manuel, friction Premium, textarea auto-resize, badge Premium
+
+### Frontend — `eolis-connect`
+
+#### Champs BL dans le formulaire manuel (`nouvelle-demande/page.tsx`)
+- **`FormState` étendu** : 28 nouveaux champs BL ajoutés (`eta`, `portOfLoading`, `portOfDischarge`, `placeOfReceipt`, `placeOfDelivery`, `customerRef`, `service`, `blDate`, `bookingPartyName`, `bookingPartyRegion`, `pickupRef`, `pickupQty`, `pickupSizeType`, `pickupUsage`, `pickupDepot`, `pickupReleaseDate`, `terminal`, `terminalClosing`, `vgmClosing`, `customsClosing`, `descriptionOfGoods`, `noOfPacks`, `kindOfPack`, `linerTerms`, `imo`, `grossWeightTons`, `measurementCbm`, `containerTemp`).
+- **5 sections accordéon** dans l'étape logistique (mode simple uniquement) : *Références BL*, *Transport*, *Pickup / Conteneur*, *Délais terminal*, *Marchandises*. Ouvertes par défaut pour que l'utilisateur voit les 28 champs vides (friction visuelle).
+- **Bandeau amber ⚡** au-dessus des sections : "Ces informations sont extraites automatiquement avec Premium".
+- **Renommage ETS** : "Date de voyage" → "ETS (départ estimé)" pour clarté maritime.
+- **Submit** : si au moins un champ BL est renseigné, `vesselData` est construit en JSON snake_case (`pickup`, `turn_in`, `booking_items`, `container_details`) — structure reconnue par `parseBLData` dans le dossier client sans aucune modification côté dossier. Fonctionne offline (stocké dans IndexedDB).
+- **Récap** : les groupes remplis (Références, Transport, Pickup, Délais, Marchandises) apparaissent dynamiquement dans la section Logistique.
+- **Fix TypeScript** : `t.shipLine` inexistant dans le récap multi-navires remplacé par une chaîne inline.
+
+#### Triple friction Premium — parcours manuel incomplet (`nouvelle-demande/page.tsx`)
+- **A — Popup interstitiel** : au clic "Continuer" (étape logistique), si 0 champ BL renseigné, une modale s'affiche — "Dossier presque vide, 28 informations manquantes" + liste des bénéfices Premium + bouton **"Scanner mon BL"** / **"Continuer quand même"**. Popup centrée verticalement (pas de bouton coupé).
+- **B — Sections ouvertes par défaut** : `blManualSections` initialisé à `true` pour toutes les sections — le client voit tous les champs vides avant d'atteindre "Continuer".
+- **C — Bandeau récap** : avertissement orange dans le récap si mode simple et champs BL non renseignés — "X informations manquantes, les agents devront vous recontacter" + lien "Scanner mon BL à la place".
+
+#### Textarea auto-resize (`mes-demandes/[id]/page.tsx`, `agent/dossiers/[id]/AgentTicketActions.tsx`)
+- `textareaRef` + `useEffect([text])` : la zone de saisie grandit automatiquement à chaque caractère tapé **ou** texte injecté par le micro (voix).
+- `overflow: hidden` sur la textarea — pas de scrollbar interne pendant l'expansion.
+- À l'envoi (`setText('')`) : le `useEffect` se déclenche → `height: auto` → retour à 1 ligne.
+- Appliqué côté client (chat dossier) et côté agent (onglet *Répondre au client* + onglet *Note interne*).
+
+#### Badge ⚡ Premium sur les dossiers BL (`agent/dashboard/page.tsx`, `agent/dossiers/[id]/page.tsx`)
+- Badge amber `⚡ Premium` visible dès qu'un ticket a `blDocumentId` non null (= créé via scan BL).
+- **Dashboard agent** : badge affiché dans la colonne ref de la liste des tickets.
+- **Vue dossier agent** : badge affiché dans l'en-tête entre la ref et les badges urgence/statut.
+- Signal immédiat pour l'agent : toutes les infos BL sont déjà présentes, pas besoin de recontacter le client.
+
+---
+
 ## Prochaines étapes prévues
 - [ ] Mode offline pour le BL upload (scan/upload sans réseau, sync à la reconnexion)
 - [ ] OPS : dashboard enrichi (filtres avancés, stats par agent)
