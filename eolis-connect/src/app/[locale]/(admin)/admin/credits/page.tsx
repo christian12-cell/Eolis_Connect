@@ -107,9 +107,11 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   useEffect(() => {
     const u = getUser()
     if (!u) { router.replace(`/${locale}/login`); return }
-    if (!['SYSTEM_ADMIN', 'OPS_ADMIN', 'FINANCE_AGENT'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
+    if (!['FINANCE_AGENT', 'SYSTEM_ADMIN'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
     setUser(u)
   }, [locale])
+
+  const isReadOnly = user?.role === 'SYSTEM_ADMIN'
 
   const loadRequests = useCallback((silent = false) => {
     if (!silent) setLoading(true)
@@ -326,8 +328,8 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                       )}
                     </div>
 
-                    {/* Actions pending */}
-                    {r.status === 'pending' && (
+                    {/* Actions pending — FINANCE_AGENT uniquement */}
+                    {r.status === 'pending' && !isReadOnly && (
                       <div className="border-t border-gray-100 px-5 py-3 space-y-2">
                         <div className="flex items-center gap-3">
                           <input

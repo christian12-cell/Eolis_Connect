@@ -151,7 +151,7 @@ def admin_usage(
     to_date:   Optional[str] = Query(None, alias="to"),
     client_id: Optional[str] = Query(None),
     urgency:   Optional[str] = Query(None),
-    current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
+    current_user: User = Depends(require_roles("FINANCE_AGENT", "SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
     q = db.query(AIUsage)
