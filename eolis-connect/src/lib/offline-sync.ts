@@ -1,5 +1,20 @@
 import { offlineDb, PendingAction } from './offline-db'
-import { apiFetch, apiUpload } from './api-client'
+import { apiFetch, apiUpload, apiUrl, getToken } from './api-client'
+
+async function uploadFiles(ticketId: string, files: NonNullable<PendingAction['files']>, messageId?: string) {
+  if (!files.length) return
+  const token = getToken()
+  const fd = new FormData()
+  for (const sf of files) fd.append('files', new Blob([sf.data], { type: sf.mimeType }), sf.name)
+  const url = messageId
+    ? apiUrl(`/api/tickets/${ticketId}/attachments?message_id=${messageId}`)
+    : apiUrl(`/api/tickets/${ticketId}/attachments`)
+  await fetch(url, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  }).catch(() => {})
+}
 
 const MAX_RETRIES = 3
 
@@ -42,6 +57,28 @@ async function execute(action: PendingAction): Promise<string | null> {
       body: JSON.stringify(body),
     })
     if (!res.ok) throw new Error('send_message_failed')
+    return null
+  }
+
+  if (action.type === 'AGENT_REPLY') {
+    const { ticketId, content, senderType } = action.payload as { ticketId: string; content: string; senderType: string }
+    const res = await apiFetch(`/api/tickets/${ticketId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content, senderType }),
+    })
+    if (!res.ok) throw new Error('agent_reply_failed')
+    return null
+  }
+
+  if (action.type === 'INTERNAL_NOTE') {
+    const { ticketId, content } = action.payload as { ticketId: string; content: string }
+    const res = await apiFetch(`/api/tickets/${ticketId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content, senderType: 'INTERNAL_NOTE' }),
+    })
+    if (!res.ok) throw new Error('internal_note_failed')
+    const msg = await res.json().catch(() => null)
+    if (action.files?.length && msg?.id) await uploadFiles(ticketId, action.files, msg.id)
     return null
   }
 
