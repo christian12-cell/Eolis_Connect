@@ -221,7 +221,8 @@ export default function AgentTicketActions({
     apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()).then(msgs => {
       if (Array.isArray(msgs)) {
         setMessages(msgs)
-        prevLenRef.current = msgs.length
+        prevClientLenRef.current   = msgs.filter((m: any) => m.senderType !== 'INTERNAL_NOTE').length
+        prevInternalLenRef.current = msgs.filter((m: any) => m.senderType === 'INTERNAL_NOTE').length
       }
     }).catch(() => {})
     apiFetch('/api/users/staff/mentions').then(r => r.json()).then(staff => {
