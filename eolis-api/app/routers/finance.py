@@ -170,10 +170,12 @@ def delete_infra_cost(
 def pnl_report(
     from_date: Optional[str] = Query(None, alias="from"),
     to_date:   Optional[str] = Query(None, alias="to"),
+    urgency:   Optional[str] = Query(None),
     current_user: User = Depends(require_roles(*FINANCE_ROLES)),
     db: Session = Depends(get_db),
 ):
     """Monthly P&L breakdown."""
+    from ..models import Ticket
     req_q = db.query(CreditRequest).filter(CreditRequest.status == "approved")
     req_q = _apply_date_filter(req_q, CreditRequest.validated_at, from_date, to_date)
     approved = req_q.all()
@@ -181,6 +183,20 @@ def pnl_report(
     ai_q = db.query(AIUsage)
     ai_q = _apply_date_filter(ai_q, AIUsage.created_at, from_date, to_date)
     usages = ai_q.all()
+
+    # Apply urgency filter on AI usages via ticket
+    urgency_list = [u.strip() for u in urgency.split(",")] if urgency else None
+    if urgency_list:
+        filtered = []
+        for u in usages:
+            ticket = None
+            if u.ticket_id:
+                ticket = db.query(Ticket).filter(Ticket.id == u.ticket_id).first()
+            elif u.bl_document_id:
+                ticket = db.query(Ticket).filter(Ticket.bl_document_id == u.bl_document_id).first()
+            if ticket and ticket.urgency in urgency_list:
+                filtered.append(u)
+        usages = filtered
 
     infra = db.query(InfrastructureCost).all()
 
