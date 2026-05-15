@@ -5,13 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, Backgrou
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..limiter import limiter
-from ..models import User, Log, AccountSetupToken, CreditBalance
+from ..models import User, Log, AccountSetupToken, CreditBalance, PasswordReset
 from ..credit_service import FREE_CREDITS_ON_SIGNUP
 from ..schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from ..security import hash_password, verify_password, create_access_token
 from ..deps import get_current_user
 from ..config import settings
-from ..email_service import send_welcome_email, send_welcome_client
+from ..email_service import send_welcome_email, send_welcome_client, send_password_reset
+from ..sms_service import sms_password_reset
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -97,6 +98,58 @@ def get_account_setup(token: str, db: Session = Depends(get_db)):
     setup.temp_password = ""
     db.commit()
     return {"username": user.username, "tempPassword": temp_pw, "firstName": user.first_name}
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/minute")
+def forgot_password(request: Request, body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    email = (body.get("email") or "").strip().lower()
+    phone = (body.get("phone") or "").strip()
+    user = db.query(User).filter(User.email == email, User.status == "ACTIVE").first()
+    if user:
+        # Invalidate any existing unused tokens
+        db.query(PasswordReset).filter(PasswordReset.user_id == user.id, PasswordReset.used == False).update({"used": True})
+        token = secrets.token_urlsafe(32)
+        pr = PasswordReset(
+            user_id=user.id,
+            token=token,
+            expires_at=datetime.utcnow() + timedelta(hours=48),
+        )
+        db.add(pr)
+        db.commit()
+        _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
+        lang = user.language or "fr"
+        reset_url = f"{_frontend}/{lang}/reset-password?token={token}"
+        background_tasks.add_task(send_password_reset, user.email, user.first_name, reset_url, lang)
+        # Send SMS to the phone provided (allows updated phone numbers)
+        sms_to = phone or user.phone
+        if sms_to:
+            background_tasks.add_task(sms_password_reset, sms_to, user.first_name, reset_url, lang)
+    return {"ok": True}
+
+
+@router.post("/reset-password")
+def reset_password(body: dict, db: Session = Depends(get_db)):
+    token    = (body.get("token") or "").strip()
+    password = (body.get("password") or "").strip()
+    if not token or not password:
+        raise HTTPException(400, "missing_fields")
+    pr = db.query(PasswordReset).filter(PasswordReset.token == token).first()
+    if not pr:
+        raise HTTPException(404, "invalid_token")
+    if pr.used:
+        raise HTTPException(410, "already_used")
+    if datetime.utcnow() > pr.expires_at:
+        pr.used = True
+        db.commit()
+        raise HTTPException(410, "expired")
+    user = db.query(User).filter(User.id == pr.user_id).first()
+    if not user:
+        raise HTTPException(404, "user_not_found")
+    user.password_hash = hash_password(password)
+    pr.used = True
+    db.commit()
+    return {"ok": True}
 
 
 @router.patch("/update-contact")

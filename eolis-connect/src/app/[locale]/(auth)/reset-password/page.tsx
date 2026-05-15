@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Eye, EyeOff, KeyRound, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react'
+import { apiUrl } from '@/lib/api-client'
 
 export default function ResetPasswordPage({ params }: { params: Promise<{ locale: string }> }) {
   const router = useRouter()
@@ -35,6 +36,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
       mismatch: 'Les mots de passe ne correspondent pas.',
       weak: 'Le mot de passe doit contenir au moins 8 caractères.',
       invalidToken: 'Ce lien est invalide ou expiré.',
+      alreadyUsed: 'Ce lien a déjà été utilisé. Faites une nouvelle demande.',
+      expired: 'Ce lien a expiré (48h). Faites une nouvelle demande.',
       error: 'Une erreur est survenue.',
       backToLogin: 'Retour à la connexion',
     },
@@ -50,6 +53,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
       mismatch: 'Passwords do not match.',
       weak: 'Password must contain at least 8 characters.',
       invalidToken: 'This link is invalid or expired.',
+      alreadyUsed: 'This link has already been used. Please request a new one.',
+      expired: 'This link has expired (48h). Please request a new one.',
       error: 'An error occurred.',
       backToLogin: 'Back to login',
     },
@@ -65,7 +70,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
     setLoading(true)
     setError('')
 
-    const res = await fetch('/api/auth/reset-password', {
+    const res = await fetch(apiUrl('/api/auth/reset-password'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, password }),
@@ -76,22 +81,27 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
       setTimeout(() => router.push(`/${locale}/login`), 3000)
     } else {
       const data = await res.json().catch(() => ({}))
-      setError(data.message ?? text.error)
+      if (data.detail === 'already_used') setError((text as any).alreadyUsed)
+      else if (data.detail === 'expired') setError((text as any).expired)
+      else if (data.detail === 'invalid_token') setError(text.invalidToken)
+      else setError(text.error)
     }
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 rounded-xl bg-[#1B3A5C]/10 flex items-center justify-center">
+    <div className="min-h-screen relative flex items-center justify-center p-4">
+      <Image src="/bg-auth.jpg" alt="" fill className="object-cover" priority />
+      <div className="absolute inset-0 bg-[#0D1F33]/75" />
+      <div className="relative z-10 w-full max-w-md">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
             <Image src="/logo.png" alt="Eolis" width={28} height={28} className="object-contain" />
           </div>
-          <span className="font-bold text-[#1B3A5C] text-lg">Eolis Connect</span>
+          <span className="font-bold text-white text-lg">Eolis Connect</span>
         </div>
 
-        <div className="bg-white rounded-2xl p-8 card-shadow border border-gray-100">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
           {success ? (
             <div className="text-center py-4">
               <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-5">
@@ -190,6 +200,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
               )}
             </>
           )}
+        </div>
         </div>
       </div>
     </div>

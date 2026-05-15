@@ -131,6 +131,16 @@ def sms_account_created_by_admin(to: str, first_name: str, username: str):
     send_sms(to, body)
 
 
+def sms_password_reset(to: str, first_name: str, reset_url: str, lang: str = "fr"):
+    if lang == "en":
+        body = (f"Eolis Connect: Hello {first_name}, here is your password reset link "
+                f"(single use, valid 48h):\n{reset_url}")
+    else:
+        body = (f"Eolis Connect : Bonjour {first_name}, voici votre lien de reinitialisation "
+                f"(usage unique, valable 48h) :\n{reset_url}")
+    send_sms(to, body)
+
+
 def sms_test(to: str):
     body = "Eolis Connect : Ceci est un SMS de test. Configuration Twilio operationnelle."
     send_sms(to, body)

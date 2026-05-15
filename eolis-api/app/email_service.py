@@ -273,3 +273,38 @@ def send_account_deleted(to_email: str, first_name: str, lang: str = "fr"):
     _send(to_email, subject, _template(content, lang))
 
 
+def send_password_reset(to_email: str, first_name: str, reset_url: str, lang: str = "fr"):
+    en = lang == "en"
+    subject = "Reset your Eolis Connect password" if en else "Réinitialisez votre mot de passe Eolis Connect"
+
+    t_greeting = "Hello" if en else "Bonjour"
+    t_request  = "You have requested to reset your <strong>Eolis Connect</strong> password." if en else "Vous avez demandé la réinitialisation de votre mot de passe <strong>Eolis Connect</strong>."
+    t_btn      = "Reset my password →" if en else "Réinitialiser mon mot de passe →"
+    t_expire   = "This link is <strong>single-use</strong> and expires in <strong>48 hours</strong>." if en else "Ce lien est <strong>à usage unique</strong> et expire dans <strong>48 heures</strong>."
+    t_no_req   = "If you did not request this, ignore this email — your password will not be changed." if en else "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email — votre mot de passe ne sera pas modifié."
+
+    content = f"""
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_greeting} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">{t_request}</p>
+
+      <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+        <tr>
+          <td style="background:#1B3A5C;border-radius:10px;padding:0;">
+            <a href="{reset_url}" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">{t_btn}</a>
+          </td>
+        </tr>
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF9C3;border:1px solid #fde047;border-radius:12px;margin:0 0 16px;">
+        <tr>
+          <td style="padding:14px 20px;">
+            <p style="margin:0;font-size:12px;color:#92400e;">⏱ {t_expire}</p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:0;font-size:13px;color:#9ca3af;">{t_no_req}</p>
+    """
+    _send(to_email, subject, _template(content, lang))
+
+
