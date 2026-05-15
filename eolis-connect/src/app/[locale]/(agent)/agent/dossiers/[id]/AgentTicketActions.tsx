@@ -178,6 +178,7 @@ export default function AgentTicketActions({
   const fileRef               = useRef<HTMLInputElement>(null)
   const prevClientLenRef      = useRef(0)
   const prevInternalLenRef    = useRef(0)
+  const textareaRef           = useRef<HTMLTextAreaElement>(null)
   const [isClientScrolledUp,   setIsClientScrolledUp]   = useState(false)
   const [clientUnread,         setClientUnread]          = useState(0)
   const [isInternalScrolledUp, setIsInternalScrolledUp] = useState(false)
@@ -347,6 +348,13 @@ export default function AgentTicketActions({
       }
     }
   }, [messages, currentAgentId, chatTab])
+
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [text])
 
   function handleAgentChatScroll() {
     const el = chatScrollRef.current
@@ -1114,9 +1122,10 @@ export default function AgentTicketActions({
                             e.target.value = ''
                           }} />
                       </label>
-                      <textarea value={text} onChange={e => setText(e.target.value)}
+                      <textarea ref={textareaRef} value={text} onChange={e => setText(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
-                        placeholder={t.replyPh} rows={2}
+                        placeholder={t.replyPh} rows={1}
+                        style={{ overflow: 'hidden' }}
                         className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-sm focus:outline-none focus:border-[#1B3A5C] resize-none transition-colors" />
                       <button onClick={sendReply} disabled={(!text.trim() && replyUploads.length === 0) || sending || replyUploads.some(f=>f.status==='uploading')}
                         className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1B3A5C] text-white disabled:opacity-40 hover:bg-[#152d47] transition-colors flex-shrink-0">
@@ -1181,11 +1190,12 @@ export default function AgentTicketActions({
                       e.target.value = ''
                     }} />
                 </label>
-                <textarea value={text}
+                <textarea ref={textareaRef} value={text}
                   onChange={e => handleInternalChange(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
                   onBlur={() => setTimeout(() => setMentionUsers([]), 150)}
-                  placeholder={t.notePh} rows={2}
+                  placeholder={t.notePh} rows={1}
+                  style={{ overflow: 'hidden' }}
                   className="flex-1 px-4 py-2.5 rounded-xl border-2 border-amber-200 bg-white text-sm focus:outline-none focus:border-amber-400 resize-none transition-colors" />
                 <button onClick={sendReply}
                   disabled={(!text.trim() && internalUploads.length === 0) || sending || internalUploads.some(f=>f.status==='uploading')}

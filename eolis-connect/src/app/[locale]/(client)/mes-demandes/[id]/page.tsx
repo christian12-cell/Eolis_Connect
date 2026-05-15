@@ -259,6 +259,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const chatInnerRef       = useRef<HTMLDivElement>(null)
   const prevMsgLenRef      = useRef(0)
+  const textareaRef        = useRef<HTMLTextAreaElement>(null)
   const [isScrolledUp, setIsScrolledUp]           = useState(false)
   const [unreadWhileUp, setUnreadWhileUp]         = useState(0)
   const firstUnreadIdRef                           = useRef<string | null>(null)
@@ -403,6 +404,13 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       }
     }
   }, [messages])
+
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [text])
 
   function handleChatScroll() {
     const el = chatInnerRef.current
@@ -1538,13 +1546,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                         </button>
                   )}
                   <textarea
+                    ref={textareaRef}
                     value={text}
                     onChange={e => setText(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
                     placeholder={isFr ? 'Écrire un message...' : 'Write a message...'}
                     rows={1}
                     className="flex-1 text-sm bg-gray-100 rounded-2xl px-4 py-2.5 resize-none outline-none leading-relaxed text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#1B3A5C]/20 transition-all"
-                    style={{ maxHeight: '5rem', overflowY: 'auto' }}
+                    style={{ overflow: 'hidden' }}
                   />
                   <button onClick={sendMessage}
                     disabled={(!text.trim() && fileUploads.length === 0) || sending || fileUploads.some(f => f.status === 'uploading')}
