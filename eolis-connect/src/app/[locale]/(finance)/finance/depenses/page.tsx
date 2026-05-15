@@ -11,15 +11,30 @@ function f2(n: number) { return n.toFixed(2) }
 function toUsd(f: number) { return (f/USD).toFixed(2) }
 function toEur(f: number) { return (f/EUR).toFixed(2) }
 
-const CATEGORIES = ['vercel','railway','cloudflare','domain','maintenance','other']
+const CATEGORIES = ['vercel','railway','neon','aws_s3','twilio','cloudflare','domain','openai','maintenance','other']
 const CAT_LABELS: Record<string,string> = {
-  vercel:'Vercel', railway:'Railway', cloudflare:'Cloudflare',
-  domain:'Domaine', maintenance:'Maintenance', other:'Autre',
+  vercel:      'Vercel',
+  railway:     'Railway',
+  neon:        'Neon (BDD)',
+  aws_s3:      'AWS S3',
+  twilio:      'Twilio (SMS)',
+  cloudflare:  'Cloudflare',
+  domain:      'Domaine',
+  openai:      'OpenAI (forfait)',
+  maintenance: 'Maintenance',
+  other:       'Autre',
 }
 const CAT_COLORS: Record<string,string> = {
-  vercel:'bg-black text-white', railway:'bg-purple-600 text-white',
-  cloudflare:'bg-orange-500 text-white', domain:'bg-blue-500 text-white',
-  maintenance:'bg-amber-500 text-white', other:'bg-gray-500 text-white',
+  vercel:      'bg-black text-white',
+  railway:     'bg-purple-600 text-white',
+  neon:        'bg-teal-600 text-white',
+  aws_s3:      'bg-yellow-500 text-white',
+  twilio:      'bg-red-600 text-white',
+  cloudflare:  'bg-orange-500 text-white',
+  domain:      'bg-blue-500 text-white',
+  openai:      'bg-emerald-600 text-white',
+  maintenance: 'bg-amber-500 text-white',
+  other:       'bg-gray-500 text-white',
 }
 
 export default function FinanceDepensesPage({ params }: { params: Promise<{ locale: string }> }) {
