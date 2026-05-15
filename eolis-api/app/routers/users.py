@@ -203,7 +203,6 @@ def delete_user(
     db: Session = Depends(get_db),
 ):
     """Delete a user account. Sends SMS + email to the deleted user."""
-    from ..models import Ticket, Message, Notification, Attachment, SatisfactionRating, OtpCode, PasswordReset, Log
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="not_found")
@@ -216,18 +215,35 @@ def delete_user(
     first_name = user.first_name
     lang       = user.language or "fr"
 
-    # Cascade-delete user data
-    for ticket_id, in db.query(Ticket.id).filter((Ticket.client_id == user_id) | (Ticket.agent_id == user_id)).all():
-        db.query(SatisfactionRating).filter(SatisfactionRating.ticket_id == ticket_id).delete()
-        db.query(Attachment).filter(Attachment.ticket_id == ticket_id).delete()
-        db.query(Message).filter(Message.ticket_id == ticket_id).delete()
-        db.query(Notification).filter(Notification.ticket_id == ticket_id).delete()
+    # Nullify validated_by on credit requests this user approved/rejected as staff
+    db.query(CreditRequest).filter(CreditRequest.validated_by == user_id).update({"validated_by": None}, synchronize_session=False)
+
+    # Nullify AIUsage.ticket_id for tickets about to be deleted (avoids FK on ticket deletion)
+    ticket_ids = [t for (t,) in db.query(Ticket.id).filter((Ticket.client_id == user_id) | (Ticket.agent_id == user_id)).all()]
+    if ticket_ids:
+        db.query(AIUsage).filter(AIUsage.ticket_id.in_(ticket_ids)).update({"ticket_id": None}, synchronize_session=False)
+
+    # Cascade-delete ticket children then tickets
+    for tid in ticket_ids:
+        db.query(SatisfactionRating).filter(SatisfactionRating.ticket_id == tid).delete()
+        db.query(Attachment).filter(Attachment.ticket_id == tid).delete()
+        db.query(Message).filter(Message.ticket_id == tid).delete()
+        db.query(Notification).filter(Notification.ticket_id == tid).delete()
     db.query(Ticket).filter((Ticket.client_id == user_id) | (Ticket.agent_id == user_id)).delete()
+
+    # Other user-linked records
     db.query(Notification).filter(Notification.user_id == user_id).delete()
     db.query(OtpCode).filter(OtpCode.user_id == user_id).delete()
     db.query(PasswordReset).filter(PasswordReset.user_id == user_id).delete()
     db.query(AccountSetupToken).filter(AccountSetupToken.user_id == user_id).delete()
     db.query(Log).filter(Log.user_id == user_id).delete()
+
+    # Financial & AI records (must come before BLDocument and User)
+    db.query(AIUsage).filter(AIUsage.client_id == user_id).delete()
+    db.query(CreditRequest).filter(CreditRequest.client_id == user_id).delete()
+    db.query(BLDocument).filter(BLDocument.client_id == user_id).delete()
+    db.query(CreditBalance).filter(CreditBalance.client_id == user_id).delete()
+
     db.query(User).filter(User.id == user_id).delete()
     db.commit()
 
