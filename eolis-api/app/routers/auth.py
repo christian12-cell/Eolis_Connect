@@ -105,7 +105,9 @@ def get_account_setup(token: str, db: Session = Depends(get_db)):
 def forgot_password(request: Request, body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     email = (body.get("email") or "").strip().lower()
     phone = (body.get("phone") or "").strip()
+    print(f"[forgot-pw] email={email!r} phone={phone!r}")
     user = db.query(User).filter(User.email == email, User.status == "ACTIVE").first()
+    print(f"[forgot-pw] user_found={user is not None} mail_enabled={settings.MAIL_ENABLED} resend_key_set={bool(settings.RESEND_API_KEY)}")
     if user:
         # Invalidate any existing unused tokens
         db.query(PasswordReset).filter(PasswordReset.user_id == user.id, PasswordReset.used == False).update({"used": True})
@@ -120,8 +122,8 @@ def forgot_password(request: Request, body: dict, background_tasks: BackgroundTa
         _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
         lang = user.language or "fr"
         reset_url = f"{_frontend}/{lang}/reset-password?token={token}"
+        print(f"[forgot-pw] reset_url={reset_url}")
         background_tasks.add_task(send_password_reset, user.email, user.first_name, reset_url, lang)
-        # Send SMS to the phone provided (allows updated phone numbers)
         sms_to = phone or user.phone
         if sms_to:
             background_tasks.add_task(sms_password_reset, sms_to, user.first_name, reset_url, lang)
