@@ -198,11 +198,39 @@ def approve_request(
         raise HTTPException(400, "Demande déjà traitée")
     if amount_received < 500:
         raise HTTPException(400, "Montant minimum 500 FCFA")
-    # Validation : montant approuvé ne peut pas dépasser 2× le montant déclaré
-    if amount_received > req.amount_declared * 2:
-        raise HTTPException(400, f"Montant trop élevé — déclaré : {req.amount_declared} FCFA, maximum autorisé : {req.amount_declared * 2} FCFA")
+    # Option B — strict 1× : montant approuvé ≤ montant déclaré (aucun gonflement possible)
+    if amount_received > req.amount_declared:
+        raise HTTPException(400, f"Montant trop élevé — déclaré : {req.amount_declared} FCFA, maximum autorisé : {req.amount_declared} FCFA")
 
     credits_to_add = round(amount_received)
+
+    # Option A — maker-checker : montants ≥ seuil suspendus jusqu'à confirmation SYSTEM_ADMIN
+    if amount_received >= LARGE_APPROVAL_THRESHOLD:
+        req.status = "pending_admin"
+        req.amount_validated = amount_received
+        req.credits_added = credits_to_add
+        req.validated_by = current_user.id
+        req.validated_at = datetime.utcnow()
+        db.add(req)
+        _audit(db, current_user.id, "CREDIT_PENDING_ADMIN", req.id, amount_received,
+               f"client={req.client_id} credits={credits_to_add}", _client_ip(request))
+        admins = db.query(User).filter(User.role == "SYSTEM_ADMIN").all()
+        client_obj = db.query(User).filter(User.id == req.client_id).first()
+        client_name = f"{client_obj.first_name} {client_obj.last_name}" if client_obj else req.client_id
+        for admin in admins:
+            db.add(Notification(
+                user_id=admin.id,
+                type="LARGE_CREDIT_APPROVAL",
+                title=f"⚠️ Confirmation requise — {int(amount_received):,} FCFA|||⚠️ Confirmation needed — {int(amount_received):,} FCFA",
+                message=(
+                    f"{current_user.first_name} {current_user.last_name} a validé {int(amount_received):,} FCFA "
+                    f"pour {client_name}. Votre confirmation est requise avant crédit."
+                    f"|||{current_user.first_name} {current_user.last_name} approved {int(amount_received):,} FCFA "
+                    f"for {client_name}. Your confirmation is required before crediting."
+                ),
+            ))
+        db.commit()
+        return {"status": "pending_admin", "creditsProposed": credits_to_add}
 
     bal = get_or_create_balance(req.client_id, db)
     bal.credits_total += credits_to_add
@@ -227,22 +255,8 @@ def approve_request(
         ),
     ))
 
-    # Audit log
     _audit(db, current_user.id, "CREDIT_APPROVE", req.id, amount_received,
            f"client={req.client_id} credits={credits_to_add}", _client_ip(request))
-
-    # Alerte SYSTEM_ADMIN si montant élevé
-    if amount_received >= LARGE_APPROVAL_THRESHOLD:
-        admins = db.query(User).filter(User.role == "SYSTEM_ADMIN").all()
-        client = db.query(User).filter(User.id == req.client_id).first()
-        client_name = f"{client.first_name} {client.last_name}" if client else req.client_id
-        for admin in admins:
-            db.add(Notification(
-                user_id=admin.id,
-                type="LARGE_CREDIT_APPROVAL",
-                title=f"⚠️ Approbation importante — {int(amount_received):,} FCFA|||⚠️ Large approval — {int(amount_received):,} FCFA",
-                message=f"{current_user.first_name} {current_user.last_name} a approuvé {int(amount_received):,} FCFA pour {client_name}.|||{current_user.first_name} {current_user.last_name} approved {int(amount_received):,} FCFA for {client_name}.",
-            ))
 
     db.commit()
     return {"creditsAdded": credits_to_add}
@@ -292,17 +306,133 @@ def reject_request(
 
 def _fmt_request(r: CreditRequest) -> dict:
     return {
-        "id":              r.id,
-        "clientId":        r.client_id,
-        "amountDeclared":  r.amount_declared,
-        "photoUrl":        r.photo_url,
-        "status":          r.status,
-        "amountValidated": r.amount_validated,
-        "creditsAdded":    r.credits_added,
-        "rejectionReason": r.rejection_reason,
-        "createdAt":       r.created_at.isoformat() + "Z",
-        "validatedAt":     r.validated_at.isoformat() + "Z" if r.validated_at else None,
+        "id":                   r.id,
+        "clientId":             r.client_id,
+        "amountDeclared":       r.amount_declared,
+        "photoUrl":             r.photo_url,
+        "status":               r.status,
+        "amountValidated":      r.amount_validated,
+        "creditsAdded":         r.credits_added,
+        "rejectionReason":      r.rejection_reason,
+        "createdAt":            r.created_at.isoformat() + "Z",
+        "validatedAt":          r.validated_at.isoformat() + "Z" if r.validated_at else None,
+        "validatedByName":      f"{r.validator.first_name} {r.validator.last_name}" if r.validator else None,
+        "adminConfirmedAt":     r.admin_confirmed_at.isoformat() + "Z" if r.admin_confirmed_at else None,
+        "adminConfirmedByName": f"{r.admin_confirmer.first_name} {r.admin_confirmer.last_name}" if getattr(r, "admin_confirmer", None) else None,
     }
+
+
+# ── Admin maker-checker endpoints (SYSTEM_ADMIN only) ─────────────────────────
+
+@router.post("/admin/requests/{request_id}/admin-confirm")
+@limiter.limit("10/minute")
+def admin_confirm_request(
+    request: Request,
+    request_id: str,
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    """2e étape 4 yeux — SYSTEM_ADMIN crédite après validation FINANCE_AGENT."""
+    req = db.query(CreditRequest).filter(CreditRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(404)
+    if req.status != "pending_admin":
+        raise HTTPException(400, "Cette demande n'est pas en attente de confirmation admin")
+
+    credits_to_add = req.credits_added or round(req.amount_validated or 0)
+
+    bal = get_or_create_balance(req.client_id, db)
+    bal.credits_total += credits_to_add
+    db.add(bal)
+
+    req.status = "approved"
+    req.admin_confirmed_by = current_user.id
+    req.admin_confirmed_at = datetime.utcnow()
+    db.add(req)
+
+    db.add(Notification(
+        user_id=req.client_id,
+        type="CREDITS_ADDED",
+        title="Crédits ajoutés ✓|||Credits added ✓",
+        message=(
+            f"{int(credits_to_add)} crédits premium ont été ajoutés à votre compte."
+            f" Une question ? {settings.MAIL_SUPPORT_FROM}"
+            f"|||{int(credits_to_add)} premium credits have been added to your account."
+            f" Questions? {settings.MAIL_SUPPORT_FROM}"
+        ),
+    ))
+
+    if req.validated_by:
+        agent = db.query(User).filter(User.id == req.validated_by).first()
+        if agent:
+            db.add(Notification(
+                user_id=agent.id,
+                type="CREDIT_ADMIN_CONFIRMED",
+                title="Approbation confirmée ✓|||Approval confirmed ✓",
+                message=(
+                    f"Votre approbation de {int(req.amount_validated or 0):,} FCFA a été confirmée par l'administrateur.|||"
+                    f"Your approval of {int(req.amount_validated or 0):,} FCFA was confirmed by the administrator."
+                ),
+            ))
+
+    _audit(db, current_user.id, "CREDIT_ADMIN_CONFIRM", req.id, req.amount_validated,
+           f"client={req.client_id} credits={credits_to_add}", _client_ip(request))
+    db.commit()
+    return {"creditsAdded": credits_to_add}
+
+
+@router.post("/admin/requests/{request_id}/admin-reject")
+@limiter.limit("10/minute")
+def admin_reject_pending(
+    request: Request,
+    request_id: str,
+    reason: str = Form(""),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    """SYSTEM_ADMIN annule une approbation en attente (maker-checker)."""
+    req = db.query(CreditRequest).filter(CreditRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(404)
+    if req.status != "pending_admin":
+        raise HTTPException(400, "Cette demande n'est pas en attente de confirmation admin")
+
+    req.status = "rejected"
+    req.rejection_reason = f"[Admin] {reason}" if reason else "[Annulé par administrateur]"
+    req.admin_confirmed_by = current_user.id
+    req.admin_confirmed_at = datetime.utcnow()
+    db.add(req)
+
+    reason_txt = f"{reason} — " if reason else ""
+    db.add(Notification(
+        user_id=req.client_id,
+        type="CREDITS_REJECTED",
+        title="Demande de recharge refusée|||Top-up request rejected",
+        message=(
+            f"{reason_txt}Contactez-nous : {settings.MAIL_SUPPORT_FROM}"
+            f"|||{reason_txt}Contact us: {settings.MAIL_SUPPORT_FROM}"
+        ),
+    ))
+
+    if req.validated_by:
+        agent = db.query(User).filter(User.id == req.validated_by).first()
+        if agent:
+            db.add(Notification(
+                user_id=agent.id,
+                type="CREDIT_ADMIN_REJECTED",
+                title="Approbation annulée|||Approval cancelled",
+                message=(
+                    f"Votre approbation de {int(req.amount_validated or 0):,} FCFA a été annulée par l'administrateur. "
+                    f"Motif : {reason or 'non précisé'}.|||"
+                    f"Your approval of {int(req.amount_validated or 0):,} FCFA was cancelled by the administrator. "
+                    f"Reason: {reason or 'not specified'}."
+                ),
+            ))
+
+    _audit(db, current_user.id, "CREDIT_ADMIN_REJECT", req.id, req.amount_validated,
+           f"reason={reason[:200]}", _client_ip(request))
+    db.commit()
+    return {"status": "rejected"}
 
 
 # ── Proof file viewer ──────────────────────────────────────────────────────────

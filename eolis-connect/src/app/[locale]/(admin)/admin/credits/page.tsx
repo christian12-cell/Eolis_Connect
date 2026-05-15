@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { apiFetch, apiUpload, apiUrl, getToken, getUser } from '@/lib/api-client'
 import {
   Zap, Check, X, Clock, CheckCircle, XCircle, Loader2,
-  ChevronDown, Users, FileText, ExternalLink, RefreshCw,
+  ChevronDown, Users, FileText, ExternalLink, RefreshCw, ShieldAlert, ShieldCheck,
 } from 'lucide-react'
 
 // ── ProofViewer: fetch avec auth, affiche image ou PDF ─────────────────────────
@@ -89,15 +89,17 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   const [requests, setRequests]   = useState<any[]>([])
   const [balances, setBalances]   = useState<any[]>([])
   const [loading, setLoading]     = useState(true)
-  const [filter, setFilter]       = useState<'pending' | 'approved' | 'rejected' | ''>('pending')
+  const [filter, setFilter]       = useState<'pending' | 'pending_admin' | 'approved' | 'rejected' | ''>('pending')
   const [validating, setValidating] = useState<string | null>(null)
   const [amountInputs, setAmountInputs] = useState<Record<string, string>>({})
   const [proofOpen, setProofOpen]         = useState<string | null>(null)
   const [searchBalance, setSearchBalance] = useState('')
   const [expandedClient, setExpandedClient] = useState<string | null>(null)
   const [clientUsage, setClientUsage]     = useState<Record<string, any[]>>({})
-  const [rejectingId, setRejectingId]     = useState<string | null>(null)
-  const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({})
+  const [rejectingId, setRejectingId]           = useState<string | null>(null)
+  const [rejectReasons, setRejectReasons]       = useState<Record<string, string>>({})
+  const [adminRejectingId, setAdminRejectingId] = useState<string | null>(null)
+  const [adminRejectReasons, setAdminRejectReasons] = useState<Record<string, string>>({})
   const [refreshing, setRefreshing]       = useState(false)
   const [countdown, setCountdown]         = useState(30)
   const autoRef    = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -109,6 +111,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     if (!u) { router.replace(`/${locale}/login`); return }
     if (!['FINANCE_AGENT', 'SYSTEM_ADMIN'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
     setUser(u)
+    if (u.role === 'SYSTEM_ADMIN') setFilter('pending_admin')
   }, [locale])
 
   const isReadOnly = user?.role === 'SYSTEM_ADMIN'
@@ -152,7 +155,9 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   }, [user, tab, loadRequests])
 
   const isFr = locale === 'fr'
+  const isSystemAdmin = user?.role === 'SYSTEM_ADMIN'
   const pendingCount = requests.filter(r => r.status === 'pending').length
+  const pendingAdminCount = requests.filter(r => r.status === 'pending_admin').length
 
   async function approve(id: string) {
     const amt = parseFloat(amountInputs[id] || '')
@@ -162,6 +167,24 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     fd.append('amount_received', String(amt))
     await apiUpload(`/api/credits/admin/requests/${id}/approve`, fd)
     setValidating(null)
+    loadRequests(true)
+  }
+
+  async function adminConfirm(id: string) {
+    setValidating(id)
+    await apiFetch(`/api/credits/admin/requests/${id}/admin-confirm`, { method: 'POST' })
+    setValidating(null)
+    loadRequests(true)
+  }
+
+  async function adminRejectConfirm(id: string) {
+    const reason = adminRejectReasons[id] ?? ''
+    setValidating(id)
+    const fd = new FormData()
+    fd.append('reason', reason)
+    await apiUpload(`/api/credits/admin/requests/${id}/admin-reject`, fd)
+    setValidating(null)
+    setAdminRejectingId(null)
     loadRequests(true)
   }
 
@@ -206,7 +229,12 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {pendingCount > 0 && (
+            {pendingAdminCount > 0 && isSystemAdmin && (
+              <span className="px-3 py-1.5 bg-orange-100 text-orange-700 text-sm font-bold rounded-full animate-pulse flex items-center gap-1.5">
+                <ShieldAlert size={14} /> {pendingAdminCount} {isFr ? 'à confirmer' : 'to confirm'}
+              </span>
+            )}
+            {pendingCount > 0 && !isSystemAdmin && (
               <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-sm font-bold rounded-full animate-pulse">
                 {pendingCount} {isFr ? 'en attente' : 'pending'}
               </span>
@@ -267,10 +295,11 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
           <>
             <div className="flex gap-2 flex-wrap">
               {([
-                { v: 'pending',  label: isFr ? 'En attente' : 'Pending' },
-                { v: 'approved', label: isFr ? 'Approuvées' : 'Approved' },
-                { v: 'rejected', label: isFr ? 'Refusées' : 'Rejected' },
-                { v: '',         label: isFr ? 'Toutes' : 'All' },
+                { v: 'pending',       label: isFr ? 'En attente' : 'Pending' },
+                { v: 'pending_admin', label: isFr ? '⚠️ À confirmer' : '⚠️ To confirm' },
+                { v: 'approved',      label: isFr ? 'Approuvées' : 'Approved' },
+                { v: 'rejected',      label: isFr ? 'Refusées' : 'Rejected' },
+                { v: '',              label: isFr ? 'Toutes' : 'All' },
               ] as { v: typeof filter; label: string }[]).map(f => (
                 <button key={f.v} onClick={() => setFilter(f.v)}
                   className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
@@ -306,9 +335,10 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                         <p className="text-xs text-gray-400">{isFr ? 'déclaré' : 'declared'}</p>
                       </div>
                       <div className="flex-shrink-0">
-                        {r.status === 'pending'  && <Clock size={18} className="text-amber-500" />}
-                        {r.status === 'approved' && <CheckCircle size={18} className="text-emerald-500" />}
-                        {r.status === 'rejected' && <XCircle size={18} className="text-red-500" />}
+                        {r.status === 'pending'       && <Clock size={18} className="text-amber-500" />}
+                        {r.status === 'pending_admin' && <ShieldAlert size={18} className="text-orange-500" />}
+                        {r.status === 'approved'      && <CheckCircle size={18} className="text-emerald-500" />}
+                        {r.status === 'rejected'      && <XCircle size={18} className="text-red-500" />}
                       </div>
                     </div>
 
@@ -327,6 +357,68 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                         <ProofViewer requestId={r.id} filename={r.photoUrl?.split('/').pop()} isFr={isFr} />
                       )}
                     </div>
+
+                    {/* pending_admin — badge pour FINANCE_AGENT, boutons pour SYSTEM_ADMIN */}
+                    {r.status === 'pending_admin' && !isSystemAdmin && (
+                      <div className="border-t border-orange-100 px-5 py-3 bg-orange-50">
+                        <p className="text-xs text-orange-700 font-semibold flex items-center gap-1.5">
+                          <ShieldAlert size={13} />
+                          {isFr
+                            ? `En attente de confirmation admin · proposé par ${r.validatedByName ?? '—'}`
+                            : `Pending admin confirmation · proposed by ${r.validatedByName ?? '—'}`
+                          }
+                        </p>
+                      </div>
+                    )}
+                    {r.status === 'pending_admin' && isSystemAdmin && (
+                      <div className="border-t border-orange-200 px-5 py-3 bg-orange-50 space-y-2">
+                        <p className="text-xs text-orange-800 font-semibold flex items-center gap-1.5">
+                          <ShieldAlert size={13} />
+                          {isFr
+                            ? `${r.validatedByName ?? 'Agent'} a validé ${r.amountValidated} FCFA — votre confirmation est requise`
+                            : `${r.validatedByName ?? 'Agent'} approved ${r.amountValidated} FCFA — your confirmation is required`
+                          }
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => adminConfirm(r.id)}
+                            disabled={validating === r.id || proofOpen !== r.id}
+                            title={proofOpen !== r.id ? (isFr ? 'Ouvrez d\'abord le justificatif' : 'Open proof first') : undefined}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+                            {validating === r.id ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                            {isFr ? 'Confirmer' : 'Confirm'}
+                          </button>
+                          <button
+                            onClick={() => setAdminRejectingId(adminRejectingId === r.id ? null : r.id)}
+                            disabled={validating === r.id}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-100 text-red-600 text-sm font-semibold disabled:opacity-50">
+                            <X size={14} /> {isFr ? 'Annuler' : 'Cancel'}
+                          </button>
+                        </div>
+                        {adminRejectingId === r.id && (
+                          <div className="flex gap-2 pt-1">
+                            <textarea
+                              rows={2}
+                              placeholder={isFr ? 'Motif (optionnel)...' : 'Reason (optional)...'}
+                              value={adminRejectReasons[r.id] ?? ''}
+                              onChange={e => setAdminRejectReasons(prev => ({ ...prev, [r.id]: e.target.value }))}
+                              className="flex-1 px-3 py-2 rounded-xl border border-red-200 text-sm focus:outline-none focus:border-red-400 resize-none"
+                            />
+                            <div className="flex flex-col gap-1.5">
+                              <button onClick={() => adminRejectConfirm(r.id)} disabled={validating === r.id}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-semibold disabled:opacity-50">
+                                {validating === r.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                {isFr ? 'Confirmer' : 'Confirm'}
+                              </button>
+                              <button onClick={() => setAdminRejectingId(null)}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 text-gray-500 text-xs font-semibold">
+                                <X size={12} /> {isFr ? 'Annuler' : 'Cancel'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Actions pending — FINANCE_AGENT uniquement */}
                     {r.status === 'pending' && !isReadOnly && (

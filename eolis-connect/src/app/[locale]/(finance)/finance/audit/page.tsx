@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { apiFetch, getUser } from '@/lib/api-client'
-import { Shield, Loader2, CheckCircle, XCircle, Plus, Trash2, AlertCircle } from 'lucide-react'
+import { Shield, Loader2, CheckCircle, XCircle, Plus, Trash2, AlertCircle, ShieldAlert, ShieldCheck } from 'lucide-react'
 
 const EUR = 655.957; const USD = 600
 function f2(n: number | null) { return n != null ? n.toFixed(2) : '—' }
@@ -15,7 +15,10 @@ const ACTION_META: Record<string, { icon: React.ReactNode; color: string; label_
   CREDIT_APPROVE:  { icon: <CheckCircle size={14}/>, color: 'text-emerald-600 bg-emerald-50', label_fr: 'Recharge approuvée',    label_en: 'Credit approved'    },
   CREDIT_REJECT:   { icon: <XCircle size={14}/>,    color: 'text-red-500 bg-red-50',          label_fr: 'Recharge refusée',      label_en: 'Credit rejected'    },
   INFRA_COST_ADD:  { icon: <Plus size={14}/>,        color: 'text-amber-600 bg-amber-50',      label_fr: 'Charge ajoutée',        label_en: 'Cost added'         },
-  INFRA_COST_DELETE: { icon: <Trash2 size={14}/>,   color: 'text-gray-500 bg-gray-100',        label_fr: 'Charge supprimée',      label_en: 'Cost deleted'       },
+  INFRA_COST_DELETE:    { icon: <Trash2 size={14}/>,       color: 'text-gray-500 bg-gray-100',       label_fr: 'Charge supprimée',         label_en: 'Cost deleted'           },
+  CREDIT_PENDING_ADMIN: { icon: <ShieldAlert size={14}/>,  color: 'text-orange-600 bg-orange-50',    label_fr: 'En attente admin',         label_en: 'Pending admin'          },
+  CREDIT_ADMIN_CONFIRM: { icon: <ShieldCheck size={14}/>,  color: 'text-emerald-600 bg-emerald-50',  label_fr: 'Confirmé admin',           label_en: 'Admin confirmed'        },
+  CREDIT_ADMIN_REJECT:  { icon: <ShieldAlert size={14}/>,  color: 'text-red-500 bg-red-50',          label_fr: 'Annulé admin',             label_en: 'Admin cancelled'        },
 }
 
 export default function AuditPage({ params }: { params: Promise<{ locale: string }> }) {

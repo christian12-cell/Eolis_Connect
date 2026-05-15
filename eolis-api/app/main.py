@@ -181,6 +181,12 @@ def startup():
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         """))
+        conn.execute(text(
+            "ALTER TABLE credit_requests ADD COLUMN IF NOT EXISTS admin_confirmed_by VARCHAR(36)"
+        ))
+        conn.execute(text(
+            "ALTER TABLE credit_requests ADD COLUMN IF NOT EXISTS admin_confirmed_at TIMESTAMP"
+        ))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS credit_requests (
                 id VARCHAR(36) PRIMARY KEY,

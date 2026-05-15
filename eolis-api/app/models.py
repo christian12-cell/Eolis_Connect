@@ -306,7 +306,10 @@ class CreditRequest(Base):
     validated_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     validated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    admin_confirmed_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    admin_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     client: Mapped["User"] = relationship("User", foreign_keys=[client_id])
     validator: Mapped["User | None"] = relationship("User", foreign_keys=[validated_by])
+    admin_confirmer: Mapped["User | None"] = relationship("User", foreign_keys=[admin_confirmed_by])
