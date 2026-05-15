@@ -107,17 +107,11 @@ function computeAgentStats(agentId: string, closedSrc: any[], allTickets: any[])
   const okSla    = slaRows.reduce((s, r) => s + r.ok, 0)
   const slaGlobal = totalSla ? Math.round(okSla / totalSla * 100) : null
 
-  // composite 0-100 : satisfaction (50%) + conformité SLA (50%)
-  // Si aucune note client → 100% SLA (pas de pénalité pour oubli de notation)
-  // Si notes disponibles → 50% sat + 50% SLA
-  const satScore = avgSat !== null ? (avgSat / 5) * 100 : null
-  const composite = slaGlobal !== null || satScore !== null
-    ? satScore !== null && slaGlobal !== null
-      ? +((satScore * 0.5) + (slaGlobal * 0.5)).toFixed(1)
-      : satScore !== null
-        ? +satScore.toFixed(1)
-        : +(slaGlobal!).toFixed(1)
-    : null
+  // composite 0-100 : satisfaction (50%) + vitesse vs plafond 24h (50%)
+  const satScore   = avgSat  !== null ? (avgSat / 5) * 100 : null
+  const speedScore = avgTime !== null ? Math.max(0, 100 - (avgTime / SLA_CAP) * 100) : null
+  const composite  = satScore !== null || speedScore !== null
+    ? +((satScore ?? 50) * 0.5 + (speedScore ?? 50) * 0.5).toFixed(2) : null
 
   return { count: treated.length, avgSat, avgTime, avgFirstR, slaGlobal, composite }
 }
@@ -410,7 +404,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                     <div className={`w-24 rounded-2xl border-2 ${podiumBg[1]} flex flex-col items-center justify-center py-4 px-3 mb-3`}>
                       <Medal size={22} className={podiumColors[1]} />
                       <p className="text-xs font-bold text-gray-700 mt-1 text-center truncate max-w-full">{ranked[1].firstName}</p>
-                      <p className="text-xs font-black text-gray-800 mt-1">{ranked[1].composite ?? '—'}<span className="text-[10px] font-normal">/100</span></p>
+                      <p className="text-xs font-black text-gray-800 mt-1">{ranked[1].composite?.toFixed(2) ?? '—'}<span className="text-[10px] font-normal">/100</span></p>
                       <div className="mt-1.5 space-y-0.5 text-center">
                         {ranked[1].avgSat !== null && <p className="text-[10px] text-amber-600">⭐ {ranked[1].avgSat.toFixed(1)}/5</p>}
                         <p className="text-[10px] text-gray-400">{fmtH(ranked[1].avgTime)}</p>
@@ -429,7 +423,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                   <div className={`w-28 rounded-2xl border-2 ${podiumBg[0]} flex flex-col items-center justify-center py-5 px-3 mb-3`}>
                     <Trophy size={26} className={podiumColors[0]} />
                     <p className="text-sm font-bold text-gray-800 mt-1 text-center truncate max-w-full">{ranked[0].firstName}</p>
-                    <p className="text-lg font-black text-gray-900 mt-1">{ranked[0].composite ?? '—'}<span className="text-xs font-normal">/100</span></p>
+                    <p className="text-lg font-black text-gray-900 mt-1">{ranked[0].composite?.toFixed(2) ?? '—'}<span className="text-xs font-normal">/100</span></p>
                     <div className="mt-2 space-y-0.5 text-center">
                       {ranked[0].avgSat !== null && <p className="text-xs text-amber-600 font-semibold">⭐ {ranked[0].avgSat.toFixed(1)}/5</p>}
                       <p className="text-xs text-gray-500">{fmtH(ranked[0].avgTime)}</p>
@@ -454,7 +448,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                     <div className={`w-24 rounded-2xl border-2 ${podiumBg[2]} flex flex-col items-center justify-center py-4 px-3 mb-3`}>
                       <Medal size={20} className={podiumColors[2]} />
                       <p className="text-xs font-bold text-gray-700 mt-1 text-center truncate max-w-full">{ranked[2].firstName}</p>
-                      <p className="text-xs font-black text-gray-800 mt-1">{ranked[2].composite ?? '—'}<span className="text-[10px] font-normal">/100</span></p>
+                      <p className="text-xs font-black text-gray-800 mt-1">{ranked[2].composite?.toFixed(2) ?? '—'}<span className="text-[10px] font-normal">/100</span></p>
                       <div className="mt-1.5 space-y-0.5 text-center">
                         {ranked[2].avgSat !== null && <p className="text-[10px] text-amber-600">⭐ {ranked[2].avgSat.toFixed(1)}/5</p>}
                         <p className="text-[10px] text-gray-400">{fmtH(ranked[2].avgTime)}</p>
@@ -518,7 +512,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                         </td>
                         <td className="px-3 py-3 text-right">
                           <span className={`font-black text-base ${a.composite !== null ? (a.composite >= 70 ? 'text-emerald-600' : a.composite >= 50 ? 'text-amber-600' : 'text-red-500') : 'text-gray-300'}`}>
-                            {a.composite !== null ? a.composite : '—'}
+                            {a.composite !== null ? a.composite.toFixed(2) : '—'}
                           </span>
                           {a.composite !== null && <span className="text-gray-400 text-xs">/100</span>}
                         </td>
