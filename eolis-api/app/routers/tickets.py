@@ -83,7 +83,7 @@ def get_ticket(ticket_id: str, current_user: User = Depends(get_current_user), d
 
 
 @router.patch("/{ticket_id}", response_model=TicketResponse)
-def update_ticket(ticket_id: str, body: TicketUpdateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_ticket(ticket_id: str, body: TicketUpdateRequest, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
@@ -92,10 +92,29 @@ def update_ticket(ticket_id: str, body: TicketUpdateRequest, current_user: User 
         ticket.agent_id = body.agent_id
         ticket.taken_at = datetime.utcnow()
 
-    if body.status is not None:
+    if body.status is not None and body.status != ticket.status:
+        old_status = ticket.status
         ticket.status = body.status
         if body.status in ("TREATED", "CLOSED"):
             ticket.closed_at = datetime.utcnow()
+        elif old_status in ("TREATED", "CLOSED"):
+            ticket.closed_at = None
+        # Notify assigned agent of admin-driven status change
+        if ticket.agent_id and ticket.agent_id != current_user.id:
+            if body.status in ("TREATED", "CLOSED"):
+                db.add(Notification(
+                    user_id=ticket.agent_id, ticket_id=ticket.id,
+                    type="TICKET_CLOSED",
+                    title=f"Dossier clôturé — {ticket.ref}",
+                    message=f"{current_user.first_name} {current_user.last_name} a clôturé le dossier {ticket.ref}",
+                ))
+            elif old_status in ("TREATED", "CLOSED"):
+                db.add(Notification(
+                    user_id=ticket.agent_id, ticket_id=ticket.id,
+                    type="TICKET_REOPENED",
+                    title=f"Dossier rouvert — {ticket.ref}",
+                    message=f"{current_user.first_name} {current_user.last_name} a rouvert le dossier {ticket.ref}",
+                ))
 
     if body.urgency is not None:
         ticket.urgency = body.urgency
@@ -103,6 +122,7 @@ def update_ticket(ticket_id: str, body: TicketUpdateRequest, current_user: User 
     db.add(Log(user_id=current_user.id, action="UPDATE_TICKET", entity="Ticket", entity_id=ticket.id))
     db.commit()
     db.refresh(ticket)
+    background_tasks.add_task(ws_manager.broadcast, ticket_id, {"type": "ticket_updated", "ticketId": ticket_id})
     return ticket
 
 
@@ -132,6 +152,13 @@ def close_ticket(ticket_id: str, background_tasks: BackgroundTasks, current_user
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
     ticket.status = "TREATED"
     ticket.closed_at = datetime.utcnow()
+    if ticket.agent_id and ticket.agent_id != current_user.id:
+        db.add(Notification(
+            user_id=ticket.agent_id, ticket_id=ticket_id,
+            type="TICKET_CLOSED",
+            title=f"Dossier clôturé — {ticket.ref}",
+            message=f"{current_user.first_name} {current_user.last_name} a clôturé le dossier {ticket.ref}",
+        ))
     db.add(Log(user_id=current_user.id, action="CLOSE_TICKET", entity="Ticket", entity_id=ticket.id))
     db.commit()
     db.refresh(ticket)

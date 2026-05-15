@@ -221,6 +221,7 @@ def send_message(
                 )
                 .all()
             )
+        already_notified_ids: set = set()
         if mentioned_users:
             # Targeted notification for each @mentioned user
             for u in mentioned_users:
@@ -231,6 +232,7 @@ def send_message(
                     title=f"Mention — {ticket.ref}",
                     message=f"{current_user.first_name} vous a mentionné dans une note sur le dossier {ticket.ref}",
                 ))
+                already_notified_ids.add(u.id)
         else:
             # No @mention — broadcast to all active OPS_ADMIN
             ops_users = db.query(UserModel).filter(
@@ -244,6 +246,17 @@ def send_message(
                     title=f"Note interne — {ticket.ref}",
                     message=f"{current_user.first_name} a ajouté une note interne sur le dossier {ticket.ref}",
                 ))
+                already_notified_ids.add(ops.id)
+
+        # Also notify the assigned agent if they're not the author and not already notified
+        if ticket.agent_id and ticket.agent_id != current_user.id and ticket.agent_id not in already_notified_ids:
+            db.add(Notification(
+                user_id=ticket.agent_id,
+                ticket_id=ticket_id,
+                type="INTERNAL_NOTE",
+                title=f"Note interne — {ticket.ref}",
+                message=f"{current_user.first_name} a ajouté une note interne sur votre dossier {ticket.ref}",
+            ))
 
     elif sender_type == "DOCS_SUBMITTED" and ticket.agent_id:
         lang_notif = client.language if client else "fr"

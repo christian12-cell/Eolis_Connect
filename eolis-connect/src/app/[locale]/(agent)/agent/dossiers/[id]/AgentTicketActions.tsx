@@ -173,12 +173,15 @@ export default function AgentTicketActions({
   const [replyUploads, setReplyUploads]       = useState<FileUploadA[]>([])
   const [internalUploads, setInternalUploads] = useState<FileUploadA[]>([])
 
-  const bottomRef       = useRef<HTMLDivElement>(null)
-  const chatScrollRef   = useRef<HTMLDivElement>(null)
-  const fileRef         = useRef<HTMLInputElement>(null)
-  const prevLenRef      = useRef(0)
-  const [isScrolledUp, setIsScrolledUp]   = useState(false)
-  const [unreadWhileUp, setUnreadWhileUp] = useState(0)
+  const bottomRef             = useRef<HTMLDivElement>(null)
+  const chatScrollRef         = useRef<HTMLDivElement>(null)
+  const fileRef               = useRef<HTMLInputElement>(null)
+  const prevClientLenRef      = useRef(0)
+  const prevInternalLenRef    = useRef(0)
+  const [isClientScrolledUp,   setIsClientScrolledUp]   = useState(false)
+  const [clientUnread,         setClientUnread]          = useState(0)
+  const [isInternalScrolledUp, setIsInternalScrolledUp] = useState(false)
+  const [internalUnread,       setInternalUnread]        = useState(0)
 
   const t = {
     reopen:        isFr ? 'Réouvrir le dossier' : 'Reopen ticket',
@@ -230,6 +233,8 @@ export default function AgentTicketActions({
   // WebSocket — real-time updates
   useTicketWS(ticketId, {
     onMessagesUpdated: () => {
+      // Auto-mark notifications as read since agent is actively viewing the ticket
+      apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' }).catch(() => {})
       Promise.all([
         apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
         apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()),
@@ -294,41 +299,72 @@ export default function AgentTicketActions({
   }, [ticketId, takenByOther, currentAgentId, localAgentId])
 
   useEffect(() => {
-    const prev = prevLenRef.current
-    const newCount = messages.length - prev
-    prevLenRef.current = messages.length
-    if (newCount <= 0) return
+    const clientMsgs   = messages.filter(m => m.senderType !== 'INTERNAL_NOTE')
+    const internalMsgs = messages.filter(m => m.senderType === 'INTERNAL_NOTE')
     const el = chatScrollRef.current
-    if (!el) return
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
-    const newMsgs = messages.slice(-newCount)
-    const myOwn = newMsgs.some((m: any) => m.senderId === currentAgentId && m.pending)
-    if (nearBottom || myOwn) {
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-      setUnreadWhileUp(0)
-      setIsScrolledUp(false)
-    } else {
-      const fromOthers = newMsgs.filter((m: any) => m.senderId !== currentAgentId).length
-      if (fromOthers > 0) {
-        setIsScrolledUp(true)
-        setUnreadWhileUp(p => p + fromOthers)
+    const nearBottom = el ? el.scrollHeight - el.scrollTop - el.clientHeight < 150 : true
+
+    // ── Client messages ──
+    const prevC  = prevClientLenRef.current
+    const newC   = clientMsgs.length - prevC
+    prevClientLenRef.current = clientMsgs.length
+    if (newC > 0) {
+      const newMsgs = clientMsgs.slice(-newC)
+      const myOwn   = newMsgs.some((m: any) => m.senderId === currentAgentId && m.pending)
+      if (chatTab === 'client') {
+        if (nearBottom || myOwn) {
+          el?.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+          setClientUnread(0); setIsClientScrolledUp(false)
+        } else {
+          const n = newMsgs.filter((m: any) => m.senderId !== currentAgentId).length
+          if (n > 0) { setIsClientScrolledUp(true); setClientUnread(p => p + n) }
+        }
+      } else if (!myOwn) {
+        const n = newMsgs.filter((m: any) => m.senderId !== currentAgentId).length
+        setClientUnread(p => p + n)
       }
     }
-  }, [messages, currentAgentId])
+
+    // ── Internal notes ──
+    const prevI  = prevInternalLenRef.current
+    const newI   = internalMsgs.length - prevI
+    prevInternalLenRef.current = internalMsgs.length
+    if (newI > 0) {
+      const newNotes = internalMsgs.slice(-newI)
+      const myOwn    = newNotes.some((m: any) => m.senderId === currentAgentId && m.pending)
+      if (chatTab === 'internal') {
+        if (nearBottom || myOwn) {
+          el?.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+          setInternalUnread(0); setIsInternalScrolledUp(false)
+        } else {
+          const n = newNotes.filter((m: any) => m.senderId !== currentAgentId).length
+          if (n > 0) { setIsInternalScrolledUp(true); setInternalUnread(p => p + n) }
+        }
+      } else if (!myOwn) {
+        const n = newNotes.filter((m: any) => m.senderId !== currentAgentId).length
+        setInternalUnread(p => p + n)
+      }
+    }
+  }, [messages, currentAgentId, chatTab])
 
   function handleAgentChatScroll() {
     const el = chatScrollRef.current
     if (!el) return
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
-    if (nearBottom) { setIsScrolledUp(false); setUnreadWhileUp(0) }
-    else setIsScrolledUp(true)
+    if (chatTab === 'client') {
+      if (nearBottom) { setIsClientScrolledUp(false); setClientUnread(0) }
+      else setIsClientScrolledUp(true)
+    } else {
+      if (nearBottom) { setIsInternalScrolledUp(false); setInternalUnread(0) }
+      else setIsInternalScrolledUp(true)
+    }
   }
 
   function scrollAgentToBottom() {
     const el = chatScrollRef.current
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-    setIsScrolledUp(false)
-    setUnreadWhileUp(0)
+    if (chatTab === 'client') { setIsClientScrolledUp(false); setClientUnread(0) }
+    else { setIsInternalScrolledUp(false); setInternalUnread(0) }
   }
 
   // ── Derived data ──────────────────────────────────────────────────────────
@@ -358,6 +394,13 @@ export default function AgentTicketActions({
     setMode('reply')
     setText('')
     setMentionUsers([])
+    // Reset unread + scroll state for the tab we're switching to
+    if (tab === 'client') { setIsClientScrolledUp(false); setClientUnread(0) }
+    else { setIsInternalScrolledUp(false); setInternalUnread(0) }
+    setTimeout(() => {
+      const el = chatScrollRef.current
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    }, 50)
   }
 
   // ── File download ─────────────────────────────────────────────────────────
@@ -468,6 +511,14 @@ export default function AgentTicketActions({
     setActionLoading(null)
   }
 
+  async function adminCloseTicket() {
+    if (!confirm(isFr ? 'Clôturer ce dossier directement sans réponse finale ?' : 'Close this ticket directly without a final response?')) return
+    setActionLoading('adminclose')
+    const res = await apiFetch(`/api/tickets/${ticketId}/close`, { method: 'PATCH' })
+    if (res.ok) { setLocalStatus('TREATED') }
+    setActionLoading(null)
+  }
+
   async function sendReply() {
     const uploads = chatTab === 'client' ? replyUploads : internalUploads
     const hasUploading = uploads.some(f => f.status === 'uploading')
@@ -574,6 +625,7 @@ export default function AgentTicketActions({
     const senderRole  = msg.sender?.role ?? 'AGENT'
 
     if (msg.senderType === 'INTERNAL_NOTE') {
+      const isMine = msg.senderId === currentAgentId
       const roleColor = senderRole === 'OPS_ADMIN' ? 'text-purple-700 border-purple-200 bg-purple-50'
         : senderRole === 'SYSTEM_ADMIN' ? 'text-red-700 border-red-200 bg-red-50'
         : 'text-amber-700 border-amber-200 bg-amber-50'
@@ -585,18 +637,25 @@ export default function AgentTicketActions({
             : part
         )
       return (
-        <div key={msg.id} className="flex justify-center">
-          <div className={`max-w-[90%] w-full border rounded-xl px-4 py-2.5 ${roleColor}`}>
-            <p className="text-[10px] font-bold mb-1 uppercase tracking-wide">
-              🔒 {t.noteLabel} · {senderName}
-            </p>
+        <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+          <div className={`max-w-[82%] border px-4 py-2.5 ${roleColor} ${
+            isMine ? 'rounded-2xl rounded-tr-sm' : 'rounded-2xl rounded-tl-sm'
+          }`}>
+            {!isMine && (
+              <p className="text-[10px] font-bold mb-1 uppercase tracking-wide">
+                🔒 {senderName}
+              </p>
+            )}
+            {isMine && (
+              <p className="text-[10px] font-bold mb-1 uppercase tracking-wide opacity-60">🔒</p>
+            )}
             <p className="text-sm leading-relaxed">{highlightMentions(msg.content.trim())}</p>
             {noteAtts.length > 0 && (
               <div className="mt-2 pt-2 border-t border-current/20">
                 <DocCardRow attachments={noteAtts} onDownload={att => downloadFile(att)} size="sm" />
               </div>
             )}
-            <p className="text-[10px] opacity-60 mt-1">{formatDate(msg.createdAt, locale)}</p>
+            <p className={`text-[10px] opacity-60 mt-1 ${isMine ? 'text-right' : ''}`}>{formatDate(msg.createdAt, locale)}</p>
           </div>
         </div>
       )
@@ -810,11 +869,11 @@ export default function AgentTicketActions({
           }`}>
           <Lock size={14} />
           {t.tabInternal}
-          {internalMessages.length > 0 && (
+          {(internalMessages.length > 0 || internalUnread > 0) && (
             <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${
-              chatTab === 'internal' ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'
+              chatTab === 'internal' ? 'bg-amber-100 text-amber-600' : internalUnread > 0 ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-500'
             }`}>
-              {internalMessages.length}
+              {chatTab !== 'internal' && internalUnread > 0 ? internalUnread : internalMessages.length}
             </span>
           )}
         </button>
@@ -840,6 +899,13 @@ export default function AgentTicketActions({
                   : 'bg-emerald-600 text-white hover:bg-emerald-700'
               }`}>
               <CheckCircle size={13} /> {t.finalize}
+            </button>
+          )}
+          {isAdmin && localStatus === 'IN_PROGRESS' && (
+            <button onClick={adminCloseTicket} disabled={actionLoading === 'adminclose'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-100 text-red-700 text-xs font-semibold hover:bg-red-200 disabled:opacity-60 transition-colors">
+              {actionLoading === 'adminclose' ? <Spinner /> : <X size={13} />}
+              {isFr ? 'Clôturer (admin)' : 'Close (admin)'}
             </button>
           )}
           {canAct && (
@@ -884,22 +950,22 @@ export default function AgentTicketActions({
         <div ref={bottomRef} />
 
         {/* Bandeau nouveaux messages */}
-        {isScrolledUp && unreadWhileUp > 0 && (
+        {(chatTab === 'client' ? isClientScrolledUp && clientUnread > 0 : isInternalScrolledUp && internalUnread > 0) && (
           <button onClick={scrollAgentToBottom}
             className="sticky bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1B3A5C] text-white text-xs font-semibold shadow-lg mx-auto w-fit">
             <span>↓</span>
-            {unreadWhileUp} {isFr ? 'nouveau' : 'new'}{unreadWhileUp > 1 && isFr ? 'x' : ''}
+            {chatTab === 'client' ? clientUnread : internalUnread} {isFr ? 'nouveau' : 'new'}{(chatTab === 'client' ? clientUnread : internalUnread) > 1 && isFr ? 'x' : ''}
           </button>
         )}
       </div>
 
       {/* Flèche scroll-to-bottom */}
-      {isScrolledUp && (
+      {(chatTab === 'client' ? isClientScrolledUp : isInternalScrolledUp) && (
         <button onClick={scrollAgentToBottom}
           className="absolute bottom-24 right-4 z-20 w-9 h-9 rounded-full bg-[#1B3A5C] shadow-lg flex items-center justify-center">
-          {unreadWhileUp > 0 && (
+          {(chatTab === 'client' ? clientUnread : internalUnread) > 0 && (
             <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-              {unreadWhileUp > 9 ? '9+' : unreadWhileUp}
+              {(chatTab === 'client' ? clientUnread : internalUnread) > 9 ? '9+' : (chatTab === 'client' ? clientUnread : internalUnread)}
             </span>
           )}
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
