@@ -104,7 +104,18 @@ def login(request: Request, body: LoginRequest, background_tasks: BackgroundTask
             # No phone registered — skip 2FA and warn (edge case)
             pass
         else:
-            # Invalidate previous 2FA OTPs
+            # Anti-double-send : si un OTP valide a été créé dans les 30 dernières secondes, ne pas renvoyer
+            recent = db.query(OtpCode).filter(
+                OtpCode.phone == f"2fa:{user.id}",
+                OtpCode.used == False,
+                OtpCode.expires_at > datetime.utcnow(),
+                OtpCode.created_at > datetime.utcnow() - timedelta(seconds=30),
+            ).first()
+            if recent:
+                pre_token = _sign_pre_auth(user.id)
+                return {"requires_2fa": True, "pre_token": pre_token, "masked_phone": _mask_phone(user.phone)}
+
+            # Invalider les anciens OTPs puis en créer un nouveau
             db.query(OtpCode).filter(
                 OtpCode.phone == f"2fa:{user.id}", OtpCode.used == False
             ).delete()

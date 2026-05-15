@@ -70,6 +70,7 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Classement' : 'Rankings',             href: `${base}/ops/classement`,      icon: <Trophy size={18} /> },
       { label: locale === 'fr' ? 'Notifications' : 'Notifications',     href: `${base}/agent/notifications`, icon: <Bell size={18} /> },
       { label: locale === 'fr' ? 'Finance (lecture)' : 'Finance (read-only)', href: `${base}/finance/dashboard`, icon: <PieChart size={18} /> },
+      { label: locale === 'fr' ? 'Confirmation crédits' : 'Credit approval', href: `${base}/admin/credits`,     icon: <Wallet size={18} /> },
       { label: locale === 'fr' ? 'Journal d\'audit' : 'Audit log',           href: `${base}/finance/audit`,     icon: <ShieldCheck size={18} /> },
       { label: locale === 'fr' ? 'Sessions' : 'Sessions',               href: `${base}/admin/sessions`,      icon: <Shield size={18} /> },
       { label: locale === 'fr' ? 'Système' : 'System',                  href: `${base}/admin/systeme`,       icon: <Globe size={18} /> },
