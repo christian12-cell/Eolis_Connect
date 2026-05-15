@@ -60,15 +60,32 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   const token  = getToken()
   const method = (options.method ?? 'GET').toUpperCase()
 
+  // Offline shortcut for GET: serve cache immediately, no network wait
+  if (typeof navigator !== 'undefined' && !navigator.onLine && method === 'GET') {
+    const cached = await offlineDb.get(path)
+    if (cached !== null) {
+      return new Response(JSON.stringify(cached), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'X-Eolis-Cache': '1' },
+      })
+    }
+    throw new Error('offline')
+  }
+
+  const controller = new AbortController()
+  const timeoutId  = setTimeout(() => controller.abort(), 8000)
+
   try {
     const res = await fetch(apiUrl(path), {
       ...options,
+      signal: options.signal ?? controller.signal,
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
     })
+    clearTimeout(timeoutId)
 
     // Cache successful GET responses for offline use
     if (res.ok && method === 'GET') {
@@ -86,7 +103,8 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
 
     return res
   } catch {
-    // Offline — serve GET from cache with a synthetic Response
+    clearTimeout(timeoutId)
+    // Offline or timeout — serve GET from cache with a synthetic Response
     if (method === 'GET') {
       const cached = await offlineDb.get(path)
       if (cached !== null) {
