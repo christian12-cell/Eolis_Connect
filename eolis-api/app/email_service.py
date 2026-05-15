@@ -172,20 +172,36 @@ def send_account_created_by_admin(to_email: str, first_name: str, username: str,
     role_labels_en = {'AGENT': 'Customer Service Agent', 'OPS_ADMIN': 'Operations Administrator', 'SYSTEM_ADMIN': 'System Administrator', 'CLIENT': 'Client'}
     role_label = (role_labels_en if en else role_labels_fr).get(role, role)
     subject = f"Welcome to Eolis Connect — Your access, {first_name}" if en else f"Bienvenue sur Eolis Connect — Vos accès, {first_name}"
+
+    t_greeting    = "Hello" if en else "Bonjour"
+    t_role_label  = "Role" if en else "Votre rôle"
+    t_created     = "An <strong>Eolis Connect</strong> account has been created for you by the administration." if en else "Un compte <strong>Eolis Connect</strong> a été créé pour vous par l'administration."
+    t_identifier  = "Your login identifier" if en else "Votre identifiant de connexion"
+    t_temp_pw     = "Your temporary password is available via the secure link below." if en else "Votre mot de passe temporaire est disponible via le lien sécurisé ci-dessous."
+    t_keep_id     = "Keep your identifier safe" if en else "Notez bien votre identifiant"
+    t_need_it     = "you will need it to sign in." if en else "vous en aurez besoin pour vous connecter."
+    t_secure_link = "Secure link to retrieve your temporary password" if en else "Lien sécurisé pour récupérer votre mot de passe temporaire"
+    t_single_use  = "This link is <strong>single-use</strong> and expires in <strong>48 hours</strong>." if en else "Ce lien est <strong>à usage unique</strong> et expire dans <strong>48 heures</strong>."
+    t_note_pw     = "Once opened, note your password immediately — the page cannot be displayed again." if en else "Une fois ouvert, notez votre mot de passe immédiatement — la page ne pourra pas être réaffichée."
+    t_btn         = "Access my credentials →" if en else "Accéder à mes identifiants →"
+    t_expire      = "If you do not use this link within 48h, it will expire permanently." if en else "Si vous n'utilisez pas ce lien dans les 48h, il expirera définitivement."
+    t_contact     = "Contact the administration for a new one:" if en else "Contactez l'administration pour en obtenir un nouveau :"
+    t_help        = "Need help?" if en else "Besoin d'aide ?"
+
     content = f"""
-      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{'Hello' if en else 'Bonjour'} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_greeting} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
       <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-        {'An <strong>Eolis Connect</strong> account has been created for you by the administration.' if en else 'Un compte <strong>Eolis Connect</strong> a été créé pour vous par l\'administration.'}<br/>
-        {'Role' if en else 'Votre rôle'} : <strong style="color:#1B3A5C;">{role_label}</strong>
+        {t_created}<br/>
+        {t_role_label} : <strong style="color:#1B3A5C;">{role_label}</strong>
       </p>
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFF6FF;border:1px solid #bfdbfe;border-radius:12px;margin:20px 0;">
         <tr>
           <td style="padding:20px 24px;">
-            <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;">{'Your login identifier' if en else 'Votre identifiant de connexion'}</p>
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;">{t_identifier}</p>
             <p style="margin:0 0 12px;font-size:24px;font-weight:800;color:#1B3A5C;font-family:monospace;">{username}</p>
             <p style="margin:0;font-size:13px;color:#4b5563;">
-              {'Your temporary password is available via the secure link below.' if en else 'Votre mot de passe temporaire est disponible via le lien sécurisé ci-dessous.'}<br/>
-              <strong>{'Keep your identifier safe' if en else 'Notez bien votre identifiant'}</strong> — {'you will need it to sign in.' if en else 'vous en aurez besoin pour vous connecter.'}
+              {t_temp_pw}<br/>
+              <strong>{t_keep_id}</strong> — {t_need_it}
             </p>
           </td>
         </tr>
@@ -193,10 +209,10 @@ def send_account_created_by_admin(to_email: str, first_name: str, username: str,
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF9C3;border:1px solid #fde047;border-radius:12px;margin:16px 0;">
         <tr>
           <td style="padding:16px 24px;">
-            <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#713f12;">🔐 {'Secure link to retrieve your temporary password' if en else 'Lien sécurisé pour récupérer votre mot de passe temporaire'}</p>
+            <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#713f12;">🔐 {t_secure_link}</p>
             <p style="margin:0;font-size:12px;color:#92400e;">
-              {'This link is <strong>single-use</strong> and expires in <strong>48 hours</strong>.' if en else 'Ce lien est <strong>à usage unique</strong> et expire dans <strong>48 heures</strong>.'}<br/>
-              {'Once opened, note your password immediately — the page cannot be displayed again.' if en else 'Une fois ouvert, notez votre mot de passe immédiatement — la page ne pourra pas être réaffichée.'}
+              {t_single_use}<br/>
+              {t_note_pw}
             </p>
           </td>
         </tr>
@@ -204,7 +220,7 @@ def send_account_created_by_admin(to_email: str, first_name: str, username: str,
       <table cellpadding="0" cellspacing="0" style="margin:24px 0;">
         <tr>
           <td style="background:#1B3A5C;border-radius:10px;padding:0;">
-            <a href="{setup_url}" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">{'Access my credentials →' if en else 'Accéder à mes identifiants →'}</a>
+            <a href="{setup_url}" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">{t_btn}</a>
           </td>
         </tr>
       </table>
@@ -212,13 +228,13 @@ def send_account_created_by_admin(to_email: str, first_name: str, username: str,
         <tr>
           <td style="padding:14px 20px;">
             <p style="margin:0;font-size:12px;color:#7f1d1d;">
-              ⚠️ {'If you do not use this link within 48h, it will expire permanently.' if en else 'Si vous n\'utilisez pas ce lien dans les 48h, il expirera définitivement.'}<br/>
-              {'Contact the administration for a new one:' if en else 'Contactez l\'administration pour en obtenir un nouveau :'} <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a>
+              ⚠️ {t_expire}<br/>
+              {t_contact} <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a>
             </p>
           </td>
         </tr>
       </table>
-      <p style="margin:0;font-size:13px;color:#9ca3af;">{'Need help?' if en else 'Besoin d\'aide ?'} <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a></p>
+      <p style="margin:0;font-size:13px;color:#9ca3af;">{t_help} <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;">{settings.MAIL_SUPPORT_FROM}</a></p>
     """
     _send(to_email, subject, _template(content))
 
@@ -226,16 +242,22 @@ def send_account_created_by_admin(to_email: str, first_name: str, username: str,
 def send_account_deleted(to_email: str, first_name: str, lang: str = "fr"):
     en = lang == "en"
     subject = "Your Eolis Connect account has been deleted" if en else "Votre compte Eolis Connect a été supprimé"
+
+    t_greeting = "Hello" if en else "Bonjour"
+    t_deleted   = "We inform you that your <strong>Eolis Connect</strong> account has been deleted by the administration." if en else "Nous vous informons que votre compte sur la plateforme <strong>Eolis Connect</strong> a été supprimé par l'administration."
+    t_error     = "If you believe this is an error, please contact our team as soon as possible." if en else "Si vous pensez qu'il s'agit d'une erreur, veuillez contacter notre équipe au plus vite."
+    t_thanks    = "Thank you for using Eolis Connect." if en else "Merci d'avoir utilisé Eolis Connect. Bonne continuation."
+
     content = f"""
-      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{'Hello' if en else 'Bonjour'} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_greeting} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
       <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-        {'We inform you that your <strong>Eolis Connect</strong> account has been deleted by the administration.' if en else 'Nous vous informons que votre compte sur la plateforme <strong>Eolis Connect</strong> a été supprimé par l\'administration.'}
+        {t_deleted}
       </p>
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF2F2;border:1px solid #fecaca;border-radius:12px;margin:20px 0;">
         <tr>
           <td style="padding:16px 24px;">
             <p style="margin:0;font-size:14px;color:#7f1d1d;">
-              {'If you believe this is an error, please contact our team as soon as possible.' if en else 'Si vous pensez qu\'il s\'agit d\'une erreur, veuillez contacter notre équipe au plus vite.'}
+              {t_error}
             </p>
             <p style="margin:10px 0 0;font-size:14px;">
               <a href="mailto:{settings.MAIL_SUPPORT_FROM}" style="color:#4A8FC4;font-weight:600;">{settings.MAIL_SUPPORT_FROM}</a>
@@ -243,7 +265,7 @@ def send_account_deleted(to_email: str, first_name: str, lang: str = "fr"):
           </td>
         </tr>
       </table>
-      <p style="margin:0;font-size:13px;color:#6b7280;">{'Thank you for using Eolis Connect.' if en else 'Merci d\'avoir utilisé Eolis Connect. Bonne continuation.'}</p>
+      <p style="margin:0;font-size:13px;color:#6b7280;">{t_thanks}</p>
     """
     _send(to_email, subject, _template(content))
 
