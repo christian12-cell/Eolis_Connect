@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func as _func
 from ..database import get_db
 from ..limiter import limiter
-from ..models import User, Log, AccountSetupToken, CreditBalance, PasswordReset, OtpCode
+from ..models import User, Log, AccountSetupToken, CreditBalance, PasswordReset, OtpCode, Notification
 from ..credit_service import FREE_CREDITS_ON_SIGNUP
 from ..schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from ..security import hash_password, verify_password, create_access_token
@@ -69,9 +69,27 @@ def generate_username(first_name: str, last_name: str) -> str:
     return f"{first[0].upper()}{first[1:].lower()}.{last.upper()}"
 
 
-@router.post("/login", response_model=TokenResponse)
+# Roles that require 2FA at login
+_2FA_ROLES = {"FINANCE_AGENT", "SYSTEM_ADMIN"}
+
+def _sign_pre_auth(user_id: str) -> str:
+    """Short-lived token valid only for 2FA verification (10 min)."""
+    return _jose_jwt.encode(
+        {"sub": user_id, "scope": "2fa_pending", "exp": datetime.utcnow() + timedelta(minutes=10)},
+        settings.SECRET_KEY, algorithm=settings.ALGORITHM,
+    )
+
+def _verify_pre_auth(token: str) -> str | None:
+    try:
+        data = _jose_jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return data["sub"] if data.get("scope") == "2fa_pending" else None
+    except _JWTError:
+        return None
+
+
+@router.post("/login")
 @limiter.limit("10/minute")
-def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
+def login(request: Request, body: LoginRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == body.username).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found")
@@ -80,8 +98,69 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     if not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="wrong_password")
 
+    # 2FA required for sensitive roles
+    if user.role in _2FA_ROLES:
+        if not user.phone:
+            # No phone registered — skip 2FA and warn (edge case)
+            pass
+        else:
+            # Invalidate previous 2FA OTPs
+            db.query(OtpCode).filter(
+                OtpCode.phone == f"2fa:{user.id}", OtpCode.used == False
+            ).delete()
+            code = f"{_random.randint(100000, 999999)}"
+            otp  = OtpCode(
+                user_id=user.id,
+                phone=f"2fa:{user.id}",
+                code=code,
+                expires_at=datetime.utcnow() + timedelta(minutes=10),
+            )
+            db.add(otp)
+            db.commit()
+            background_tasks.add_task(sms_otp, user.phone, code, user.language or "fr")
+            pre_token = _sign_pre_auth(user.id)
+            return {"requires_2fa": True, "pre_token": pre_token, "masked_phone": _mask_phone(user.phone)}
+
     user.last_login_at = datetime.utcnow()
     db.add(user)
+    db.commit()
+    db.refresh(user)
+    token = create_access_token({"sub": user.id, "role": user.role, "username": user.username}, role=user.role)
+    return {"access_token": token, "token_type": "bearer", "user": user}
+
+
+@router.post("/2fa/verify")
+@limiter.limit("5/minute")
+def verify_2fa(request: Request, body: dict, db: Session = Depends(get_db)):
+    pre_token = body.get("pre_token", "")
+    code      = body.get("code", "").strip()
+    user_id   = _verify_pre_auth(pre_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="invalid_pre_token")
+
+    otp = db.query(OtpCode).filter(
+        OtpCode.phone == f"2fa:{user_id}",
+        OtpCode.used  == False,
+        OtpCode.expires_at > datetime.utcnow(),
+    ).order_by(OtpCode.created_at.desc()).first()
+
+    if not otp:
+        raise HTTPException(status_code=401, detail="otp_expired")
+
+    otp.attempts += 1
+    if otp.attempts > 5:
+        db.commit()
+        raise HTTPException(status_code=429, detail="too_many_attempts")
+
+    if otp.code != code:
+        db.commit()
+        raise HTTPException(status_code=401, detail="wrong_code")
+
+    otp.used = True
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="user_not_found")
+    user.last_login_at = datetime.utcnow()
     db.commit()
     db.refresh(user)
     token = create_access_token({"sub": user.id, "role": user.role, "username": user.username}, role=user.role)

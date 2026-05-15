@@ -17,10 +17,15 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
   const [errorType, setErrorType] = useState<'username' | 'password' | 'blocked' | 'generic' | null>(null)
   const [isOffline, setIsOffline] = useState(false)
+  // 2FA state
+  const [step, setStep]           = useState<'credentials' | '2fa'>('credentials')
+  const [preToken, setPreToken]   = useState('')
+  const [maskedPhone, setMaskedPhone] = useState('')
+  const [otpCode, setOtpCode]     = useState('')
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   useEffect(() => {
@@ -70,10 +75,11 @@ export default function LoginPage({ params }: LoginPageProps) {
   const text = t[locale as keyof typeof t] ?? t.fr
 
   const roleRoutes: Record<string, string> = {
-    CLIENT: `/${locale}/accueil`,
-    AGENT: `/${locale}/agent/dashboard`,
-    OPS_ADMIN: `/${locale}/ops/dashboard`,
-    SYSTEM_ADMIN: `/${locale}/admin/dashboard`,
+    CLIENT:        `/${locale}/accueil`,
+    AGENT:         `/${locale}/agent/dashboard`,
+    OPS_ADMIN:     `/${locale}/ops/dashboard`,
+    SYSTEM_ADMIN:  `/${locale}/admin/dashboard`,
+    FINANCE_AGENT: `/${locale}/finance/dashboard`,
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -91,15 +97,20 @@ export default function LoginPage({ params }: LoginPageProps) {
 
       if (res.ok) {
         const data = await res.json()
-        // API may return camelCase or snake_case depending on FastAPI alias config
-        const token = data.accessToken ?? data.access_token
-        const user = data.user
-        console.log('[login] response:', { token: token?.slice(0, 20), role: user?.role, status: user?.status })
-        if (!token || !user) {
-          setError(text.genericError)
-          setErrorType('generic')
+
+        // 2FA required — switch to OTP step
+        if (data.requires_2fa) {
+          setPreToken(data.pre_token)
+          setMaskedPhone(data.masked_phone ?? '')
+          setStep('2fa')
           setLoading(false)
           return
+        }
+
+        const token = data.accessToken ?? data.access_token
+        const user  = data.user
+        if (!token || !user) {
+          setError(text.genericError); setErrorType('generic'); setLoading(false); return
         }
         saveSession(token, user)
         let dest = roleRoutes[user.role] ?? `/${locale}/accueil`
@@ -107,7 +118,6 @@ export default function LoginPage({ params }: LoginPageProps) {
           const favPage = localStorage.getItem('eolis_fav_page') ?? 'accueil'
           dest = `/${locale}/${favPage}`
         }
-        console.log('[login] navigating to:', dest)
         window.location.href = dest
         return
       }
@@ -142,6 +152,38 @@ export default function LoginPage({ params }: LoginPageProps) {
     setLoading(false)
   }
 
+  async function handle2FA(e: React.FormEvent) {
+    e.preventDefault()
+    if (otpCode.length !== 6) return
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(apiUrl('/api/auth/2fa/verify'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pre_token: preToken, code: otpCode }),
+      })
+      if (res.ok) {
+        const data  = await res.json()
+        const token = data.accessToken ?? data.access_token
+        const user  = data.user
+        saveSession(token, user)
+        window.location.href = roleRoutes[user.role] ?? `/${locale}/accueil`
+        return
+      }
+      const err    = await res.json().catch(() => ({}))
+      const detail = err.detail ?? ''
+      if (detail === 'wrong_code')         setError(locale === 'fr' ? 'Code incorrect. Réessayez.' : 'Incorrect code. Please try again.')
+      else if (detail === 'otp_expired')   setError(locale === 'fr' ? 'Code expiré. Reconnectez-vous.' : 'Code expired. Please log in again.')
+      else if (detail === 'too_many_attempts') setError(locale === 'fr' ? 'Trop de tentatives. Reconnectez-vous.' : 'Too many attempts. Please log in again.')
+      else if (detail === 'invalid_pre_token') { setStep('credentials'); setError(locale === 'fr' ? 'Session expirée. Reconnectez-vous.' : 'Session expired. Please log in again.') }
+      else setError(text.genericError)
+    } catch {
+      setError(text.genericError)
+    }
+    setLoading(false)
+  }
+
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4">
       <Image src="/bg-auth.jpg" alt="" fill className="object-cover" priority />
@@ -171,6 +213,59 @@ export default function LoginPage({ params }: LoginPageProps) {
           <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
           {locale === 'fr' ? 'Choisir une autre langue' : 'Choose another language'}
         </Link>
+
+        {/* ── STEP 2FA ── */}
+        {step === '2fa' ? (
+          <div>
+            <div className="mb-6 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-[#1B3A5C]/10 flex items-center justify-center mx-auto mb-3">
+                <KeyRound size={26} className="text-[#1B3A5C]" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {locale === 'fr' ? 'Vérification en 2 étapes' : 'Two-step verification'}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {locale === 'fr'
+                  ? `Un code a été envoyé par SMS au ${maskedPhone}`
+                  : `A code was sent by SMS to ${maskedPhone}`}
+              </p>
+            </div>
+
+            <form onSubmit={handle2FA} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block mb-1.5">
+                  {locale === 'fr' ? 'Code à 6 chiffres' : '6-digit code'}
+                </label>
+                <input
+                  type="text" inputMode="numeric" maxLength={6} value={otpCode}
+                  onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0,6))}
+                  placeholder="000000" autoFocus
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:border-[#1B3A5C]"
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 rounded-xl px-4 py-3">
+                  <AlertCircle size={16} className="flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <button type="submit" disabled={loading || otpCode.length !== 6}
+                className="w-full py-3.5 rounded-xl bg-[#1B3A5C] text-white font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                {loading
+                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {locale === 'fr' ? 'Vérification...' : 'Verifying...'}</>
+                  : <>{locale === 'fr' ? 'Valider le code' : 'Verify code'}</>}
+              </button>
+
+              <button type="button" onClick={() => { setStep('credentials'); setOtpCode(''); setError('') }}
+                className="w-full text-sm text-gray-400 hover:text-gray-600 mt-1">
+                ← {locale === 'fr' ? 'Retour à la connexion' : 'Back to login'}
+              </button>
+            </form>
+          </div>
+        ) : (
+        <>
 
         <div className="mb-7">
           <h2 className="text-2xl font-bold text-gray-900">{text.title}</h2>
@@ -253,6 +348,8 @@ export default function LoginPage({ params }: LoginPageProps) {
         </p>
 
         <p className="mt-4 text-center text-xs text-gray-400 italic">&ldquo;{text.tagline}&rdquo;</p>
+        </>
+        )}
       </div>
     </div>
   )

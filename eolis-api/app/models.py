@@ -195,6 +195,22 @@ class Log(Base):
     user: Mapped["User | None"] = relationship("User", back_populates="logs")
 
 
+class FinancialAuditLog(Base):
+    """Immutable audit trail for every financial action."""
+    __tablename__ = "financial_audit_logs"
+
+    id: Mapped[str]           = mapped_column(String(36), primary_key=True, default=gen_id)
+    user_id: Mapped[str]      = mapped_column(String(36), ForeignKey("users.id"))
+    action: Mapped[str]       = mapped_column(String(100))   # CREDIT_APPROVE, CREDIT_REJECT, INFRA_ADD, INFRA_DELETE
+    entity_id: Mapped[str | None]    = mapped_column(String(36), nullable=True)
+    amount_fcfa: Mapped[float | None] = mapped_column(nullable=True)
+    details: Mapped[str | None]      = mapped_column(Text, nullable=True)
+    ip_address: Mapped[str | None]   = mapped_column(String(50), nullable=True)
+    created_at: Mapped[datetime]     = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+
+
 class BLDocument(Base):
     __tablename__ = "bl_documents"
 

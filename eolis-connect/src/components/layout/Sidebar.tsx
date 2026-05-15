@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   Home, FileText, PlusCircle, Settings, LayoutDashboard,
   List, Clock, BarChart2, Trophy, Users, ScrollText, X, Globe, Bell, BookOpen, Shield, Zap, Wallet,
-  TrendingUp, DollarSign, Receipt, PieChart, Building2,
+  TrendingUp, DollarSign, Receipt, PieChart, Building2, ShieldCheck,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -84,6 +84,7 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Revenus & IA' : 'Revenue & AI',          href: `${base}/finance/revenus`,    icon: <TrendingUp size={18} /> },
       { label: locale === 'fr' ? 'Charges infra' : 'Infra costs',          href: `${base}/finance/depenses`,   icon: <Building2 size={18} /> },
       { label: locale === 'fr' ? 'Rapport P&L' : 'P&L Report',             href: `${base}/finance/rapport`,    icon: <PieChart size={18} /> },
+      { label: locale === 'fr' ? 'Journal d\'audit' : 'Audit log',         href: `${base}/finance/audit`,      icon: <ShieldCheck size={18} /> },
       { label: locale === 'fr' ? 'Notifications' : 'Notifications',        href: `${base}/agent/notifications`, icon: <Bell size={18} /> },
       { label: locale === 'fr' ? 'Paramètres' : 'Settings',                href: `${base}/agent/parametres`,   icon: <Settings size={18} /> },
     ]

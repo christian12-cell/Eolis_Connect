@@ -1,11 +1,15 @@
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import User, AIUsage, CreditRequest, InfrastructureCost
+from ..models import User, AIUsage, CreditRequest, InfrastructureCost, FinancialAuditLog
 from ..deps import get_current_user, require_roles
+
+def _client_ip(request: Request) -> str | None:
+    fwd = request.headers.get("x-forwarded-for")
+    return fwd.split(",")[0].strip() if fwd else str(request.client.host) if request.client else None
 
 router = APIRouter(prefix="/finance", tags=["finance"])
 
@@ -134,6 +138,7 @@ def list_infra_costs(
 
 @router.post("/infra-costs", status_code=201)
 def add_infra_cost(
+    request: Request,
     body: InfraCostIn,
     current_user: User = Depends(require_roles("FINANCE_AGENT")),
     db: Session = Depends(get_db),
@@ -148,6 +153,12 @@ def add_infra_cost(
         added_by=current_user.id,
     )
     db.add(cost)
+    db.flush()
+    db.add(FinancialAuditLog(
+        user_id=current_user.id, action="INFRA_COST_ADD", entity_id=cost.id,
+        amount_fcfa=body.amount_fcfa, details=f"{body.category} — {body.label} ({body.period})",
+        ip_address=_client_ip(request),
+    ))
     db.commit()
     db.refresh(cost)
     return {"id": cost.id, "label": cost.label, "amountFcfa": cost.amount_fcfa}
@@ -155,6 +166,7 @@ def add_infra_cost(
 
 @router.delete("/infra-costs/{cost_id}", status_code=204)
 def delete_infra_cost(
+    request: Request,
     cost_id: str,
     current_user: User = Depends(require_roles("FINANCE_AGENT")),
     db: Session = Depends(get_db),
@@ -162,8 +174,35 @@ def delete_infra_cost(
     cost = db.query(InfrastructureCost).filter(InfrastructureCost.id == cost_id).first()
     if not cost:
         raise HTTPException(404)
+    db.add(FinancialAuditLog(
+        user_id=current_user.id, action="INFRA_COST_DELETE", entity_id=cost_id,
+        amount_fcfa=cost.amount_fcfa, details=f"{cost.category} — {cost.label}",
+        ip_address=_client_ip(request),
+    ))
     db.delete(cost)
     db.commit()
+
+
+@router.get("/audit-log")
+def get_audit_log(
+    current_user: User = Depends(require_roles(*FINANCE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    """Financial audit trail — immutable log of all financial actions."""
+    logs = db.query(FinancialAuditLog).order_by(FinancialAuditLog.created_at.desc()).limit(200).all()
+    return [
+        {
+            "id":         l.id,
+            "action":     l.action,
+            "entityId":   l.entity_id,
+            "amountFcfa": l.amount_fcfa,
+            "details":    l.details,
+            "ipAddress":  l.ip_address,
+            "createdAt":  l.created_at.isoformat() + "Z",
+            "doneBy":     f"{l.user.first_name} {l.user.last_name}" if l.user else l.user_id,
+            "role":       l.user.role if l.user else None,
+        } for l in logs
+    ]
 
 
 @router.get("/pnl")

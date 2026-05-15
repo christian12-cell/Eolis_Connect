@@ -5,16 +5,31 @@ import mimetypes
 import boto3
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
 from fastapi.responses import StreamingResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import CreditBalance, CreditRequest, User, Notification, AIUsage, Ticket
+from ..models import CreditBalance, CreditRequest, User, Notification, AIUsage, Ticket, FinancialAuditLog
 from ..deps import get_current_user, require_roles
 from ..credit_service import get_or_create_balance, FREE_CREDITS_ON_SIGNUP
 from ..config import settings
+from ..limiter import limiter
 
 router = APIRouter(prefix="/credits", tags=["credits"])
+
+# Seuil d'alerte (FCFA) — au-dessus, SYSTEM_ADMIN est notifié
+LARGE_APPROVAL_THRESHOLD = 100_000
+
+def _audit(db: Session, user_id: str, action: str, entity_id: str | None = None,
+           amount: float | None = None, details: str | None = None, ip: str | None = None):
+    db.add(FinancialAuditLog(
+        user_id=user_id, action=action, entity_id=entity_id,
+        amount_fcfa=amount, details=details, ip_address=ip,
+    ))
+
+def _client_ip(request: Request) -> str | None:
+    fwd = request.headers.get("x-forwarded-for")
+    return fwd.split(",")[0].strip() if fwd else str(request.client.host) if request.client else None
 
 
 # ── Public config endpoint ─────────────────────────────────────────────────────
@@ -168,7 +183,9 @@ def admin_list_requests(
 
 
 @router.post("/admin/requests/{request_id}/approve")
+@limiter.limit("10/minute")
 def approve_request(
+    request: Request,
     request_id: str,
     amount_received: float = Form(...),
     current_user: User = Depends(require_roles("FINANCE_AGENT")),
@@ -181,8 +198,11 @@ def approve_request(
         raise HTTPException(400, "Demande déjà traitée")
     if amount_received < 500:
         raise HTTPException(400, "Montant minimum 500 FCFA")
+    # Validation : montant approuvé ne peut pas dépasser 2× le montant déclaré
+    if amount_received > req.amount_declared * 2:
+        raise HTTPException(400, f"Montant trop élevé — déclaré : {req.amount_declared} FCFA, maximum autorisé : {req.amount_declared * 2} FCFA")
 
-    credits_to_add = round(amount_received)  # 1 crédit = 1 FCFA, toujours entier
+    credits_to_add = round(amount_received)
 
     bal = get_or_create_balance(req.client_id, db)
     bal.credits_total += credits_to_add
@@ -195,7 +215,7 @@ def approve_request(
     req.validated_at = datetime.utcnow()
     db.add(req)
 
-    notif = Notification(
+    db.add(Notification(
         user_id=req.client_id,
         type="CREDITS_ADDED",
         title="Crédits ajoutés ✓|||Credits added ✓",
@@ -205,14 +225,33 @@ def approve_request(
             f"|||{int(credits_to_add)} premium credits have been added to your account."
             f" Questions? {settings.MAIL_SUPPORT_FROM}"
         ),
-    )
-    db.add(notif)
+    ))
+
+    # Audit log
+    _audit(db, current_user.id, "CREDIT_APPROVE", req.id, amount_received,
+           f"client={req.client_id} credits={credits_to_add}", _client_ip(request))
+
+    # Alerte SYSTEM_ADMIN si montant élevé
+    if amount_received >= LARGE_APPROVAL_THRESHOLD:
+        admins = db.query(User).filter(User.role == "SYSTEM_ADMIN").all()
+        client = db.query(User).filter(User.id == req.client_id).first()
+        client_name = f"{client.first_name} {client.last_name}" if client else req.client_id
+        for admin in admins:
+            db.add(Notification(
+                user_id=admin.id,
+                type="LARGE_CREDIT_APPROVAL",
+                title=f"⚠️ Approbation importante — {int(amount_received):,} FCFA|||⚠️ Large approval — {int(amount_received):,} FCFA",
+                message=f"{current_user.first_name} {current_user.last_name} a approuvé {int(amount_received):,} FCFA pour {client_name}.|||{current_user.first_name} {current_user.last_name} approved {int(amount_received):,} FCFA for {client_name}.",
+            ))
+
     db.commit()
     return {"creditsAdded": credits_to_add}
 
 
 @router.post("/admin/requests/{request_id}/reject")
+@limiter.limit("10/minute")
 def reject_request(
+    request: Request,
     request_id: str,
     reason: str = Form(""),
     current_user: User = Depends(require_roles("FINANCE_AGENT")),
@@ -242,6 +281,9 @@ def reject_request(
         ),
     )
     db.add(notif)
+    # Audit log
+    _audit(db, current_user.id, "CREDIT_REJECT", req.id, req.amount_declared,
+           f"reason={reason[:200]}", _client_ip(request))
     db.commit()
     return {"status": "rejected"}
 

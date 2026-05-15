@@ -197,6 +197,18 @@ def startup():
             )
         """))
         conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS financial_audit_logs (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+                action VARCHAR(100) NOT NULL,
+                entity_id VARCHAR(36),
+                amount_fcfa DOUBLE PRECISION,
+                details TEXT,
+                ip_address VARCHAR(50),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
             CREATE TABLE IF NOT EXISTS infrastructure_costs (
                 id VARCHAR(36) PRIMARY KEY,
                 category VARCHAR(50) NOT NULL,
