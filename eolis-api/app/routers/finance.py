@@ -623,22 +623,41 @@ def delete_projection(
 
 @router.get("/projections/comparison")
 def projection_comparison(
-    year: Optional[str] = Query(None),
+    year:         Optional[str] = Query(None),
+    from_period:  Optional[str] = Query(None, alias="from"),   # YYYY-MM
+    to_period:    Optional[str] = Query(None, alias="to"),     # YYYY-MM
     current_user: User = Depends(require_roles(*FINANCE_ROLES)),
     db: Session = Depends(get_db),
 ):
-    """Compare objectifs vs réalité mois par mois."""
-    from ..models import Ticket
+    """Compare objectifs vs réalité mois par mois. Supporte year=YYYY ou from/to=YYYY-MM."""
+    import calendar
 
-    # Projections filtrées par année
+    # Projections filtrées
     proj_q = db.query(FinancialProjection).order_by(FinancialProjection.period)
-    if year:
+    if from_period:
+        proj_q = proj_q.filter(FinancialProjection.period >= from_period[:7])
+    if to_period:
+        proj_q = proj_q.filter(FinancialProjection.period <= to_period[:7])
+    elif year and not from_period:
         proj_q = proj_q.filter(FinancialProjection.period.like(f"{year}-%"))
     projections = {p.period: p for p in proj_q.all()}
 
-    # Données réelles — même logique que pnl_report
-    from_date = f"{year}-01-01" if year else None
-    to_date   = f"{year}-12-31" if year else None
+    # Dates réelles
+    if from_period:
+        from_date = f"{from_period[:7]}-01"
+    elif year:
+        from_date = f"{year}-01-01"
+    else:
+        from_date = None
+
+    if to_period:
+        y, m = map(int, to_period[:7].split("-"))
+        last = calendar.monthrange(y, m)[1]
+        to_date = f"{to_period[:7]}-{last:02d}"
+    elif year and not from_period:
+        to_date = f"{year}-12-31"
+    else:
+        to_date = None
 
     req_q = db.query(CreditRequest).filter(CreditRequest.status == "approved")
     req_q = _apply_date_filter(req_q, CreditRequest.validated_at, from_date, to_date)
@@ -649,7 +668,11 @@ def projection_comparison(
     usages = ai_q.all()
 
     infra = db.query(InfrastructureCost)
-    if year:
+    if from_period:
+        infra = infra.filter(InfrastructureCost.period >= from_period[:7])
+    if to_period:
+        infra = infra.filter(InfrastructureCost.period <= to_period[:7])
+    elif year and not from_period:
         infra = infra.filter(InfrastructureCost.period.like(f"{year}-%"))
     infra = infra.all()
 
