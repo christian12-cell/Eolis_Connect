@@ -104,6 +104,7 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   const [countdown, setCountdown]         = useState(30)
   const autoRef    = useRef<ReturnType<typeof setInterval> | null>(null)
   const countRef   = useRef<ReturnType<typeof setInterval> | null>(null)
+  const filterRef  = useRef<string>('pending')
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   useEffect(() => {
@@ -111,7 +112,9 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     if (!u) { router.replace(`/${locale}/login`); return }
     if (!['FINANCE_AGENT', 'SYSTEM_ADMIN'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
     setUser(u)
-    if (u.role === 'SYSTEM_ADMIN') setFilter('pending_admin')
+    const initialFilter = u.role === 'SYSTEM_ADMIN' ? 'pending_admin' : 'pending'
+    filterRef.current = initialFilter
+    setFilter(initialFilter)
   }, [locale])
 
   const isReadOnly = user?.role === 'SYSTEM_ADMIN'
@@ -119,12 +122,12 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   const loadRequests = useCallback((silent = false) => {
     if (!silent) setLoading(true)
     else setRefreshing(true)
-    const qs = filter ? `?status=${filter}` : ''
+    const qs = filterRef.current ? `?status=${filterRef.current}` : ''
     apiFetch(`/api/credits/admin/requests${qs}`)
       .then(r => r.json())
       .then(d => { setRequests(Array.isArray(d) ? d : []); setLoading(false); setRefreshing(false) })
       .catch(() => { setLoading(false); setRefreshing(false) })
-  }, [filter])
+  }, [])
 
   const loadBalances = useCallback((silent = false) => {
     if (!silent) setLoading(true)
@@ -136,9 +139,13 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   }, [])
 
   useEffect(() => {
+    filterRef.current = filter
+  }, [filter])
+
+  useEffect(() => {
     if (!user) return
     tab === 'requests' ? loadRequests() : loadBalances()
-  }, [user, tab, loadRequests, loadBalances])
+  }, [user, tab, filter, loadRequests, loadBalances])
 
   // Auto-refresh 30s avec countdown ring (comme agent dashboard)
   useEffect(() => {
