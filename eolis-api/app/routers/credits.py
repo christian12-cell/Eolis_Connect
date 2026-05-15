@@ -5,11 +5,11 @@ import mimetypes
 import boto3
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from fastapi.responses import StreamingResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import CreditBalance, CreditRequest, User, Notification, AIUsage
+from ..models import CreditBalance, CreditRequest, User, Notification, AIUsage, Ticket
 from ..deps import get_current_user, require_roles
 from ..credit_service import get_or_create_balance, FREE_CREDITS_ON_SIGNUP
 from ..config import settings
@@ -324,23 +324,61 @@ def admin_balances(
 
 @router.get("/admin/benefits")
 def admin_benefits(
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date:   Optional[str] = Query(None, alias="to"),
+    urgency:   Optional[str] = Query(None),
     current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
     db: Session = Depends(get_db),
 ):
-    approved     = db.query(CreditRequest).filter(CreditRequest.status == "approved").all()
-    pending_count= db.query(CreditRequest).filter(CreditRequest.status == "pending").count()
-    total_revenue= sum(r.amount_validated or 0 for r in approved)
+    def _parse_from(s: str):
+        try: return datetime.strptime(s, "%Y-%m-%d")
+        except ValueError: return None
 
-    usages       = db.query(AIUsage).all()
-    total_api    = sum(u.cost_fcfa for u in usages)
+    def _parse_to(s: str):
+        try: return datetime.strptime(s, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+        except ValueError: return None
 
-    bl_credits   = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "bl_extraction")
-    voice_credits= sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "voice_transcription")
+    # Credit requests filtered by validation date
+    req_q = db.query(CreditRequest).filter(CreditRequest.status == "approved")
+    if from_date and (d := _parse_from(from_date)):
+        req_q = req_q.filter(CreditRequest.validated_at >= d)
+    if to_date and (d := _parse_to(to_date)):
+        req_q = req_q.filter(CreditRequest.validated_at <= d)
+    approved      = req_q.all()
+    pending_count = db.query(CreditRequest).filter(CreditRequest.status == "pending").count()
+    total_revenue = sum(r.amount_validated or 0 for r in approved)
+
+    # AI usages filtered by date
+    usage_q = db.query(AIUsage)
+    if from_date and (d := _parse_from(from_date)):
+        usage_q = usage_q.filter(AIUsage.created_at >= d)
+    if to_date and (d := _parse_to(to_date)):
+        usage_q = usage_q.filter(AIUsage.created_at <= d)
+    usages = usage_q.all()
+
+    # Urgency filter via ticket join
+    urgency_list = [u.strip() for u in urgency.split(",")] if urgency else None
+    if urgency_list:
+        filtered = []
+        for u in usages:
+            ticket = None
+            if u.ticket_id:
+                ticket = db.query(Ticket).filter(Ticket.id == u.ticket_id).first()
+            elif u.bl_document_id:
+                ticket = db.query(Ticket).filter(Ticket.bl_document_id == u.bl_document_id).first()
+            if ticket and ticket.urgency in urgency_list:
+                filtered.append(u)
+        usages = filtered
+
+    total_api     = sum(u.cost_fcfa for u in usages)
+    total_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in usages)
+    bl_credits    = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "bl_extraction")
+    voice_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "voice_transcription")
 
     nb_clients   = db.query(CreditBalance).count()
     free_credits = nb_clients * FREE_CREDITS_ON_SIGNUP
 
-    per_request  = []
+    per_request = []
     for req in approved:
         client = db.query(User).filter(User.id == req.client_id).first()
         per_request.append({
@@ -351,13 +389,16 @@ def admin_benefits(
         })
 
     return {
-        "totalRevenue":      round(total_revenue, 2),
-        "totalApiCost":      round(total_api, 4),
-        "grossProfit":       round(total_revenue - total_api, 2),
-        "freeCreditsGiven":  free_credits,
-        "blCreditsConsumed": round(bl_credits, 2),
-        "voiceCreditsConsumed": round(voice_credits, 2),
-        "approvedRequestsCount": len(approved),
-        "pendingRequestsCount":  pending_count,
-        "revenueDetails":    per_request,
+        "totalRevenue":           round(total_revenue,               2),
+        "totalApiCost":           round(total_api,                   4),
+        "totalCreditsConsumed":   round(total_credits,               2),
+        "totalClientFcfa":        round(total_credits,               2),
+        "usageProfit":            round(total_credits - total_api,   4),
+        "grossProfit":            round(total_revenue - total_api,   2),
+        "freeCreditsGiven":       free_credits,
+        "blCreditsConsumed":      round(bl_credits,                  2),
+        "voiceCreditsConsumed":   round(voice_credits,               2),
+        "approvedRequestsCount":  len(approved),
+        "pendingRequestsCount":   pending_count,
+        "revenueDetails":         per_request,
     }

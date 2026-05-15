@@ -150,6 +150,7 @@ def admin_usage(
     from_date: Optional[str] = Query(None, alias="from"),
     to_date:   Optional[str] = Query(None, alias="to"),
     client_id: Optional[str] = Query(None),
+    urgency:   Optional[str] = Query(None),
     current_user: User = Depends(require_roles("SYSTEM_ADMIN", "OPS_ADMIN")),
     db: Session = Depends(get_db),
 ):
@@ -159,15 +160,18 @@ def admin_usage(
     q = _apply_date_filter(q, from_date, to_date)
     rows = q.order_by(AIUsage.created_at.desc()).all()
 
-    total_usd  = sum(r.cost_usd  for r in rows)
-    total_fcfa = sum(r.cost_fcfa for r in rows)
+    urgency_list = [u.strip() for u in urgency.split(",")] if urgency else None
+
+    total_usd     = 0.0
+    total_fcfa    = 0.0
+    total_credits = 0.0
 
     by_client: dict = defaultdict(lambda: {
-        "costUsd": 0.0, "costFcfa": 0.0, "count": 0, "firstName": None, "lastName": None,
+        "costUsd": 0.0, "costFcfa": 0.0, "credits": 0.0, "count": 0, "firstName": None, "lastName": None,
     })
     by_ticket: dict = defaultdict(lambda: {
-        "ref": None, "ticketId": None, "clientId": None, "clientName": None,
-        "costUsd": 0.0, "costFcfa": 0.0, "blCount": 0, "voiceCount": 0,
+        "ref": None, "ticketId": None, "clientId": None, "clientName": None, "urgency": None,
+        "costUsd": 0.0, "costFcfa": 0.0, "credits": 0.0, "blCount": 0, "voiceCount": 0,
     })
 
     items = []
@@ -175,21 +179,34 @@ def admin_usage(
         client = db.query(User).filter(User.id == r.client_id).first()
         ticket = _resolve_ticket(r, db)
 
-        ticket_key = (ticket.id if ticket else f"notickect-{r.client_id}-{r.created_at.date()}")
+        # Urgency filter — skip operations not matching the requested urgency
+        if urgency_list:
+            if not ticket or ticket.urgency not in urgency_list:
+                continue
+
+        credits     = float(getattr(r, "credits_cost", 0) or 0)
+        ticket_key  = ticket.id if ticket else f"noticket-{r.client_id}-{r.created_at.date()}"
         client_name = f"{client.first_name} {client.last_name}" if client else r.client_id
 
-        by_client[r.client_id]["costUsd"]   += r.cost_usd
-        by_client[r.client_id]["costFcfa"]  += r.cost_fcfa
-        by_client[r.client_id]["count"]     += 1
-        by_client[r.client_id]["firstName"]  = client.first_name if client else None
-        by_client[r.client_id]["lastName"]   = client.last_name  if client else None
+        total_usd     += r.cost_usd
+        total_fcfa    += r.cost_fcfa
+        total_credits += credits
 
-        by_ticket[ticket_key]["ref"]        = ticket.ref if ticket else None
-        by_ticket[ticket_key]["ticketId"]   = ticket.id  if ticket else None
+        by_client[r.client_id]["costUsd"]  += r.cost_usd
+        by_client[r.client_id]["costFcfa"] += r.cost_fcfa
+        by_client[r.client_id]["credits"]  += credits
+        by_client[r.client_id]["count"]    += 1
+        by_client[r.client_id]["firstName"] = client.first_name if client else None
+        by_client[r.client_id]["lastName"]  = client.last_name  if client else None
+
+        by_ticket[ticket_key]["ref"]        = ticket.ref     if ticket else None
+        by_ticket[ticket_key]["ticketId"]   = ticket.id      if ticket else None
         by_ticket[ticket_key]["clientId"]   = r.client_id
         by_ticket[ticket_key]["clientName"] = client_name
+        by_ticket[ticket_key]["urgency"]    = ticket.urgency if ticket else None
         by_ticket[ticket_key]["costUsd"]   += r.cost_usd
         by_ticket[ticket_key]["costFcfa"]  += r.cost_fcfa
+        by_ticket[ticket_key]["credits"]   += credits
         if r.type == "voice_transcription":
             by_ticket[ticket_key]["voiceCount"] += 1
         else:
@@ -200,48 +217,61 @@ def admin_usage(
             "type":         r.type,
             "clientId":     r.client_id,
             "clientName":   client_name,
-            "ticketId":     ticket.id  if ticket else r.ticket_id,
-            "ticketRef":    ticket.ref if ticket else None,
+            "ticketId":     ticket.id     if ticket else r.ticket_id,
+            "ticketRef":    ticket.ref    if ticket else None,
+            "urgency":      ticket.urgency if ticket else None,
             "model":        r.model,
             "inputTokens":  r.input_tokens,
             "outputTokens": r.output_tokens,
-            "costUsd":      round(r.cost_usd,  8),
-            "costFcfa":     round(r.cost_fcfa, 4),
+            "costUsd":      round(r.cost_usd,          8),
+            "costFcfa":     round(r.cost_fcfa,         4),
+            "creditsCost":  round(credits,             2),
+            "profitFcfa":   round(credits - r.cost_fcfa, 4),
             "fcfaRate":     r.fcfa_rate,
             "createdAt":    r.created_at.isoformat() + "Z",
         })
 
     clients_summary = [
         {
-            "clientId":  cid,
-            "firstName": v["firstName"],
-            "lastName":  v["lastName"],
-            "count":     v["count"],
-            "totalUsd":  round(v["costUsd"],  8),
-            "totalFcfa": round(v["costFcfa"], 4),
+            "clientId":   cid,
+            "firstName":  v["firstName"],
+            "lastName":   v["lastName"],
+            "count":      v["count"],
+            "totalUsd":   round(v["costUsd"],              8),
+            "totalFcfa":  round(v["costFcfa"],             4),
+            "totalCredits": round(v["credits"],            2),
+            "clientFcfa": round(v["credits"],              2),
+            "profitFcfa": round(v["credits"] - v["costFcfa"], 4),
         }
         for cid, v in sorted(by_client.items(), key=lambda x: -x[1]["costUsd"])
     ]
 
     tickets_summary = [
         {
-            "ref":        v["ref"],
-            "ticketId":   v["ticketId"],
-            "clientId":   v["clientId"],
-            "clientName": v["clientName"],
-            "blCount":    v["blCount"],
-            "voiceCount": v["voiceCount"],
-            "totalUsd":   round(v["costUsd"],  8),
-            "totalFcfa":  round(v["costFcfa"], 4),
+            "ref":          v["ref"],
+            "ticketId":     v["ticketId"],
+            "clientId":     v["clientId"],
+            "clientName":   v["clientName"],
+            "urgency":      v["urgency"],
+            "blCount":      v["blCount"],
+            "voiceCount":   v["voiceCount"],
+            "totalUsd":     round(v["costUsd"],              8),
+            "totalFcfa":    round(v["costFcfa"],             4),
+            "totalCredits": round(v["credits"],              2),
+            "clientFcfa":   round(v["credits"],              2),
+            "profitFcfa":   round(v["credits"] - v["costFcfa"], 4),
         }
         for v in sorted(by_ticket.values(), key=lambda x: -x["costUsd"])
     ]
 
     return {
-        "totalUsd":       round(total_usd,  8),
-        "totalFcfa":      round(total_fcfa, 4),
-        "count":          len(items),
-        "clientsSummary": clients_summary,
-        "ticketsSummary": tickets_summary,
-        "items":          items,
+        "totalUsd":        round(total_usd,                    8),
+        "totalFcfa":       round(total_fcfa,                   4),
+        "totalCredits":    round(total_credits,                2),
+        "totalClientFcfa": round(total_credits,                2),
+        "totalProfitFcfa": round(total_credits - total_fcfa,   4),
+        "count":           len(items),
+        "clientsSummary":  clients_summary,
+        "ticketsSummary":  tickets_summary,
+        "items":           items,
     }
