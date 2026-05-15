@@ -295,8 +295,8 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
             </p>
             <p className="text-xs text-blue-100 leading-relaxed">
               {isFr
-                ? 'Le paiement s\'effectue directement depuis votre application Orange Money ou MTN MoMo sur votre téléphone — pas ici. Revenez ensuite soumettre votre reçu.'
-                : 'The payment is made directly from your Orange Money or MTN MoMo app on your phone — not here. Then come back to submit your receipt.'}
+                ? 'Effectuez votre transfert depuis votre téléphone via l\'application ou le code USSD ci-dessous — pas ici. Revenez ensuite soumettre la capture du SMS de confirmation.'
+                : 'Make your transfer from your phone via the app or the USSD code below — not here. Then come back to submit the screenshot of the confirmation SMS.'}
             </p>
           </div>
         </div>
@@ -307,26 +307,24 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
             {isFr ? 'Envoyez votre paiement à l\'un de ces numéros :' : 'Send your payment to one of these numbers:'}
           </p>
           {[
-            { op: 'Orange Money', num: payInfo.orangeNumber, bg: 'bg-orange-50', border: 'border-orange-200', dot: 'bg-orange-400' },
-            { op: 'MTN MoMo',     num: payInfo.mtnNumber,    bg: 'bg-yellow-50', border: 'border-yellow-200', dot: 'bg-yellow-400' },
-          ].map(({ op, num, bg, border, dot }) => (
-            <div key={op} className={`${bg} ${border} border rounded-2xl px-4 py-3.5 flex items-center gap-3`}>
-              <div className={`w-2.5 h-2.5 rounded-full ${dot} flex-shrink-0`} />
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{op}</p>
-                <p className="text-xl font-bold text-gray-900 font-mono tracking-wider">{num}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{payInfo.accountName}</p>
+            { op: 'Orange Money', num: payInfo.orangeNumber, code: '#150#', bg: 'bg-orange-50', border: 'border-orange-200', dot: 'bg-orange-400' },
+            { op: 'MTN MoMo',     num: payInfo.mtnNumber,    code: '*126#', bg: 'bg-yellow-50', border: 'border-yellow-200', dot: 'bg-yellow-400' },
+          ].map(({ op, num, code, bg, border, dot }) => (
+            <div key={op} className={`${bg} ${border} border rounded-2xl px-4 py-3.5 flex items-center justify-between gap-3`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-2.5 h-2.5 rounded-full ${dot} flex-shrink-0`} />
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{op}</p>
+                  <p className="text-xl font-bold text-gray-900 font-mono tracking-wider">{num}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{payInfo.accountName}</p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-[10px] text-gray-400 mb-0.5">{isFr ? 'Code USSD' : 'USSD code'}</p>
+                <p className="text-sm font-bold text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded-lg">{code}</p>
               </div>
             </div>
           ))}
-          <div className="bg-blue-500/20 border border-blue-400/30 rounded-xl px-4 py-3 flex gap-2">
-            <span className="text-base flex-shrink-0">💡</span>
-            <p className="text-xs text-blue-100 leading-relaxed">
-              {isFr
-                ? `Lors de votre transfert, indiquez votre nom complet comme référence afin que l'administrateur puisse identifier votre paiement facilement.`
-                : `When making your transfer, enter your full name as the reference so the administrator can identify your payment easily.`}
-            </p>
-          </div>
         </div>
 
         {/* Mode d'emploi */}
@@ -338,22 +336,20 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
             <li className="flex gap-2">
               <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">1.</span>
               {isFr
-                ? 'Ouvrez Orange Money ou MTN MoMo sur votre téléphone et envoyez le montant au numéro ci-dessus'
-                : 'Open Orange Money or MTN MoMo on your phone and send the amount to the number above'}
+                ? 'Depuis votre téléphone, ouvrez Orange Money / MTN MoMo ou composez le code USSD et envoyez le montant au numéro ci-dessus'
+                : 'From your phone, open Orange Money / MTN MoMo or dial the USSD code and send the amount to the number above'}
             </li>
             <li className="flex gap-2">
               <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">2.</span>
               {isFr
-                ? 'Notez votre nom complet comme référence du transfert'
-                : 'Enter your full name as the transfer reference'}
+                ? 'Une fois le transfert effectué, vous recevez un SMS de confirmation — prenez-en une capture d\'écran'
+                : 'Once the transfer is done, you receive a confirmation SMS — take a screenshot of it'}
             </li>
             <li className="flex gap-2">
               <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">3.</span>
-              {isFr ? 'Prenez une capture d\'écran ou téléchargez le reçu (image ou PDF)' : 'Take a screenshot or download the receipt (image or PDF)'}
-            </li>
-            <li className="flex gap-2">
-              <span className="font-bold text-[#1B3A5C] w-5 flex-shrink-0">4.</span>
-              {isFr ? 'Revenez ici, remplissez le formulaire et soumettez votre demande' : 'Come back here, fill in the form and submit your request'}
+              {isFr
+                ? 'Revenez ici, entrez le montant envoyé, uploadez la capture et soumettez votre demande'
+                : 'Come back here, enter the amount sent, upload the screenshot and submit your request'}
             </li>
           </ol>
           <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">
