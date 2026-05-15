@@ -64,7 +64,12 @@ export interface SyncResult {
   refs: string[]
 }
 
+let _syncing = false
+
 export async function syncPending(): Promise<SyncResult> {
+  if (_syncing) return { sent: 0, refs: [] }
+  _syncing = true
+
   const actions = await offlineDb.pending()
   let sent = 0
   const refs: string[] = []
@@ -83,6 +88,8 @@ export async function syncPending(): Promise<SyncResult> {
       }
     }
   }
+
+  _syncing = false
 
   if (sent > 0 && typeof window !== 'undefined') {
     window.dispatchEvent(new Event('eolis-sync-done'))

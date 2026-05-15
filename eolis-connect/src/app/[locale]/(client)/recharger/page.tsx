@@ -32,13 +32,41 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
     const u = getUser()
     if (!u) { router.replace(`/${locale}/login`); return }
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/accueil`); return }
-    apiFetch('/api/credits/balance').then(r => r.json()).then(setBalance).catch(() => {})
-    apiFetch('/api/credits/payment-info').then(r => r.json()).then(d => setPayInfo({
-      orangeNumber: d.orangeNumber ?? '…',
-      mtnNumber:    d.mtnNumber    ?? '…',
-      accountName:  d.accountName  ?? '…',
-      supportEmail: d.supportEmail ?? '',
-    })).catch(() => {})
+
+    // Load payInfo from cache immediately (works offline)
+    try {
+      const cached = localStorage.getItem('eolis_payinfo')
+      if (cached) setPayInfo(JSON.parse(cached))
+    } catch {}
+
+    // Load balance from cache
+    try {
+      const cachedBal = localStorage.getItem('eolis_balance')
+      if (cachedBal) setBalance(JSON.parse(cachedBal))
+    } catch {}
+
+    // Refresh from API when online
+    apiFetch('/api/credits/balance')
+      .then(r => r.json())
+      .then(d => {
+        setBalance(d)
+        localStorage.setItem('eolis_balance', JSON.stringify(d))
+      })
+      .catch(() => {})
+
+    apiFetch('/api/credits/payment-info')
+      .then(r => r.json())
+      .then(d => {
+        const info = {
+          orangeNumber: d.orangeNumber ?? '…',
+          mtnNumber:    d.mtnNumber    ?? '…',
+          accountName:  d.accountName  ?? '…',
+          supportEmail: d.supportEmail ?? '',
+        }
+        setPayInfo(info)
+        localStorage.setItem('eolis_payinfo', JSON.stringify(info))
+      })
+      .catch(() => {})
   }, [locale])
 
   const isFr    = locale === 'fr'
