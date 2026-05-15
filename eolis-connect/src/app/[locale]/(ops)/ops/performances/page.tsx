@@ -191,6 +191,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   const [selectedAgent, setSelectedAgent] = useState<string>('all')
   const [yearFilter, setYearFilter]     = useState<number[]>([])
   const [monthFilter, setMonthFilter]   = useState<number[]>([])
+  const [urgencyFilter, setUrgencyFilter] = useState<string[]>([])
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -216,15 +217,24 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   const now    = new Date()
 
   // ── Filter tickets by period ─────────────────────────────────────────────
-  const hasFilter = !!(yearFilter.length || monthFilter.length)
+  const hasFilter = !!(yearFilter.length || monthFilter.length || urgencyFilter.length)
   const closedAll = tickets.filter(t => t.status === 'TREATED' || t.status === 'CLOSED')
 
-  const periodClosed = hasFilter ? closedAll.filter(t => {
+  const periodClosed = (yearFilter.length || monthFilter.length) ? closedAll.filter(t => {
     const d = new Date(t.closedAt ?? t.updatedAt)
     if (yearFilter.length  && !yearFilter.includes(d.getFullYear())) return false
     if (monthFilter.length && !monthFilter.includes(d.getMonth() + 1)) return false
     return true
   }) : closedAll
+
+  // Apply urgency filter on top of period filter
+  const filteredClosed = urgencyFilter.length > 0
+    ? periodClosed.filter(t => urgencyFilter.includes(t.urgency))
+    : periodClosed
+
+  const filteredClosedAll = urgencyFilter.length > 0
+    ? closedAll.filter(t => urgencyFilter.includes(t.urgency))
+    : closedAll
 
   // Previous period for comparison (same duration before)
   const prevClosed = (() => {
@@ -307,23 +317,26 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
     }
 
     const allResTimes = agents.flatMap(a =>
-      periodClosed.filter(t => t.agentId === a.id && (t.closedAt ?? t.updatedAt))
+      filteredClosed.filter(t => t.agentId === a.id && (t.closedAt ?? t.updatedAt))
         .map(t => (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000)
         .filter(h => !isNaN(h) && isFinite(h))
     )
+    const urgTix = urgencyFilter.length > 0
+      ? tickets.filter(t => urgencyFilter.includes(t.urgency))
+      : tickets
     const allFirstR = agents.flatMap(a =>
-      tickets.filter(t => t.agentId === a.id).map(getFirstResponseH).filter(h => h !== null) as number[]
+      urgTix.filter(t => t.agentId === a.id).map(getFirstResponseH).filter(h => h !== null) as number[]
     )
     const allMsgs = agents.flatMap(a =>
-      tickets.filter(t => t.agentId === a.id).map(getMsgCount)
+      urgTix.filter(t => t.agentId === a.id).map(getMsgCount)
     )
-    const allScores = periodClosed.filter(t => t.satisfactionRating?.score).map(t => t.satisfactionRating.score)
+    const allScores = filteredClosed.filter(t => t.satisfactionRating?.score).map(t => t.satisfactionRating.score)
 
-    const perAgent  = agents.map(a => computeStats(a.id, periodClosed))
+    const perAgent  = agents.map(a => computeStats(a.id, filteredClosed))
     const slaGlobal = avgOf(perAgent.map(s => s.slaGlobal))
 
     return {
-      count:     periodClosed.length,
+      count:     filteredClosed.length,
       avgSat:    allScores.length ? +(allScores.reduce((a: number, b: number) => a + b, 0) / allScores.length).toFixed(1) : null,
       avgRes:    rawAvg(allResTimes),   // raw float → fmtH handles display
       avgFirstR: rawAvg(allFirstR),
@@ -332,18 +345,29 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
     }
   })()
 
-  // All agents stats for comparison table
-  const allAgentStats = agents.map(a => ({ ...a, stats: computeStats(a.id, periodClosed) }))
-    .sort((a, b) => b.stats.count - a.stats.count)
+  // All agents stats for comparison table — tri multi-critères
+  const allAgentStats = agents.map(a => ({ ...a, stats: computeStats(a.id, filteredClosed) }))
+    .sort((a, b) => {
+      // 1. Volume traité (décroissant)
+      if (b.stats.count !== a.stats.count) return b.stats.count - a.stats.count
+      // 2. Satisfaction (décroissant)
+      const satDiff = (b.stats.avgSat ?? 0) - (a.stats.avgSat ?? 0)
+      if (Math.abs(satDiff) > 0.05) return satDiff
+      // 3. SLA global % (décroissant)
+      const slaDiff = (b.stats.slaGlobal ?? 0) - (a.stats.slaGlobal ?? 0)
+      if (slaDiff !== 0) return slaDiff
+      // 4. Délai résolution (croissant — plus rapide = meilleur)
+      return (a.stats.avgRes ?? Infinity) - (b.stats.avgRes ?? Infinity)
+    })
 
   // Selected agent stats
-  const selStats = selectedAgent !== 'all' ? computeStats(selectedAgent, periodClosed) : null
+  const selStats = selectedAgent !== 'all' ? computeStats(selectedAgent, filteredClosed) : null
   const selPrevStats = selectedAgent !== 'all' ? computeStats(selectedAgent, prevClosed) : null
   const selAgent = agents.find(a => a.id === selectedAgent)
 
   // ── Trend data for charts (individual agent) ──────────────────────────────
   function buildTrend(agentId: string) {
-    const src = agentId === 'all' ? closedAll : closedAll.filter(t => t.agentId === agentId)
+    const src = agentId === 'all' ? filteredClosedAll : filteredClosedAll.filter(t => t.agentId === agentId)
     if (!src.length) return []
     const timestamps = src.map(t => new Date(t.closedAt ?? t.updatedAt).getTime()).filter(d => !isNaN(d))
     if (!timestamps.length) return []
@@ -379,7 +403,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
 
   const trendData    = selectedAgent !== 'all' ? buildTrend(selectedAgent) : buildTrend('all')
   const urgencyData  = (() => {
-    const src = selectedAgent !== 'all' ? periodClosed.filter(t => t.agentId === selectedAgent) : periodClosed
+    const src = selectedAgent !== 'all' ? filteredClosed.filter(t => t.agentId === selectedAgent) : filteredClosed
     return [
       { name: `🔴 ${isFr ? 'Élevée' : 'High'}`,   value: src.filter(t => t.urgency === 'HIGH').length,   color: '#EF4444' },
       { name: `🟡 ${isFr ? 'Moyenne' : 'Medium'}`, value: src.filter(t => t.urgency === 'MEDIUM').length, color: '#F59E0B' },
@@ -447,8 +471,17 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
           selected={monthFilter}
           onToggle={v => setMonthFilter(p => p.includes(v as number) ? p.filter(x => x !== v) : [...p, v as number])}
           onClear={() => setMonthFilter([])} />
+        <MultiSelect label={isFr ? 'Urgence' : 'Urgency'} isFr={isFr}
+          options={[
+            { value: 'HIGH',   label: `🔴 ${isFr ? 'Élevée' : 'High'}` },
+            { value: 'MEDIUM', label: `🟡 ${isFr ? 'Moyenne' : 'Medium'}` },
+            { value: 'LOW',    label: `🟢 ${isFr ? 'Faible' : 'Low'}` },
+          ]}
+          selected={urgencyFilter}
+          onToggle={v => setUrgencyFilter(p => p.includes(v as string) ? p.filter(x => x !== v) : [...p, v as string])}
+          onClear={() => setUrgencyFilter([])} />
         {hasFilter && (
-          <button onClick={() => { setYearFilter([]); setMonthFilter([]) }}
+          <button onClick={() => { setYearFilter([]); setMonthFilter([]); setUrgencyFilter([]) }}
             className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 font-medium">
             <X size={14} /> {L.clearAll}
           </button>
