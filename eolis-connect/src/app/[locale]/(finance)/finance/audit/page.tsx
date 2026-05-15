@@ -32,7 +32,7 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
   useEffect(() => {
     const u = getUser()
     if (!u) { router.replace(`/${locale}/login`); return }
-    if (!['FINANCE_AGENT','SYSTEM_ADMIN'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
+    if (u.role !== 'SYSTEM_ADMIN') { router.replace(`/${locale}/accueil`); return }
     setUser(u)
     setLoading(true)
     apiFetch('/api/finance/audit-log').then(r => r.json()).then(d => { setLogs(Array.isArray(d) ? d : []); setLoading(false) }).catch(() => setLoading(false))
@@ -80,9 +80,17 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-semibold text-gray-900">{l.doneBy}</p>
+                        {l.doneByUsername && <span className="text-[10px] text-[#4A8FC4] font-mono bg-blue-50 px-1.5 py-0.5 rounded">@{l.doneByUsername}</span>}
                         <span className="text-[10px] text-gray-400 font-mono bg-gray-100 px-1.5 py-0.5 rounded">{l.role}</span>
                         {l.ipAddress && <span className="text-[10px] text-gray-400 font-mono">IP: {l.ipAddress}</span>}
                       </div>
+                      {l.clientName && (
+                        <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-1">
+                          <span className="text-gray-400">{isFr ? 'Client :' : 'Client:'}</span>
+                          <span className="font-semibold">{l.clientName}</span>
+                          {l.clientUsername && <span className="font-mono text-[#4A8FC4]">@{l.clientUsername}</span>}
+                        </p>
+                      )}
                       {l.details && <p className="text-xs text-gray-500 mt-0.5 truncate">{l.details}</p>}
                       {l.entityId && <p className="text-[10px] text-gray-400 font-mono mt-0.5">ID: {l.entityId}</p>}
                     </div>

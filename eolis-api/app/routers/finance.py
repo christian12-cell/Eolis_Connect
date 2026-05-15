@@ -194,22 +194,38 @@ def delete_infra_cost(
 
 @router.get("/audit-log")
 def get_audit_log(
-    current_user: User = Depends(require_roles(*FINANCE_ROLES)),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
-    """Financial audit trail — immutable log of all financial actions."""
+    """Financial audit trail — SYSTEM_ADMIN only, immutable."""
     logs = db.query(FinancialAuditLog).order_by(FinancialAuditLog.created_at.desc()).limit(200).all()
+
+    # For CREDIT_* actions, entity_id is a CreditRequest id — fetch client info
+    from ..models import CreditRequest
+    def _client_info(entity_id: str | None, action: str):
+        if not entity_id or not action.startswith("CREDIT"):
+            return None, None
+        req = db.query(CreditRequest).filter(CreditRequest.id == entity_id).first()
+        if not req or not req.client:
+            return None, None
+        return f"{req.client.first_name} {req.client.last_name}", req.client.username
+
     return [
         {
-            "id":         l.id,
-            "action":     l.action,
-            "entityId":   l.entity_id,
-            "amountFcfa": l.amount_fcfa,
-            "details":    l.details,
-            "ipAddress":  l.ip_address,
-            "createdAt":  l.created_at.isoformat() + "Z",
-            "doneBy":     f"{l.user.first_name} {l.user.last_name}" if l.user else l.user_id,
-            "role":       l.user.role if l.user else None,
+            "id":           l.id,
+            "action":       l.action,
+            "entityId":     l.entity_id,
+            "amountFcfa":   l.amount_fcfa,
+            "details":      l.details,
+            "ipAddress":    l.ip_address,
+            "createdAt":    l.created_at.isoformat() + "Z",
+            "doneBy":       f"{l.user.first_name} {l.user.last_name}" if l.user else l.user_id,
+            "doneByUsername": l.user.username if l.user else None,
+            "role":         l.user.role if l.user else None,
+            **dict(zip(
+                ("clientName", "clientUsername"),
+                _client_info(l.entity_id, l.action)
+            )),
         } for l in logs
     ]
 

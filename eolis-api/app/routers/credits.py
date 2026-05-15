@@ -17,8 +17,8 @@ from ..limiter import limiter
 
 router = APIRouter(prefix="/credits", tags=["credits"])
 
-# Seuil d'alerte (FCFA) — au-dessus, SYSTEM_ADMIN est notifié
-LARGE_APPROVAL_THRESHOLD = 100_000
+# Seuil maker-checker (FCFA) — au-dessus, confirmation SYSTEM_ADMIN obligatoire
+LARGE_APPROVAL_THRESHOLD = 30_000
 
 def _audit(db: Session, user_id: str, action: str, entity_id: str | None = None,
            amount: float | None = None, details: str | None = None, ip: str | None = None):
