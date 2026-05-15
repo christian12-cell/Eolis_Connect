@@ -343,6 +343,7 @@ Page d'analyse approfondie des performances individuelles et collectives.
 
 - **Sélecteur d'agent** : bascule entre la vue globale ("All agents") et la fiche d'un agent spécifique
 - **Year / Month** : filtrent la période analysée. Sans filtre = toutes les données disponibles
+- **Urgency** (multi-sélection) : filtre par degré de gravité — HIGH, MEDIUM, LOW. Permet de comparer les agents sur des dossiers de **même complexité** pour un classement équitable. Sans filtre = tous niveaux d'urgence confondus
 
 ### Vue "All agents" — 3 graphes globaux
 
@@ -363,7 +364,15 @@ Temps moyen de résolution dans le temps — même axe X auto-adaptatif. Complè
 
 ### Vue "All agents" — Tableau comparatif
 
-Tous les agents classés par nombre de dossiers traités (décroissant), avec médailles 🥇🥈🥉 pour les 3 premiers.
+Tous les agents classés selon un **tri multi-critères équitable**, avec médailles 🥇🥈🥉 pour les 3 premiers.
+
+**Ordre de tri (en cas d'égalité à chaque niveau, on passe au suivant) :**
+1. **Volume** — nombre de dossiers traités (décroissant) — critère principal
+2. **Satisfaction** — note moyenne /5 (décroissante) — départage si même volume
+3. **SLA %** — taux de respect des délais (décroissant) — départage si même satisfaction
+4. **Délai moyen** — temps de résolution (croissant, le plus rapide gagne) — dernier départage
+
+> Exemple : deux agents ont tous deux traité 12 dossiers → on compare leur satisfaction ; si identique, leur SLA % ; si identique encore, leur délai moyen. Plus jamais d'ordre aléatoire en cas d'égalité.
 
 | Colonne | Description |
 |---|---|
