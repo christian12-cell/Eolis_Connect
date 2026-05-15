@@ -224,4 +224,48 @@ Si des dossiers apparaissent ici, chaque ligne affiche : référence, client, ca
 
 ---
 
+---
+
+## Page Ticket Queue (File de dossiers)
+
+Cette page est l'Agent Dashboard — la vue opérationnelle du travail quotidien.
+
+### Les 3 cartes
+
+| Carte | Calcul |
+|---|---|
+| **New** | Tickets `status === 'PENDING'` — pas encore pris en charge |
+| **In progress** | Tickets `status === 'IN_PROGRESS'` — en cours de traitement |
+| **Treated today** | Tickets clôturés depuis minuit (heure Douala, WAT) |
+
+### La file de dossiers
+
+Affiche uniquement les dossiers **actifs** (PENDING + IN_PROGRESS). Les dossiers clôturés ne sont pas ici — ils sont dans la page "Treated tickets".
+
+**Tri :** toujours par urgence, dans cet ordre : HIGH → MEDIUM → LOW. À urgence égale, les plus anciens apparaissent en premier.
+
+**Chaque ligne affiche :**
+- Point coloré d'urgence (rouge/orange/vert)
+- Référence du dossier (REF-2026-XXXX)
+- Nom du client + badge langue (🇫🇷 FR / 🇬🇧 EN)
+- Catégorie et sous-catégorie
+- Statut (badge)
+- Temps depuis la soumission ("il y a 2h", "il y a 3j")
+- Bouton "Voir" pour accéder au dossier
+
+### Filtres et recherche
+
+- **Filtres urgence :** All / High / Medium / Low — filtrent l'affichage de la file
+- **Recherche :** sur la référence (ex: REF-2026-0001) OU le nom du client
+
+### Différence OPS Admin vs Agent simple
+
+L'OPS Admin peut accéder à **n'importe quel dossier**, même ceux déjà assignés à un autre agent. Un simple AGENT voit le bouton "Voir" grisé si le dossier appartient à quelqu'un d'autre.
+
+### Auto-refresh
+
+La page se rafraîchit automatiquement toutes les **60 secondes**. Le compteur SVG en haut à droite indique le temps restant avant le prochain refresh. Le bouton "Refresh" force un rafraîchissement immédiat.
+
+---
+
 *(Suite du manuel à venir — pages suivantes)*
