@@ -313,4 +313,73 @@ Du plus récent au plus ancien (date de clôture).
 
 ---
 
+---
+
+## Page Performance (Performances des agents)
+
+Page d'analyse approfondie des performances individuelles et collectives.
+
+### Filtres
+
+- **Sélecteur d'agent** : bascule entre la vue globale ("All agents") et la fiche d'un agent spécifique
+- **Year / Month** : filtrent la période analysée. Sans filtre = toutes les données disponibles
+
+### Vue "All agents" — 3 graphes globaux
+
+#### Treated tickets (courbe)
+Nombre de dossiers clôturés par période. L'axe X s'adapte automatiquement selon l'étendue des données :
+- ≤ 14 jours → granularité journalière
+- ≤ 60 jours → granularité hebdomadaire
+- > 60 jours → granularité mensuelle
+
+#### Avg satisfaction (/5) (courbe)
+Note moyenne de satisfaction des clients sur la période. Basé sur les évaluations post-clôture. Affiché "—" si aucune note.
+
+#### Urgency breakdown (barres)
+Répartition des dossiers traités par urgence : 🔴 High, 🟡 Medium, 🟢 Low.
+
+### Vue "All agents" — Tableau comparatif
+
+Tous les agents classés par nombre de dossiers traités (décroissant), avec médailles 🥇🥈🥉 pour les 3 premiers.
+
+| Colonne | Description |
+|---|---|
+| **Rank** | Classement par volume traité |
+| **Agent** | Nom de l'agent |
+| **Traités** | Nombre de dossiers clôturés sur la période |
+| **Satisfaction** | Note /5 — **vert** si ≥ moyenne équipe, **rouge** si < moyenne équipe |
+| **Délai moy.** | Temps moyen entre création et clôture |
+| **1ère réponse** | Temps moyen entre création du dossier et premier message de l'agent |
+| **SLA %** | % global de dossiers résolus dans les délais cibles |
+| **Msgs/dossier** | Nombre moyen de messages par dossier |
+| **En cours** | Dossiers actifs actuellement |
+| **Détail →** | Ouvre la fiche individuelle de l'agent |
+
+Dernière ligne = **moyenne équipe** (fond bleu foncé) — référence de comparaison.
+
+---
+
+### Vue individuelle (agent sélectionné)
+
+#### 6 cartes KPI
+
+| KPI | Calcul | Comparaison affichée |
+|---|---|---|
+| **Dossiers traités** | Nombre de dossiers clôturés | ± vs période précédente |
+| **Satisfaction moy.** | Moyenne des notes /5 | ± vs moyenne équipe |
+| **Délai résolution moy.** | `(closedAt − createdAt)` en h/min | vs moyenne équipe |
+| **1ère réponse moy.** | Temps entre création et premier message de l'agent | vs moyenne équipe |
+| **Messages / dossier** | Moyenne des échanges par dossier | vs moyenne équipe |
+| **Charge actuelle** | Dossiers PENDING + IN_PROGRESS assignés en ce moment | — |
+
+**Note "1ère réponse" :** mesure la réactivité de l'agent — combien de temps le client a attendu avant d'avoir une réponse du staff (hors notes internes).
+
+#### SLA Compliance individuelle
+Même logique que l'Overview : % de dossiers résolus dans le délai cible par urgence (HIGH <3h, MEDIUM <5h, LOW <10h).
+
+#### Commentaires clients
+Les 8 derniers commentaires écrits par des clients sur les dossiers de cet agent, avec la note étoile associée.
+
+---
+
 *(Suite du manuel à venir — pages suivantes)*
