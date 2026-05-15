@@ -20,8 +20,24 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [tokenChecked, setTokenChecked] = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
+
+  useEffect(() => {
+    if (!token) { setTokenChecked(true); return }
+    fetch(apiUrl(`/api/auth/reset-password/validate?token=${encodeURIComponent(token)}`))
+      .then(async res => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          if (data.detail === 'already_used') setError('already_used')
+          else if (data.detail === 'expired') setError('expired')
+          else setError('invalid_token')
+        }
+      })
+      .catch(() => {})
+      .finally(() => setTokenChecked(true))
+  }, [token])
 
   const t = {
     fr: {
@@ -118,15 +134,27 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
             </div>
           ) : (
             <>
-              {!token ? (
+              {!token || (tokenChecked && error && ['already_used', 'expired', 'invalid_token'].includes(error)) ? (
                 <div className="text-center py-4">
                   <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-4">
                     <AlertCircle className="w-7 h-7 text-red-500" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-3">{text.invalidToken}</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-3">
+                    {!token ? text.invalidToken
+                      : error === 'already_used' ? (text as any).alreadyUsed
+                      : error === 'expired' ? (text as any).expired
+                      : text.invalidToken}
+                  </h2>
                   <Link href={`/${locale}/forgot-password`} className="inline-flex items-center gap-2 text-[#4A8FC4] text-sm font-medium">
-                    <ArrowLeft size={16} /> Demander un nouveau lien
+                    <ArrowLeft size={16} /> {locale === 'fr' ? 'Demander un nouveau lien' : 'Request a new link'}
                   </Link>
+                </div>
+              ) : !tokenChecked ? (
+                <div className="flex justify-center py-8">
+                  <svg className="animate-spin h-6 w-6 text-[#1B3A5C]" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
                 </div>
               ) : (
                 <>

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from jose import jwt as _jose_jwt, JWTError as _JWTError
 from sqlalchemy.orm import Session
+from sqlalchemy import func as _func
 from ..database import get_db
 from ..limiter import limiter
 from ..models import User, Log, AccountSetupToken, CreditBalance, PasswordReset, OtpCode
@@ -149,12 +150,15 @@ def fp_lookup(request: Request, body: dict, db: Session = Depends(get_db)):
         raise HTTPException(400, "invalid_request")
     user = None
     if mode == "email":
-        user = db.query(User).filter(User.email == value.lower(), User.status == "ACTIVE").first()
+        # Case-insensitive match, most recently created active account
+        user = (db.query(User)
+                .filter(_func.lower(User.email) == value.lower(), User.status == "ACTIVE")
+                .order_by(User.created_at.desc()).first())
     else:
-        user = db.query(User).filter(User.phone == value, User.status == "ACTIVE").first()
-        if not user:
-            norm = re.sub(r'\s', '', value)
-            user = db.query(User).filter(User.phone == norm, User.status == "ACTIVE").first()
+        norm = re.sub(r'\s', '', value)
+        user = (db.query(User)
+                .filter(User.phone.in_([value, norm]), User.status == "ACTIVE")
+                .order_by(User.created_at.desc()).first())
     if not user:
         return {"found": False}
     masked = _mask_email(user.email) if mode == "email" else _mask_phone(user.phone or value)
@@ -237,6 +241,20 @@ def fp_send_reset(body: dict, background_tasks: BackgroundTasks, db: Session = D
     elif user.phone:
         background_tasks.add_task(sms_password_reset, user.phone, user.first_name, reset_url, lang)
     return {"ok": True}
+
+
+@router.get("/reset-password/validate")
+def validate_reset_token(token: str, db: Session = Depends(get_db)):
+    pr = db.query(PasswordReset).filter(PasswordReset.token == token).first()
+    if not pr:
+        raise HTTPException(404, "invalid_token")
+    if pr.used:
+        raise HTTPException(410, "already_used")
+    if datetime.utcnow() > pr.expires_at:
+        pr.used = True
+        db.commit()
+        raise HTTPException(410, "expired")
+    return {"valid": True}
 
 
 @router.post("/reset-password")
