@@ -435,6 +435,99 @@ def admin_reject_pending(
     return {"status": "rejected"}
 
 
+@router.post("/admin/requests/{request_id}/direct-approve")
+@limiter.limit("10/minute")
+def direct_approve_request(
+    request: Request,
+    request_id: str,
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    """SYSTEM_ADMIN approuve directement une grosse demande pending (sans passer par FINANCE_AGENT)."""
+    req = db.query(CreditRequest).filter(CreditRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(404)
+    if req.status != "pending":
+        raise HTTPException(400, "La demande n'est plus en attente")
+    if req.amount_declared < LARGE_APPROVAL_THRESHOLD:
+        raise HTTPException(400, f"Montant inférieur au seuil ({LARGE_APPROVAL_THRESHOLD} FCFA)")
+
+    credits_to_add = round(req.amount_declared)
+
+    bal = get_or_create_balance(req.client_id, db)
+    bal.credits_total += credits_to_add
+    db.add(bal)
+
+    req.status = "approved"
+    req.amount_validated = req.amount_declared
+    req.credits_added = credits_to_add
+    req.validated_by = current_user.id
+    req.validated_at = datetime.utcnow()
+    req.admin_confirmed_by = current_user.id
+    req.admin_confirmed_at = datetime.utcnow()
+    db.add(req)
+
+    db.add(Notification(
+        user_id=req.client_id,
+        type="CREDITS_ADDED",
+        title="Crédits ajoutés ✓|||Credits added ✓",
+        message=(
+            f"{int(credits_to_add)} crédits premium ont été ajoutés à votre compte."
+            f" Une question ? {settings.MAIL_SUPPORT_FROM}"
+            f"|||{int(credits_to_add)} premium credits have been added to your account."
+            f" Questions? {settings.MAIL_SUPPORT_FROM}"
+        ),
+    ))
+
+    _audit(db, current_user.id, "CREDIT_DIRECT_ADMIN_APPROVE", req.id, req.amount_declared,
+           f"client={req.client_id} credits={credits_to_add} (approbation directe admin)", _client_ip(request))
+    db.commit()
+    return {"creditsAdded": credits_to_add}
+
+
+@router.post("/admin/requests/{request_id}/direct-reject")
+@limiter.limit("10/minute")
+def direct_reject_request(
+    request: Request,
+    request_id: str,
+    reason: str = Form(""),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    """SYSTEM_ADMIN rejette directement une grosse demande pending."""
+    req = db.query(CreditRequest).filter(CreditRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(404)
+    if req.status != "pending":
+        raise HTTPException(400, "La demande n'est plus en attente")
+    if req.amount_declared < LARGE_APPROVAL_THRESHOLD:
+        raise HTTPException(400, f"Montant inférieur au seuil ({LARGE_APPROVAL_THRESHOLD} FCFA)")
+
+    req.status = "rejected"
+    req.rejection_reason = f"[Admin direct] {reason}" if reason else "[Refusé directement par administrateur]"
+    req.validated_by = current_user.id
+    req.validated_at = datetime.utcnow()
+    req.admin_confirmed_by = current_user.id
+    req.admin_confirmed_at = datetime.utcnow()
+    db.add(req)
+
+    reason_txt = f"{reason} — " if reason else ""
+    db.add(Notification(
+        user_id=req.client_id,
+        type="CREDITS_REJECTED",
+        title="Demande de recharge refusée|||Top-up request rejected",
+        message=(
+            f"{reason_txt}Contactez-nous : {settings.MAIL_SUPPORT_FROM}"
+            f"|||{reason_txt}Contact us: {settings.MAIL_SUPPORT_FROM}"
+        ),
+    ))
+
+    _audit(db, current_user.id, "CREDIT_DIRECT_ADMIN_REJECT", req.id, req.amount_declared,
+           f"reason={reason[:200]}", _client_ip(request))
+    db.commit()
+    return {"status": "rejected"}
+
+
 # ── Proof file viewer ──────────────────────────────────────────────────────────
 
 @router.get("/photo/{request_id}")

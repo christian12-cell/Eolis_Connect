@@ -119,15 +119,30 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
 
   const isReadOnly = user?.role === 'SYSTEM_ADMIN'
 
+  const LARGE_THRESHOLD = 30_000
+
   const loadRequests = useCallback((silent = false) => {
     if (!silent) setLoading(true)
     else setRefreshing(true)
-    const qs = filterRef.current ? `?status=${filterRef.current}` : ''
+    // Pour SYSTEM_ADMIN sur "À confirmer" : charger pending_admin + pending au-dessus du seuil
+    const isAdminConfirmView = filterRef.current === 'pending_admin' && user?.role === 'SYSTEM_ADMIN'
+    const qs = isAdminConfirmView ? '' : filterRef.current ? `?status=${filterRef.current}` : ''
     apiFetch(`/api/credits/admin/requests${qs}`)
       .then(r => r.json())
-      .then(d => { setRequests(Array.isArray(d) ? d : []); setLoading(false); setRefreshing(false) })
+      .then(d => {
+        let rows = Array.isArray(d) ? d : []
+        if (isAdminConfirmView) {
+          rows = rows.filter((r: any) =>
+            r.status === 'pending_admin' ||
+            (r.status === 'pending' && r.amountDeclared >= LARGE_THRESHOLD)
+          )
+        }
+        setRequests(rows)
+        setLoading(false)
+        setRefreshing(false)
+      })
       .catch(() => { setLoading(false); setRefreshing(false) })
-  }, [])
+  }, [user?.role])
 
   const loadBalances = useCallback((silent = false) => {
     if (!silent) setLoading(true)
@@ -164,7 +179,9 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   const isFr = locale === 'fr'
   const isSystemAdmin = user?.role === 'SYSTEM_ADMIN'
   const pendingCount = requests.filter(r => r.status === 'pending').length
-  const pendingAdminCount = requests.filter(r => r.status === 'pending_admin').length
+  const pendingAdminCount = requests.filter(r =>
+    r.status === 'pending_admin' || (r.status === 'pending' && r.amountDeclared >= LARGE_THRESHOLD)
+  ).length
 
   async function approve(id: string) {
     const amt = parseFloat(amountInputs[id] || '')
@@ -174,6 +191,24 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     fd.append('amount_received', String(amt))
     await apiUpload(`/api/credits/admin/requests/${id}/approve`, fd)
     setValidating(null)
+    loadRequests(true)
+  }
+
+  async function directApprove(id: string) {
+    setValidating(id)
+    await apiFetch(`/api/credits/admin/requests/${id}/direct-approve`, { method: 'POST' })
+    setValidating(null)
+    loadRequests(true)
+  }
+
+  async function directRejectConfirm(id: string) {
+    const reason = adminRejectReasons[id] ?? ''
+    setValidating(id)
+    const fd = new FormData()
+    fd.append('reason', reason)
+    await apiUpload(`/api/credits/admin/requests/${id}/direct-reject`, fd)
+    setValidating(null)
+    setAdminRejectingId(null)
     loadRequests(true)
   }
 
@@ -364,6 +399,54 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                         <ProofViewer requestId={r.id} filename={r.photoUrl?.split('/').pop()} isFr={isFr} />
                       )}
                     </div>
+
+                    {/* grosse demande pending — boutons directs pour SYSTEM_ADMIN */}
+                    {r.status === 'pending' && isSystemAdmin && r.amountDeclared >= LARGE_THRESHOLD && (
+                      <div className="border-t border-orange-200 px-5 py-3 bg-orange-50 space-y-2">
+                        <p className="text-xs text-orange-800 font-semibold flex items-center gap-1.5">
+                          <ShieldAlert size={13} />
+                          {isFr
+                            ? `Montant ≥ ${LARGE_THRESHOLD.toLocaleString()} FCFA — en attente de FINANCE_AGENT ou action directe admin`
+                            : `Amount ≥ ${LARGE_THRESHOLD.toLocaleString()} FCFA — awaiting finance agent or direct admin action`}
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => directApprove(r.id)}
+                            disabled={validating === r.id || proofOpen !== r.id}
+                            title={proofOpen !== r.id ? (isFr ? 'Ouvrez d\'abord le justificatif' : 'Open proof first') : undefined}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+                            {validating === r.id ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                            {isFr ? 'Approuver directement' : 'Approve directly'}
+                          </button>
+                          <button
+                            onClick={() => setAdminRejectingId(adminRejectingId === r.id ? null : r.id)}
+                            disabled={validating === r.id}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-100 text-red-600 text-sm font-semibold disabled:opacity-50">
+                            <X size={14} /> {isFr ? 'Refuser' : 'Reject'}
+                          </button>
+                        </div>
+                        {adminRejectingId === r.id && (
+                          <div className="flex gap-2 pt-1">
+                            <textarea rows={2}
+                              placeholder={isFr ? 'Motif (optionnel)...' : 'Reason (optional)...'}
+                              value={adminRejectReasons[r.id] ?? ''}
+                              onChange={e => setAdminRejectReasons(prev => ({ ...prev, [r.id]: e.target.value }))}
+                              className="flex-1 px-3 py-2 rounded-xl border border-red-200 text-sm focus:outline-none focus:border-red-400 resize-none" />
+                            <div className="flex flex-col gap-1.5">
+                              <button onClick={() => directRejectConfirm(r.id)} disabled={validating === r.id}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-semibold disabled:opacity-50">
+                                {validating === r.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                {isFr ? 'Confirmer' : 'Confirm'}
+                              </button>
+                              <button onClick={() => setAdminRejectingId(null)}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 text-gray-500 text-xs font-semibold">
+                                <X size={12} /> {isFr ? 'Annuler' : 'Cancel'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* pending_admin — badge pour FINANCE_AGENT, boutons pour SYSTEM_ADMIN */}
                     {r.status === 'pending_admin' && !isSystemAdmin && (

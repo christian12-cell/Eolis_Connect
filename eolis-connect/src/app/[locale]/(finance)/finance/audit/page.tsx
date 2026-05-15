@@ -18,7 +18,9 @@ const ACTION_META: Record<string, { icon: React.ReactNode; color: string; label_
   INFRA_COST_DELETE:    { icon: <Trash2 size={14}/>,       color: 'text-gray-500 bg-gray-100',       label_fr: 'Charge supprimée',         label_en: 'Cost deleted'           },
   CREDIT_PENDING_ADMIN: { icon: <ShieldAlert size={14}/>,  color: 'text-orange-600 bg-orange-50',    label_fr: 'En attente admin',         label_en: 'Pending admin'          },
   CREDIT_ADMIN_CONFIRM: { icon: <ShieldCheck size={14}/>,  color: 'text-emerald-600 bg-emerald-50',  label_fr: 'Confirmé admin',           label_en: 'Admin confirmed'        },
-  CREDIT_ADMIN_REJECT:  { icon: <ShieldAlert size={14}/>,  color: 'text-red-500 bg-red-50',          label_fr: 'Annulé admin',             label_en: 'Admin cancelled'        },
+  CREDIT_ADMIN_REJECT:          { icon: <ShieldAlert size={14}/>,  color: 'text-red-500 bg-red-50',          label_fr: 'Annulé admin',             label_en: 'Admin cancelled'        },
+  CREDIT_DIRECT_ADMIN_APPROVE:  { icon: <ShieldCheck size={14}/>,  color: 'text-emerald-600 bg-emerald-50',  label_fr: 'Approuvé direct admin',    label_en: 'Direct admin approval'  },
+  CREDIT_DIRECT_ADMIN_REJECT:   { icon: <ShieldAlert size={14}/>,  color: 'text-red-500 bg-red-50',          label_fr: 'Refusé direct admin',      label_en: 'Direct admin rejection' },
 }
 
 export default function AuditPage({ params }: { params: Promise<{ locale: string }> }) {
