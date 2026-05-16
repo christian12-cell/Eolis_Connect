@@ -104,6 +104,38 @@ Format : `[Date] — Type — Description`
 
 ---
 
+## [2026-05-16] — Session classement OPS, score composite, badges, documentation
+
+### Frontend — `eolis-connect`
+
+#### Score composite — refonte complète (`ops/classement/page.tsx`, `ops/dashboard/page.tsx`)
+- **Ancienne formule** (2 critères) : satisfaction 50% + vitesse résolution 50%.
+- **Nouvelle formule** (4 critères) : satisfaction 25% + vitesse résolution 25% + SLA % 30% + 1ère réponse 20%.
+- **Redistribution proportionnelle** : si une composante est absente (aucune note client, aucun message…), son poids est redistribué aux autres — plus de fallback artificiel à 50.
+- **Volume exclu du score** : quantité ≠ qualité. Un agent traitant 30 dossiers LOW ne doit pas battre un agent gérant 8 dossiers HIGH critiques.
+- **Performance globale par urgence (Overview)** : même formule 4 critères. Correction d'une erreur : les messages étaient déjà chargés avec les tickets, la 1ère réponse est donc calculable dans ce graphe aussi.
+
+#### Classement — nouvelles aides visuelles (`ops/classement/page.tsx`)
+- **Encart formule** (permanent, sous les filtres) : 4 badges colorés ⭐🏁🎯⚡ avec leurs poids et note de redistribution.
+- **🏅 Guide des distinctions** (accordion dépliable) : tableau complet des 5 badges avec signification, critère d'attribution précis et lien avec le score composite.
+- **Tooltip score par agent** : survol du score `/100` → popup `position: fixed` (hors overflow tableau) affichant la décomposition de chaque critère en /100 avec son poids. Fix overflow clip via `getBoundingClientRect()`.
+
+#### Badge 🏁 Résolution — nouveau award (`ops/classement/page.tsx`)
+- 5ème badge ajouté : **🏁 Résolution** = agent avec le délai moyen de résolution le plus bas (création → clôture).
+- Les 4 critères du score ont maintenant chacun leur badge correspondant.
+- Cohérence icônes : 🏁 = vitesse résolution, ⚡ = 1ère réponse / Rapidité (partout dans l'app).
+
+#### Fix tooltip overflow (`ops/classement/page.tsx`)
+- Tooltip CSS `group-hover:absolute` remplacé par état React + `position: fixed` + `getBoundingClientRect()`.
+- Cause : `overflow-x: auto` du container tableau créait un stacking context clippant les éléments absolus.
+
+### Documentation
+- **5 manuels HTML** créés : `MANUEL_CLIENT.html`, `MANUEL_AGENT.html`, `MANUEL_FINANCE.html`, `MANUEL_OPS_ADMIN.html`, `GUIDE_DEVELOPPEUR.html`.
+- **MANUEL_OPS_ADMIN.html** : formules corrigées, graphes détaillés avec guide de lecture, filtre urgence expliqué, tableau des 5 badges complet, section Overview vs Classement, aides UI documentées.
+- **GUIDE_DEVELOPPEUR.html** : ajout pattern tooltip/popup `position: fixed` + `getBoundingClientRect()` dans les erreurs frontend courantes.
+
+---
+
 ## Prochaines étapes prévues
 - [ ] Mode offline pour le BL upload (scan/upload sans réseau, sync à la reconnexion)
 - [ ] OPS : dashboard enrichi (filtres avancés, stats par agent)
