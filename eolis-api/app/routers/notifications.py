@@ -115,10 +115,10 @@ def check_final_unread(
             )
             lang = getattr(user, "language", "fr") or "fr"
             send_push_to_user(
-                db, user.id, "FINAL_UNREAD",
+                user.id, "FINAL_UNREAD",
                 f"Réponse finale non lue — {ticket.ref}" if lang != "en" else f"Final response not viewed — {ticket.ref}",
                 f"{client_name} n'a pas encore lu la réponse finale." if lang != "en" else f"{client_name} has not yet read the final response.",
-                f"/fr/agent/dossiers/{ticket.id}", ticket.urgency,
+                f"/fr/agent/dossiers/{ticket.id}", ticket.urgency, ticket.id, delay_seconds=0,
             )
         created += 1
 
@@ -157,10 +157,10 @@ def check_final_unread(
             )
             lang = getattr(user, "language", "fr") or "fr"
             send_push_to_user(
-                db, user.id, "CLIENT_MSG_UNREAD",
+                user.id, "CLIENT_MSG_UNREAD",
                 f"Message non lu — {ticket.ref}" if lang != "en" else f"Unread message — {ticket.ref}",
                 f"{client_name} attend une réponse depuis plus d'1h." if lang != "en" else f"{client_name} has been waiting for a reply for over 1h.",
-                f"/fr/agent/dossiers/{ticket.id}", ticket.urgency,
+                f"/fr/agent/dossiers/{ticket.id}", ticket.urgency, ticket.id, delay_seconds=0,
             )
         created += 1
 

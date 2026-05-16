@@ -179,7 +179,7 @@ def send_message(
                     ticket.ref, client.language or "fr",
                 )
             background_tasks.add_task(
-                send_push_to_user, db, ticket.client_id, "FINAL_RESPONSE",
+                send_push_to_user,ticket.client_id, "FINAL_RESPONSE",
                 "Réponse finale" if (client.language != "en") else "Final response",
                 f"Votre dossier {ticket.ref} a été clôturé. Consultez la réponse." if (client.language != "en") else f"Your request {ticket.ref} has been closed.",
                 f"/{client.language or 'fr'}/mes-demandes/{ticket_id}", ticket.urgency, ticket_id,
@@ -200,7 +200,7 @@ def send_message(
                     client.phone, client.first_name, ticket.ref, client.language or "fr",
                 )
             background_tasks.add_task(
-                send_push_to_user, db, ticket.client_id, "DOCUMENT_REQUEST",
+                send_push_to_user,ticket.client_id, "DOCUMENT_REQUEST",
                 "Documents requis" if (client.language != "en") else "Documents required",
                 f"Documents demandés pour le dossier {ticket.ref}" if (client.language != "en") else f"Documents requested for {ticket.ref}",
                 f"/{client.language or 'fr'}/mes-demandes/{ticket_id}", ticket.urgency, ticket_id,
@@ -216,7 +216,7 @@ def send_message(
                 message=f"Nouveau message dans le dossier {ticket.ref}",
             ))
             background_tasks.add_task(
-                send_push_to_user, db, ticket.client_id, "NEW_MESSAGE",
+                send_push_to_user,ticket.client_id, "NEW_MESSAGE",
                 "Nouveau message" if (client.language != "en") else "New message",
                 f"Réponse sur le dossier {ticket.ref}" if (client.language != "en") else f"Reply on {ticket.ref}",
                 f"/{client.language or 'fr'}/mes-demandes/{ticket_id}", ticket.urgency, ticket_id,
@@ -250,7 +250,7 @@ def send_message(
                     message=f"{current_user.first_name} vous a mentionné dans une note sur le dossier {ticket.ref}",
                 ))
                 background_tasks.add_task(
-                    send_push_to_user, db, u.id, "MENTION",
+                    send_push_to_user,u.id, "MENTION",
                     f"Mention — {ticket.ref}",
                     f"{current_user.first_name} vous a mentionné dans une note",
                     f"/fr/agent/dossiers/{ticket_id}", ticket.urgency, ticket_id,
@@ -296,7 +296,7 @@ def send_message(
                 ticket.agent.phone, client.first_name, ticket.ref,
             )
         background_tasks.add_task(
-            send_push_to_user, db, ticket.agent_id, "DOCS_SUBMITTED",
+            send_push_to_user,ticket.agent_id, "DOCS_SUBMITTED",
             "Documents reçus",
             f"Le client a envoyé les documents pour {ticket.ref}",
             f"/fr/agent/dossiers/{ticket_id}", ticket.urgency, ticket_id,
@@ -311,7 +311,7 @@ def send_message(
             message=f"Le client a répondu sur le dossier {ticket.ref}",
         ))
         background_tasks.add_task(
-            send_push_to_user, db, ticket.agent_id, "NEW_MESSAGE",
+            send_push_to_user,ticket.agent_id, "NEW_MESSAGE",
             f"Réponse client — {ticket.ref}",
             f"Le client a répondu sur le dossier {ticket.ref}",
             f"/fr/agent/dossiers/{ticket_id}", ticket.urgency, ticket_id,
