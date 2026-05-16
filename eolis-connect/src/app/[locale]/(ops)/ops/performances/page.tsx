@@ -393,6 +393,11 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   const allAgentStats = agents.map(a => ({ ...a, stats: computeStats(a.id, filteredClosed) }))
     .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
 
+  const teamComposite = (() => {
+    const composites = allAgentStats.map(a => a.stats.composite).filter(c => c !== null) as number[]
+    return composites.length ? +(composites.reduce((a, b) => a + b, 0) / composites.length).toFixed(2) : null
+  })()
+
   // Selected agent stats
   const selStats = selectedAgent !== 'all' ? computeStats(selectedAgent, filteredClosed) : null
   const selPrevStats = selectedAgent !== 'all' ? computeStats(selectedAgent, prevClosed) : null
@@ -709,7 +714,9 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                         onClick={() => setSelectedAgent(a.id)}>
                         <td className="px-4 py-3 text-right">
                           {s.composite !== null ? (
-                            <span className="font-bold text-sm text-[#1B3A5C]">{s.composite}<span className="text-gray-400 font-normal text-xs">/100</span></span>
+                            <span className={`font-bold text-sm ${teamComposite !== null && s.composite < teamComposite ? 'text-red-500' : 'text-emerald-600'}`}>
+                              {s.composite}<span className="text-gray-400 font-normal text-xs">/100</span>
+                            </span>
                           ) : <span className="text-gray-300 text-xs">—</span>}
                         </td>
                         <td className="px-3 py-3">
@@ -744,10 +751,6 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                     )
                   })}
                   {/* Team average row */}
-                  {(() => {
-                    const composites = allAgentStats.map(a => a.stats.composite).filter(c => c !== null) as number[]
-                    const teamComposite = composites.length ? +(composites.reduce((a, b) => a + b, 0) / composites.length).toFixed(2) : null
-                    return (
                   <tr className="bg-[#1B3A5C]/5 font-semibold border-t-2 border-[#1B3A5C]/20">
                     <td className="px-4 py-3 text-right">
                       {teamComposite !== null ? (
@@ -770,8 +773,6 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                     <td className="px-3 py-3" />
                     <td className="px-3 py-3" />
                   </tr>
-                    )
-                  })()}
                 </tbody>
               </table>
             </div>
