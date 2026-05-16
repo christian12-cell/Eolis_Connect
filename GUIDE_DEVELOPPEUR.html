@@ -154,6 +154,11 @@
     <li><a href="#cheat-back">Backend</a></li>
     <li><a href="#cheat-db">SQL utile</a></li>
   </ul>
+  <div class="toc-section">Logique métier OPS</div>
+  <ul>
+    <li><a href="#ops-score">Score composite /100</a></li>
+    <li><a href="#ops-classement">Page Classement vs Performance</a></li>
+  </ul>
   <div class="toc-section">Sécurité & Rôles</div>
   <ul>
     <li><a href="#roles-isolation">Rôles, attribution & isolation données</a></li>
@@ -1591,6 +1596,115 @@ router = APIRouter(prefix=<span class="s">"/tickets"</span>, tags=[<span class="
 <span class="c">-- Voir la taille des tables</span>
 <span class="k">SELECT</span> relname, pg_size_pretty(pg_total_relation_size(relid))
 <span class="k">FROM</span> pg_catalog.pg_statio_user_tables <span class="k">ORDER BY</span> pg_total_relation_size(relid) <span class="k">DESC</span>;</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="ops-score">
+  <h2>📊 Score composite /100 — Comment il est calculé</h2>
+
+  <p>Le score composite est le seul chiffre qui résume la qualité de travail d'un agent. Il est utilisé sur la page <strong>Classement</strong> (tri principal) et affiché comme colonne sur la page <strong>Performance</strong>.</p>
+
+  <h3>Formule</h3>
+  <pre><span class="c">// 4 critères pondérés — dans computeAgentStats() (classement) et computeStats() (performance)</span>
+Score = satisfaction (25%) + vitesse résolution (25%) + SLA % (30%) + 1ère réponse (20%)</pre>
+
+  <h3>Conversion de chaque critère en /100</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Critère</th><th>Donnée brute</th><th>Formule /100</th><th>Exemple</th></tr></thead>
+    <tbody>
+      <tr><td>⭐ Satisfaction</td><td>Note moyenne (ex: 4.5/5)</td><td><code>(note / 5) × 100</code></td><td>4.5/5 → 90</td></tr>
+      <tr><td>🏁 Vitesse résolution</td><td>Délai moyen création→clôture (heures)</td><td><code>max(0, 100 - (heures / 24) × 100)</code></td><td>6min → 99.58 / 1h30 → 93.75</td></tr>
+      <tr><td>🎯 SLA %</td><td>% dossiers clos dans le délai SLA</td><td>Directement</td><td>100% → 100</td></tr>
+      <tr><td>⚡ 1ère réponse</td><td>Délai avant le 1er message agent (heures)</td><td><code>max(0, 100 - (heures / 24) × 100)</code></td><td>0min → 100 / 1h → 95.83</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>La constante <code>SLA_CAP = 24</code> sert de référence : 0h = score 100, 24h = score 0. Tout ce qui dépasse 24h reste à 0 (jamais négatif grâce au <code>max(0, ...)</code>).</p>
+
+  <h3>Redistribution si un critère manque</h3>
+  <p>Si un agent n'a aucune note de satisfaction (client oublié de noter), ce critère est exclu. Son poids 25% est redistribué proportionnellement aux 3 autres. Pas de pénalité injuste.</p>
+  <pre><span class="k">const</span> components = [
+  { score: satScore,    weight: 0.25 },
+  { score: speedScore,  weight: 0.25 },
+  { score: slaScore,    weight: 0.30 },
+  { score: firstRScore, weight: 0.20 },
+].filter(c => c.score !== <span class="v">null</span>)  <span class="c">// exclut les critères absents</span>
+
+<span class="k">const</span> totalWeight = components.reduce((s, c) => s + c.weight, 0)
+<span class="c">// chaque poids est renormalisé : weight / totalWeight</span>
+<span class="k">const</span> composite = components.reduce((s, c) => s + c.score * (c.weight / totalWeight), 0)</pre>
+
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div class="alert-body"><strong>Volume exclu du score</strong> Le nombre de dossiers traités n'entre pas dans le calcul. Un agent traitant 30 dossiers LOW ne doit pas mécaniquement battre un agent gérant 8 dossiers HIGH critiques. Le volume est visible comme colonne séparée.</div>
+  </div>
+
+  <h3>SLA — délais cibles par urgence</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Urgence</th><th>Délai SLA cible</th></tr></thead>
+    <tbody>
+      <tr><td>🔴 HIGH</td><td>&lt; 3h</td></tr>
+      <tr><td>🟡 MEDIUM</td><td>&lt; 5h</td></tr>
+      <tr><td>🟢 LOW</td><td>&lt; 10h</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Exemple complet — theresa agent (1ère au classement)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Critère</th><th>Brut</th><th>/100</th><th>× poids</th><th>Points</th></tr></thead>
+    <tbody>
+      <tr><td>⭐ Satisfaction</td><td>5/5</td><td>100</td><td>×0.25</td><td>25</td></tr>
+      <tr><td>🏁 Vitesse</td><td>4min</td><td>99.72</td><td>×0.25</td><td>24.93</td></tr>
+      <tr><td>🎯 SLA</td><td>100%</td><td>100</td><td>×0.30</td><td>30</td></tr>
+      <tr><td>⚡ 1ère réponse</td><td>4min</td><td>99.72</td><td>×0.20</td><td>19.94</td></tr>
+      <tr><td colspan="4"><strong>Score final</strong></td><td><strong>99.87/100</strong></td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="ops-classement">
+  <h2>🏆 Page Classement vs Page Performance — Différences clés</h2>
+
+  <p>Ces deux pages OPS utilisent les mêmes données mais ont des objectifs différents. Elles ne doivent pas être confondues.</p>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th></th><th>Page Classement</th><th>Page Performance</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Question</strong></td><td>Qui fait le meilleur travail ?</td><td>Quelles sont les stats de chaque agent ?</td></tr>
+      <tr><td><strong>Tri</strong></td><td>Score composite décroissant</td><td>Alphabétique (neutre)</td></tr>
+      <tr><td><strong>Score composite</strong></td><td>Colonne principale + tri</td><td>Colonne visible (info), pas critère de tri</td></tr>
+      <tr><td><strong>Volume traité</strong></td><td>Colonne visible, hors score</td><td>Colonne visible, hors tri</td></tr>
+      <tr><td><strong>Badges awards</strong></td><td>Oui (🥇🥈🥉⭐🏁🎯⚡)</td><td>Non</td></tr>
+      <tr><td><strong>Détail individuel</strong></td><td>Non</td><td>Oui — charts, SLA par urgence, commentaires clients</td></tr>
+      <tr><td><strong>Mode Équité ⚖️</strong></td><td>Oui</td><td>Oui</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Pourquoi le tri alphabétique sur Performance ?</h3>
+  <p>La page Performance est un outil de consultation, pas de jugement. Trier par volume mettrait implicitement en avant ceux qui traitent le plus (volume ≠ qualité). Trier par score composite dupliquerait le Classement. L'ordre alphabétique est neutre : l'OPS admin trouve l'agent qu'il cherche facilement, et le score composite est visible dans la colonne sans dicter l'ordre.</p>
+
+  <h3>Les deux fonctions de calcul</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Fichier</th><th>Fonction</th><th>Utilisée par</th><th>Différence</th></tr></thead>
+    <tbody>
+      <tr><td><code>classement/page.tsx</code></td><td><code>computeAgentStats()</code></td><td>Classement uniquement</td><td>Retourne aussi <code>count</code> pour les badges</td></tr>
+      <tr><td><code>performances/page.tsx</code></td><td><code>computeStats()</code></td><td>Performance uniquement</td><td>Retourne aussi <code>urgency</code>, <code>active</code>, <code>comments</code> pour le détail individuel</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">💡</span>
+    <div class="alert-body"><strong>Si tu modifies la formule du score composite</strong> tu dois la modifier dans les deux fichiers : <code>classement/page.tsx</code> (fonction <code>computeAgentStats</code>) ET <code>performances/page.tsx</code> (fonction <code>computeStats</code>). Les deux doivent rester synchronisées.</div>
+  </div>
+
+  <h3>Score composite de l'équipe (ligne Team Average)</h3>
+  <p>La ligne Team Average de la page Performance affiche la moyenne des scores composites individuels :</p>
+  <pre><span class="k">const</span> composites = allAgentStats.map(a => a.stats.composite).filter(c => c !== <span class="v">null</span>)
+<span class="k">const</span> teamComposite = composites.length
+  ? +(composites.reduce((a, b) => a + b, 0) / composites.length).toFixed(2)
+  : <span class="v">null</span></pre>
+  <p>C'est un benchmark utile : un agent en dessous de la moyenne équipe sait qu'il a une marge de progression.</p>
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
