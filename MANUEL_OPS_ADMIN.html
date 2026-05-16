@@ -428,21 +428,15 @@
       </div>
 
       <div class="code-box">
-        <span class="label">Satisfaction (25%)</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
-        <br><span class="label">Vitesse      (25%)</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (temps résolution moy. <span class="op">/</span> 24h) <span class="op">×</span> 100)
-        <br><span class="label">SLA %        (30%)</span> <span class="eq">=</span> % dossiers résolus dans le délai cible de leur urgence
-        <br><span class="comment">// 1ère réponse absente ici — messages non chargés dans ce graphe macro</span>
+        <span class="label">Satisfaction  (25%)</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
+        <br><span class="label">Vitesse       (25%)</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (temps résolution moy. <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <br><span class="label">SLA %         (30%)</span> <span class="eq">=</span> % dossiers résolus dans le délai cible de leur urgence
+        <br><span class="label">1ère réponse  (20%)</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (délai 1ère réponse moy. <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <br><br><span class="comment">// Même formule que le Classement individuel — messages chargés avec les tickets</span>
         <br><span class="comment">// Composante absente → poids redistribué proportionnellement</span>
-        <br><br><span class="comment">// Exemple : sat=96 | vitesse=98 | SLA=100 → composite = 98.6/100</span>
-        <br><span class="comment">// Sans notes : vitesse=96 | SLA=100 → composite = (96×25+100×30)/55 = 98.2/100</span>
+        <br><span class="comment">// Exemple : sat=96 | vitesse=98 | SLA=100 | 1ère réponse=95 → composite = 97.5/100</span>
       </div>
 
-      <div class="alert alert-info" style="margin-top:12px;">
-        <span class="alert-icon">ℹ️</span>
-        <div class="alert-body">
-          <strong>Pourquoi pas la 1ère réponse ici ?</strong> Ce graphe calcule le score sur des groupes de tickets (tous les HIGH du jour X), sans charger les messages de chaque ticket. Charger les messages pour chaque point du graphe serait trop lourd. La 1ère réponse est disponible dans le <strong>Classement individuel</strong> où les messages sont déjà chargés.
-        </div>
-      </div>
 
       <div class="graphe-card">
         <div class="graphe-title">Graphe 4 — By Category (donut bas droit)</div>
@@ -815,14 +809,14 @@
         </div>
       </div>
 
-      <h3 id="overview-vs-classement">⚠️ Performance globale (Overview) vs Score Classement — différence</h3>
-      <div class="alert alert-warn">
-        <span class="alert-icon">⚠️</span>
+      <h3 id="overview-vs-classement">Performance globale (Overview) vs Score Classement</h3>
+      <div class="alert alert-success">
+        <span class="alert-icon">✅</span>
         <div class="alert-body">
-          <strong>Les deux graphes utilisent la même philosophie mais pas exactement la même formule.</strong><br><br>
-          <strong>Graphe Overview (Performance par urgence)</strong> : sat(25%) + vitesse(25%) + SLA(30%) — <em>sans</em> la 1ère réponse. Raison : ce graphe calcule le score sur des groupes de tickets par journée, sans charger les messages → pas de données de 1ère réponse disponibles.<br><br>
-          <strong>Classement individuel</strong> : sat(25%) + vitesse(25%) + SLA(30%) + 1ère réponse(20%) — les 4 critères complets car les messages sont chargés par agent.<br><br>
-          Dans les deux cas, si une composante est absente (aucune note, aucun message…) son poids est redistribué proportionnellement aux autres.
+          <strong>Les deux utilisent exactement la même formule à 4 critères.</strong><br><br>
+          Le graphe "Performance globale par urgence" (Overview) et le Classement individuel calculent tous les deux :<br>
+          <strong>sat(25%) + vitesse(25%) + SLA(30%) + 1ère réponse(20%)</strong><br><br>
+          Les messages sont chargés avec les tickets dans les deux cas, donc la 1ère réponse est disponible partout. Si une composante est absente (aucune note client, aucun message…), son poids est redistribué proportionnellement aux autres — même règle des deux côtés.
         </div>
       </div>
 
