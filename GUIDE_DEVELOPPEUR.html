@@ -136,7 +136,7 @@
   </ul>
   <div class="toc-section">Erreurs & Debug</div>
   <ul>
-    <li><a href="#erreurs-front">Erreurs frontend</a></li>
+    <li><a href="#erreurs-front">Erreurs frontend (dont tooltip coupé)</a></li>
     <li><a href="#erreurs-back">Erreurs backend</a></li>
     <li><a href="#erreurs-db">Erreurs base de données</a></li>
     <li><a href="#debug">Comment débugger</a></li>
@@ -1044,6 +1044,48 @@ npx tsc --noEmit --skipLibCheck
       1. Vérifier que le backend tourne (<code>http://localhost:8000</code> en local)<br>
       2. Vérifier <code>NEXT_PUBLIC_API_URL</code> dans les variables Vercel<br>
       3. Vérifier CORS dans <code>ALLOWED_ORIGINS</code>
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">Tooltip / popup coupé(e) — seule la première ligne s'affiche</div>
+    <p style="font-size:.87rem;color:#6b7280;">Un élément positionné en <code>absolute</code> est clippé par le <code>overflow: hidden</code> ou <code>overflow-x: auto</code> d'un parent. Ça arrive souvent dans les tableaux avec défilement horizontal.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution — utiliser position: fixed + getBoundingClientRect()</div>
+      Au lieu d'un tooltip CSS (<code>group-hover:block</code> + <code>absolute</code>), utiliser un état React + <code>position: fixed</code> calculé via <code>getBoundingClientRect()</code> pour sortir totalement du contexte overflow :
+      <pre style="margin-top:8px;background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;font-size:.8rem;overflow-x:auto;">
+// 1. Déclarer l'état
+const [tooltip, setTooltip] = useState&lt;{data: any; x: number; y: number} | null&gt;(null)
+
+// 2. Sur l'élément déclencheur
+&lt;div
+  onMouseEnter={(e) =&gt; {
+    const r = e.currentTarget.getBoundingClientRect()
+    setTooltip({ data: monObjet, x: r.left, y: r.top })
+  }}
+  onMouseLeave={() =&gt; setTooltip(null)}
+&gt;
+
+// 3. Tooltip rendu AU NIVEAU DU COMPOSANT RACINE (hors tableau)
+{tooltip &amp;&amp; (
+  &lt;div style={{ position:'fixed', top: tooltip.y - 150, left: tooltip.x - 240, zIndex:9999, pointerEvents:'none' }}
+    className="bg-[#1B3A5C] text-white rounded-xl p-3 shadow-2xl w-60"
+  &gt;
+    {/* contenu du tooltip */}
+  &lt;/div&gt;
+)}</pre>
+      <strong>Règle :</strong> tout élément avec <code>overflow: hidden/auto/scroll</code> coupe ses enfants en <code>absolute</code>. Seul <code>fixed</code> échappe à ce contexte car il se positionne par rapport à la fenêtre du navigateur.
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">Dropdown / modal ne s'affiche pas au-dessus d'un tableau</div>
+    <p style="font-size:.87rem;color:#6b7280;">Même cause que le tooltip — le <code>overflow-x: auto</code> du wrapper tableau crée un "stacking context" qui clip tout ce qui déborde.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solutions possibles</div>
+      <strong>Option A</strong> : même pattern <code>position: fixed</code> + <code>getBoundingClientRect()</code> ci-dessus.<br><br>
+      <strong>Option B</strong> : utiliser un <code>z-index</code> très élevé ET changer le wrapper tableau en <code>overflow: visible</code> + gérer le scroll différemment.<br><br>
+      <strong>Option C</strong> : rendre le dropdown en dehors du tableau avec React Portals (<code>ReactDOM.createPortal()</code>) — solution la plus propre mais plus complexe.
     </div>
   </div>
 </div>
