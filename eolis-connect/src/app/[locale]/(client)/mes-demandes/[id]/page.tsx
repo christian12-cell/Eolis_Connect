@@ -306,6 +306,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   useTicketWS(ticketId, {
     onMessagesUpdated: () => {
       if (!ticketId) return
+      apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' }).catch(() => {})
       Promise.all([
         apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
         apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()),
