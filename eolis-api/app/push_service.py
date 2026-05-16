@@ -41,7 +41,7 @@ def send_push_to_user(
     from .database import SessionLocal
     from .models import PushSubscription, PushPreference, Notification
 
-    logger.info("[PUSH] start user=%s type=%s ticket=%s", user_id, notif_type, ticket_id)
+    logger.warning("[PUSH] start user=%s type=%s ticket=%s", user_id, notif_type, ticket_id)
 
     # ── Lecture initiale ──────────────────────────────────────────────────────
     try:
@@ -50,28 +50,28 @@ def send_push_to_user(
             if pref:
                 field = PREF_FIELD.get(notif_type, "new_message")
                 if not getattr(pref, field, True):
-                    logger.info("[PUSH] skip — preference %s=False user=%s", field, user_id)
+                    logger.warning("[PUSH] skip — preference %s=False user=%s", field, user_id)
                     return
                 if pref.high_only and urgency and urgency != "HIGH":
-                    logger.info("[PUSH] skip — high_only filter user=%s urgency=%s", user_id, urgency)
+                    logger.warning("[PUSH] skip — high_only filter user=%s urgency=%s", user_id, urgency)
                     return
 
             subs_list = [
                 {"endpoint": s.endpoint, "p256dh": s.p256dh, "auth": s.auth, "id": s.id}
                 for s in db.query(PushSubscription).filter(PushSubscription.user_id == user_id).all()
             ]
-            logger.info("[PUSH] found %d subscription(s) for user=%s", len(subs_list), user_id)
+            logger.warning("[PUSH] found %d subscription(s) for user=%s", len(subs_list), user_id)
     except Exception as exc:
         logger.error("[PUSH] DB error (initial read) user=%s: %s", user_id, exc)
         return
 
     if not subs_list:
-        logger.info("[PUSH] skip — no subscriptions for user=%s", user_id)
+        logger.warning("[PUSH] skip — no subscriptions for user=%s", user_id)
         return
 
     # ── Délai : laisse mark-read s'exécuter si l'user est sur la page ─────────
     if delay_seconds > 0:
-        logger.info("[PUSH] sleeping %ds before send user=%s", delay_seconds, user_id)
+        logger.warning("[PUSH] sleeping %ds before send user=%s", delay_seconds, user_id)
         time.sleep(delay_seconds)
 
     # ── Vérifier si déjà lu (session fraîche) ─────────────────────────────────
@@ -83,12 +83,12 @@ def send_push_to_user(
                     Notification.ticket_id == ticket_id,
                     Notification.is_read == False,
                 ).first()
-            logger.info("[PUSH] unread_check user=%s ticket=%s still_unread=%s", user_id, ticket_id, still_unread is not None)
+            logger.warning("[PUSH] unread_check user=%s ticket=%s still_unread=%s", user_id, ticket_id, still_unread is not None)
         except Exception as exc:
             logger.error("[PUSH] DB error (unread check) user=%s: %s", user_id, exc)
             still_unread = True  # En cas d'erreur, on envoie quand même
         if not still_unread:
-            logger.info("[PUSH] skip — already read user=%s ticket=%s", user_id, ticket_id)
+            logger.warning("[PUSH] skip — already read user=%s ticket=%s", user_id, ticket_id)
             return
 
     # ── Envoi ─────────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ def send_push_to_user(
     private_key = settings.VAPID_PRIVATE_KEY
     payload = json.dumps({"title": title, "body": body, "url": url, "ticketId": ticket_id})
 
-    logger.info("[PUSH] sending to %d device(s) user=%s", len(subs_list), user_id)
+    logger.warning("[PUSH] sending to %d device(s) user=%s", len(subs_list), user_id)
     with SessionLocal() as push_db:
         from .models import PushSubscription as PS
         for sub in subs_list:
@@ -115,7 +115,7 @@ def send_push_to_user(
                     vapid_private_key=private_key,
                     vapid_claims={"sub": f"mailto:{settings.VAPID_CLAIMS_EMAIL}"},
                 )
-                logger.info("[PUSH] sent OK user=%s endpoint=...%s", user_id, sub["endpoint"][-30:])
+                logger.warning("[PUSH] sent OK user=%s endpoint=...%s", user_id, sub["endpoint"][-30:])
             except WebPushException as exc:
                 logger.warning("[PUSH] WebPushException user=%s status=%s body=%s",
                     user_id,
