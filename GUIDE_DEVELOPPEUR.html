@@ -153,6 +153,10 @@
     <li><a href="#cheat-back">Backend</a></li>
     <li><a href="#cheat-db">SQL utile</a></li>
   </ul>
+  <div class="toc-section">Sécurité & Rôles</div>
+  <ul>
+    <li><a href="#roles-isolation">Rôles, attribution & isolation données</a></li>
+  </ul>
   <div class="toc-section">Services & UI</div>
   <ul>
     <li><a href="#cloud-access">Accès Neon / Railway / Vercel / S3</a></li>
@@ -1351,6 +1355,229 @@ router = APIRouter(prefix=<span class="s">"/tickets"</span>, tags=[<span class="
 <span class="c">-- Voir la taille des tables</span>
 <span class="k">SELECT</span> relname, pg_size_pretty(pg_total_relation_size(relid))
 <span class="k">FROM</span> pg_catalog.pg_statio_user_tables <span class="k">ORDER BY</span> pg_total_relation_size(relid) <span class="k">DESC</span>;</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="roles-isolation">
+  <h2>🔒 Rôles, attribution et isolation des données</h2>
+
+  <h3>Comment un rôle est attribué à la création de compte</h3>
+  <p>Quand quelqu'un crée un compte via le formulaire d'inscription, <strong>le rôle est toujours fixé à <code>CLIENT</code></strong> automatiquement par le code — personne ne peut choisir son propre rôle :</p>
+  <pre><span class="c"># Dans routers/auth.py — register()</span>
+user = User(
+    first_name = body.first_name,
+    last_name  = body.last_name,
+    email      = body.email,
+    role       = <span class="s">"CLIENT"</span>,    <span class="c">← TOUJOURS CLIENT à l'inscription</span>
+    status     = <span class="s">"ACTIVE"</span>,    <span class="c">← actif immédiatement</span>
+    ...
+)</pre>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">ℹ️</span>
+    <div class="alert-body">
+      <strong>Seul le SYSTEM_ADMIN peut changer le rôle d'un utilisateur</strong> — via la page Admin → Utilisateurs. Un CLIENT ne peut jamais s'upgrader lui-même en AGENT ou ADMIN. C'est une règle non contournable car le rôle est fixé côté serveur, pas côté client.
+    </div>
+  </div>
+
+  <h3>Les 5 rôles et leurs droits</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Rôle DB</th><th>Qui</th><th>Comment créé</th><th>Voit quoi</th></tr></thead>
+    <tbody>
+      <tr><td><code>CLIENT</code></td><td>Clients Eolis</td><td>Inscription publique → auto <code>CLIENT</code></td><td>Uniquement ses propres tickets, messages, crédits</td></tr>
+      <tr><td><code>AGENT</code></td><td>Agents support</td><td>Admin crée le compte + change rôle</td><td>Tickets non assignés + ses tickets assignés</td></tr>
+      <tr><td><code>OPS_ADMIN</code></td><td>Responsable opérationnel</td><td>Idem</td><td>Tous les tickets + stats globales</td></tr>
+      <tr><td><code>FINANCE_AGENT</code></td><td>Gestionnaire financier</td><td>Idem</td><td>Finances, crédits, charges infra</td></tr>
+      <tr><td><code>SYSTEM_ADMIN</code></td><td>Toi (Christian)</td><td>Créé au démarrage du serveur dans <code>_ensure_system_admin()</code></td><td>Tout sans exception</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Comment le rôle voyage de la DB jusqu'au navigateur</h3>
+  <div class="flow" style="flex-direction:column;align-items:flex-start;gap:4px;">
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">1. DB</div><span style="color:#64748b;font-size:.84rem">La colonne <code>users.role = 'CLIENT'</code> est stockée en PostgreSQL</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">2. Login</div><span style="color:#64748b;font-size:.84rem">Le backend lit le rôle depuis la DB et l'encode dans le JWT : <code>{"sub":"uuid","role":"CLIENT","exp":...}</code></span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">3. localStorage</div><span style="color:#64748b;font-size:.84rem"><code>saveSession(token, user)</code> stocke le token + les infos user (<code>eolis_token</code>, <code>eolis_user</code>)</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">4. getUser()</div><span style="color:#64748b;font-size:.84rem"><code>getUser()</code> lit <code>eolis_user</code> depuis localStorage → <code>{role:"CLIENT", firstName:"Thomas",...}</code></span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">5. Chaque requête</div><span style="color:#64748b;font-size:.84rem">Le token est envoyé dans le header <code>Authorization: Bearer xxx</code> → le backend relit le rôle depuis le token</span></div>
+  </div>
+
+  <h3>Sécurité double couche — Frontend ET Backend</h3>
+  <p>La sécurité est appliquée <strong>deux fois</strong> : côté frontend (UX) et côté backend (vraie sécurité). Le frontend protège l'interface, le backend protège les données.</p>
+
+  <h4>Couche 1 — Frontend : redirection selon le rôle</h4>
+  <p>Chaque page vérifie le rôle dès le chargement et redirige si le rôle ne correspond pas :</p>
+  <pre><span class="c">// Dans CHAQUE page client — ex: accueil/page.tsx</span>
+<span class="f">useEffect</span>(() => {
+  <span class="k">const</span> u = <span class="f">getUser</span>()
+  <span class="k">if</span> (!u) {
+    router.<span class="f">replace</span>(`/${locale}/login`)  <span class="c">← pas connecté → login</span>
+    <span class="k">return</span>
+  }
+  <span class="k">if</span> (u.role !== <span class="s">'CLIENT'</span>) {
+    router.<span class="f">replace</span>(`/${locale}/login`)  <span class="c">← mauvais rôle → login</span>
+    <span class="k">return</span>
+  }
+  <span class="f">setUser</span>(u)
+}, [locale])
+
+<span class="c">// Dans une page agent — agent/dashboard/page.tsx</span>
+<span class="k">if</span> (!['AGENT', 'OPS_ADMIN', 'SYSTEM_ADMIN'].<span class="f">includes</span>(u.role)) {
+  router.<span class="f">replace</span>(`/${locale}/login`)  <span class="c">← CLIENT ne peut pas accéder</span>
+}</pre>
+
+  <h4>Couche 2 — Backend : vérification du token + du rôle</h4>
+  <p>Même si quelqu'un contourne le frontend (via Postman, curl, ou en modifiant son localStorage), le backend bloque tout :</p>
+  <pre><span class="c"># Dans deps.py — get_current_user() : tourne sur CHAQUE requête</span>
+<span class="k">def</span> <span class="f">get_current_user</span>(credentials, db):
+    payload = <span class="f">decode_token</span>(credentials.credentials)  <span class="c">← décode le JWT</span>
+    user_id  = payload.<span class="f">get</span>(<span class="s">"sub"</span>)                     <span class="c">← extrait l'ID</span>
+    user     = db.<span class="f">query</span>(User).<span class="f">filter</span>(User.id == user_id).<span class="f">first</span>()
+
+    <span class="k">if</span> user.status <span class="k">in</span> (<span class="s">"REJECTED"</span>, <span class="s">"SUSPENDED"</span>):
+        <span class="k">raise</span> HTTPException(403)  <span class="c">← compte bloqué → refus</span>
+    <span class="k">return</span> user                  <span class="c">← retourne l'objet User complet depuis la DB</span>
+
+<span class="c"># Dans require_roles() — vérifie le rôle spécifiquement</span>
+<span class="k">def</span> <span class="f">require_roles</span>(*roles):
+    <span class="k">def</span> <span class="f">checker</span>(current_user = Depends(<span class="f">get_current_user</span>)):
+        <span class="k">if</span> current_user.role <span class="k">not in</span> roles:
+            <span class="k">raise</span> HTTPException(403, <span class="s">"Insufficient permissions"</span>)
+        <span class="k">return</span> current_user
+    <span class="k">return</span> checker
+
+<span class="c"># Utilisation : seuls les CLIENTs peuvent créer un ticket</span>
+<span class="v">@router.post</span>(<span class="s">"/tickets"</span>)
+<span class="k">def</span> <span class="f">create_ticket</span>(user = Depends(<span class="f">require_roles</span>(<span class="s">"CLIENT"</span>))):
+    ...</pre>
+
+  <h3>Isolation des données — Chaque utilisateur ne voit que le sien</h3>
+  <p>C'est le mécanisme le plus important. À chaque requête, le backend filtre les données selon l'identité de l'appelant :</p>
+
+  <h4>Les tickets — GET /api/tickets</h4>
+  <pre><span class="c"># Dans routers/tickets.py — list_tickets()</span>
+q = db.<span class="f">query</span>(Ticket)
+
+<span class="k">if</span> current_user.role == <span class="s">"CLIENT"</span>:
+    q = q.<span class="f">filter</span>(Ticket.client_id == current_user.id)
+    <span class="c"># ← UN CLIENT NE VOIT QUE SES PROPRES TICKETS</span>
+    <span class="c"># Même si un autre client a le ticket REF-2026-0001, Thomas ne le verra jamais</span>
+
+<span class="k">elif</span> current_user.role == <span class="s">"AGENT"</span>:
+    q = q.<span class="f">filter</span>(
+        (Ticket.agent_id == current_user.id) | (Ticket.agent_id == <span class="k">None</span>)
+    )
+    <span class="c"># ← L'AGENT VOIT : ses tickets assignés + les tickets non assignés</span>
+    <span class="c"># Il ne voit PAS les tickets assignés à d'autres agents</span>
+
+<span class="k">else</span>:  <span class="c"># OPS_ADMIN, SYSTEM_ADMIN</span>
+    <span class="k">pass</span>  <span class="c"># pas de filtre → voient TOUT</span></pre>
+
+  <h4>Un ticket individuel — GET /api/tickets/{id}</h4>
+  <pre><span class="c"># Même si tu connais l'UUID d'un ticket qui n'est pas à toi → refus</span>
+ticket = db.<span class="f">query</span>(Ticket).<span class="f">filter</span>(Ticket.id == ticket_id).<span class="f">first</span>()
+
+<span class="k">if</span> current_user.role == <span class="s">"CLIENT"</span> <span class="k">and</span> ticket.client_id != current_user.id:
+    <span class="k">raise</span> HTTPException(403, <span class="s">"Access denied"</span>)
+    <span class="c"># ← Thomas ne peut PAS accéder au ticket d'Alice même avec son ID exact</span></pre>
+
+  <h4>Les messages — filtrés aussi</h4>
+  <pre><span class="c"># Un CLIENT ne voit JAMAIS les INTERNAL_NOTE (notes internes des agents)</span>
+messages = db.<span class="f">query</span>(Message).<span class="f">filter</span>(Message.ticket_id == ticket_id)
+
+<span class="k">if</span> current_user.role == <span class="s">"CLIENT"</span>:
+    messages = messages.<span class="f">filter</span>(Message.sender_type != <span class="s">"INTERNAL_NOTE"</span>)
+    <span class="c"># ← Les discussions internes d'équipe restent invisibles pour le client</span></pre>
+
+  <h4>Les crédits — chaque client a son propre solde</h4>
+  <pre><span class="c"># credit_balances a une contrainte UNIQUE sur client_id</span>
+<span class="c"># → impossible d'avoir 2 lignes pour le même client</span>
+credit_balances:
+  client_id → UNIQUE → <span class="k">1 ligne par client maximum</span>
+
+<span class="c"># Quand un client consulte son solde</span>
+balance = db.<span class="f">query</span>(CreditBalance)
+           .<span class="f">filter</span>(CreditBalance.client_id == current_user.id)
+           .<span class="f">first</span>()
+<span class="c"># → seul son propre solde, jamais celui d'un autre</span></pre>
+
+  <h4>Les BL documents — filtrés par client</h4>
+  <pre><span class="c"># GET /api/bl/my-bls → seulement les BL du client connecté</span>
+bls = db.<span class="f">query</span>(BLDocument)
+       .<span class="f">filter</span>(BLDocument.client_id == current_user.id)
+       .<span class="f">all</span>()</pre>
+
+  <h4>Les notifications — chaque user voit les siennes</h4>
+  <pre><span class="c"># GET /api/notifications</span>
+notifs = db.<span class="f">query</span>(Notification)
+           .<span class="f">filter</span>(Notification.user_id == current_user.id)
+           .<span class="f">all</span>()</pre>
+
+  <h3>Résumé visuel — Qui voit quoi dans les tickets</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Rôle</th><th>Filtre appliqué en DB</th><th>Résultat concret</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge b-blue">CLIENT</span></td><td><code>WHERE client_id = mon_id</code></td><td>Thomas voit uniquement ses 3 tickets. Alice voit ses 5 tickets. Jamais mélangés.</td></tr>
+      <tr><td><span class="badge b-green">AGENT</span></td><td><code>WHERE agent_id = mon_id OR agent_id IS NULL</code></td><td>Jean-Mbarga voit ses tickets assignés + les tickets sans agent (disponibles à prendre)</td></tr>
+      <tr><td><span class="badge b-orange">OPS_ADMIN</span></td><td>Aucun filtre</td><td>Debora voit tous les tickets de tous les clients</td></tr>
+      <tr><td><span class="badge b-red">SYSTEM_ADMIN</span></td><td>Aucun filtre</td><td>Toi tu vois tout + accès utilisateurs, logs, finances</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Ce qui se passe si quelqu'un essaie de tricher</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Tentative</th><th>Ce qui se passe</th></tr></thead>
+    <tbody>
+      <tr><td>Un client modifie son <code>localStorage</code> pour mettre <code>role: "ADMIN"</code></td><td>Le frontend le laisse peut-être naviguer vers une page admin, mais le backend relit le rôle depuis la DB via le JWT → <code>403 Forbidden</code> sur chaque requête</td></tr>
+      <tr><td>Un client devine l'UUID d'un ticket d'un autre client et appelle <code>GET /api/tickets/{uuid}</code></td><td>Backend vérifie <code>ticket.client_id != current_user.id</code> → <code>403 Access denied</code></td></tr>
+      <tr><td>Un agent appelle <code>GET /api/tickets</code> depuis Postman avec son token</td><td>Il ne reçoit que ses tickets assignés + les non-assignés. Jamais les tickets des autres agents.</td></tr>
+      <tr><td>Quelqu'un appelle l'API sans token JWT</td><td><code>get_current_user()</code> échoue → <code>401 Unauthorized</code> immédiatement</td></tr>
+      <tr><td>Quelqu'un utilise un token expiré</td><td><code>decode_token()</code> détecte l'expiration → <code>401 Unauthorized</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Comment ajouter une restriction de rôle sur un nouvel endpoint</h3>
+  <pre><span class="c"># Option 1 : un seul rôle autorisé</span>
+<span class="v">@router.post</span>(<span class="s">"/mon-endpoint"</span>)
+<span class="k">def</span> <span class="f">mon_endpoint</span>(user = Depends(<span class="f">require_roles</span>(<span class="s">"FINANCE_AGENT"</span>))):
+    <span class="c"># seul FINANCE_AGENT peut appeler ça</span>
+
+<span class="c"># Option 2 : plusieurs rôles autorisés</span>
+<span class="v">@router.get</span>(<span class="s">"/stats"</span>)
+<span class="k">def</span> <span class="f">get_stats</span>(user = Depends(<span class="f">require_roles</span>(<span class="s">"OPS_ADMIN"</span>, <span class="s">"SYSTEM_ADMIN"</span>))):
+    <span class="c"># OPS_ADMIN et SYSTEM_ADMIN peuvent voir les stats</span>
+
+<span class="c"># Option 3 : accessible à tous mais comportement différent par rôle</span>
+<span class="v">@router.get</span>(<span class="s">"/tickets"</span>)
+<span class="k">def</span> <span class="f">list_tickets</span>(user = Depends(<span class="f">get_current_user</span>)):  <span class="c">← pas de restriction de rôle</span>
+    q = db.<span class="f">query</span>(Ticket)
+    <span class="k">if</span> user.role == <span class="s">"CLIENT"</span>:
+        q = q.<span class="f">filter</span>(Ticket.client_id == user.id)    <span class="c">← filtré</span>
+    <span class="k">elif</span> user.role == <span class="s">"AGENT"</span>:
+        q = q.<span class="f">filter</span>(...)                              <span class="c">← filtré différemment</span>
+    <span class="c"># sinon : pas de filtre (OPS/ADMIN)</span></pre>
+
+  <h3>Comment le SYSTEM_ADMIN est créé au démarrage</h3>
+  <pre><span class="c"># Dans main.py — _ensure_system_admin()</span>
+<span class="c"># Cette fonction tourne à chaque démarrage du backend</span>
+<span class="k">def</span> <span class="f">_ensure_system_admin</span>():
+    exists = db.<span class="f">query</span>(User).<span class="f">filter</span>(User.role == <span class="s">"SYSTEM_ADMIN"</span>).<span class="f">first</span>()
+    <span class="k">if not</span> exists:
+        <span class="c"># Créer le compte admin par défaut</span>
+        u = User(
+            username      = <span class="s">"Christian.DENMEKO"</span>,
+            email         = <span class="s">"christian.denmeko@eoliscameroun.com"</span>,
+            role          = <span class="s">"SYSTEM_ADMIN"</span>,
+            password_hash = <span class="f">hash_password</span>(<span class="s">"Admin@2026!"</span>),
+            status        = <span class="s">"ACTIVE"</span>,
+        )
+        db.<span class="f">add</span>(u)
+        db.<span class="f">commit</span>()
+<span class="c"># → si la table users est vide (premier démarrage ou reset DB),
+#   le compte admin est automatiquement recréé</span></pre>
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
