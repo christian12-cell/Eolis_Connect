@@ -108,10 +108,14 @@ function computeAgentStats(agentId: string, closedSrc: any[], allTickets: any[])
   const slaGlobal = totalSla ? Math.round(okSla / totalSla * 100) : null
 
   // composite 0-100 : satisfaction (50%) + vitesse vs plafond 24h (50%)
+  // Si une seule composante est disponible, elle compte à 100%
   const satScore   = avgSat  !== null ? (avgSat / 5) * 100 : null
   const speedScore = avgTime !== null ? Math.max(0, 100 - (avgTime / SLA_CAP) * 100) : null
-  const composite  = satScore !== null || speedScore !== null
-    ? +((satScore ?? 50) * 0.5 + (speedScore ?? 50) * 0.5).toFixed(2) : null
+  const composite  = satScore !== null && speedScore !== null
+    ? +((satScore * 0.5 + speedScore * 0.5)).toFixed(2)
+    : satScore   !== null ? +satScore.toFixed(2)
+    : speedScore !== null ? +speedScore.toFixed(2)
+    : null
 
   return { count: treated.length, avgSat, avgTime, avgFirstR, slaGlobal, composite }
 }

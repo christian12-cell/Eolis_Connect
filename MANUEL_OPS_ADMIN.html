@@ -648,7 +648,7 @@
         <span class="alert-icon">ℹ️</span>
         <div class="alert-body">
           <strong>Cas "aucune note client"</strong>
-          Si un client n'a laissé aucune note, la composante satisfaction est remplacée par <strong>50/100</strong> (valeur neutre centrale) — pas par 0, et pas ignorée. Concrètement : un agent sans aucune note obtient un score composite basé uniquement sur sa vitesse, comme s'il avait une satisfaction "moyenne". Cela évite de pénaliser un agent dont les clients ont simplement oublié de noter, tout en l'empêchant d'avoir un score artificiellement parfait sans feedback client.
+          Si un agent n'a reçu aucune note de satisfaction, la composante satisfaction est <strong>simplement ignorée</strong> — le score composite est calculé à 100% sur la vitesse de résolution. Il n'y a ni pénalité (pas de 0) ni valeur artificielle (pas de 50). Exemple : un agent avec 0 avis mais un délai moyen de 1h obtient un score composite de 96/100 (basé uniquement sur sa vitesse). Il peut tout à fait finir premier si sa vitesse est la meilleure. C'est la règle la plus équitable : on ne juge que ce qu'on peut mesurer.
         </div>
       </div>
 
