@@ -38,10 +38,15 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
   const [otpResent, setOtpResent] = useState(false)
 
   const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>('default')
   const [pushPrefs, setPushPrefs] = useState({ newMessage: true, finalResponse: true, documentRequested: true })
   const [pushSaving, setPushSaving] = useState(false)
 
   useEffect(() => {
+    if (!('Notification' in window) || !('PushManager' in window)) {
+      setPushPermission('unsupported'); return
+    }
+    setPushPermission(Notification.permission)
     isPushSubscribed().then(setPushEnabled)
     apiFetch('/api/push/preferences').then(r => r.json()).then(d => {
       if (d) setPushPrefs({ newMessage: d.newMessage ?? true, finalResponse: d.finalResponse ?? true, documentRequested: d.documentRequested ?? true })
@@ -196,6 +201,7 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
     } else {
       const ok = await subscribeToPush()
       setPushEnabled(ok)
+      setPushPermission(Notification.permission)
     }
   }
 
@@ -388,55 +394,66 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
       </section>
 
       {/* Notifications section */}
-      <section className="bg-white rounded-2xl border border-gray-100 card-shadow mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
-            <Bell size={18} className="text-amber-600" />
-          </div>
-          <div className="flex-1">
-            <h2 className="font-semibold text-gray-900">{t.notifications}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{t.notifDesc}</p>
-          </div>
-          <button
-            onClick={togglePush}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${pushEnabled ? 'bg-[#1B3A5C]' : 'bg-gray-200'}`}
-          >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${pushEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
-        </div>
-        <div className="px-6 py-5 space-y-3">
-          {!pushEnabled && (
-            <p className="text-xs text-gray-400">
-              {isFr ? 'Activez le toggle ci-dessus puis acceptez la permission navigateur.' : 'Enable the toggle above then accept the browser permission.'}
-            </p>
-          )}
-          {pushEnabled && ([
-            { key: 'newMessage',        label: t.notifNewMessage },
-            { key: 'finalResponse',     label: t.notifFinalResponse },
-            { key: 'documentRequested', label: t.notifDocRequested },
-          ] as { key: keyof typeof pushPrefs; label: string }[]).map(({ key, label }) => (
-            <div key={key} className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">{label}</span>
-              <button
-                onClick={() => setPushPrefs(p => ({ ...p, [key]: !p[key] }))}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${pushPrefs[key] ? 'bg-[#4A8FC4]' : 'bg-gray-200'}`}
-              >
-                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${pushPrefs[key] ? 'translate-x-5' : 'translate-x-1'}`} />
-              </button>
+      {pushPermission !== 'unsupported' && (
+        <section className="bg-white rounded-2xl border border-gray-100 card-shadow mb-6">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
+              <Bell size={18} className="text-amber-600" />
             </div>
-          ))}
-          {pushEnabled && (
-            <button
-              onClick={savePushPrefs}
-              disabled={pushSaving}
-              className="mt-2 flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1B3A5C] text-white font-semibold text-sm hover:bg-[#152d47] disabled:opacity-60 transition-colors"
-            >
-              {pushSaving && <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
-              {isFr ? 'Enregistrer' : 'Save'}
-            </button>
-          )}
-        </div>
-      </section>
+            <div className="flex-1">
+              <h2 className="font-semibold text-gray-900">{t.notifications}</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{t.notifDesc}</p>
+            </div>
+            {pushPermission !== 'denied' && (
+              <button
+                onClick={togglePush}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${pushEnabled ? 'bg-[#1B3A5C]' : 'bg-gray-200'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${pushEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            )}
+          </div>
+          <div className="px-6 py-5 space-y-3">
+            {pushPermission === 'denied' && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-xs text-red-600">
+                {isFr
+                  ? 'Vous avez bloqué les notifications. Pour les réactiver : Paramètres du navigateur → Notifications → autoriser ce site.'
+                  : 'You blocked notifications. To re-enable: Browser settings → Notifications → allow this site.'}
+              </div>
+            )}
+            {pushPermission === 'default' && !pushEnabled && (
+              <p className="text-xs text-gray-400">
+                {isFr ? 'Activez le toggle ci-dessus — le navigateur vous demandera la permission.' : 'Enable the toggle above — the browser will ask for permission.'}
+              </p>
+            )}
+            {pushEnabled && ([
+              { key: 'newMessage',        label: t.notifNewMessage },
+              { key: 'finalResponse',     label: t.notifFinalResponse },
+              { key: 'documentRequested', label: t.notifDocRequested },
+            ] as { key: keyof typeof pushPrefs; label: string }[]).map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">{label}</span>
+                <button
+                  onClick={() => setPushPrefs(p => ({ ...p, [key]: !p[key] }))}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${pushPrefs[key] ? 'bg-[#4A8FC4]' : 'bg-gray-200'}`}
+                >
+                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${pushPrefs[key] ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+              </div>
+            ))}
+            {pushEnabled && (
+              <button
+                onClick={savePushPrefs}
+                disabled={pushSaving}
+                className="mt-2 flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1B3A5C] text-white font-semibold text-sm hover:bg-[#152d47] disabled:opacity-60 transition-colors"
+              >
+                {pushSaving && <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
+                {isFr ? 'Enregistrer' : 'Save'}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Language section */}
       <section className="bg-white rounded-2xl border border-gray-100 card-shadow">

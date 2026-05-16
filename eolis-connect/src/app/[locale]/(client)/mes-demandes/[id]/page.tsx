@@ -306,7 +306,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   useTicketWS(ticketId, {
     onMessagesUpdated: () => {
       if (!ticketId) return
-      apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' }).catch(() => {})
+      apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' })
+        .then(() => window.dispatchEvent(new Event('eolis:notifications_read')))
+        .catch(() => {})
       Promise.all([
         apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
         apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()),
@@ -444,7 +446,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       const msgArray = Array.isArray(msgs) ? msgs : []
       setMessages(msgArray)
       prevMsgLenRef.current = msgArray.length
-      apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' }).catch(() => {})
+      apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' })
+        .then(() => window.dispatchEvent(new Event('eolis:notifications_read')))
+        .catch(() => {})
     } catch {}
     setLoading(false)
   }

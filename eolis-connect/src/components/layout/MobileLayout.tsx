@@ -63,7 +63,12 @@ export function MobileLayout({
       }
       fetchNotifCount()
       const notifInterval = setInterval(fetchNotifCount, 30_000)
-      return () => clearInterval(notifInterval)
+      // Refresh immédiat quand la page conversation appelle mark-read
+      window.addEventListener('eolis:notifications_read', fetchNotifCount)
+      return () => {
+        clearInterval(notifInterval)
+        window.removeEventListener('eolis:notifications_read', fetchNotifCount)
+      }
     }
   }, [locale])
 
