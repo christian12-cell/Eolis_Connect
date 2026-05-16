@@ -29,17 +29,28 @@ export async function subscribeToPush(): Promise<boolean> {
 
     const reg = await navigator.serviceWorker.ready
 
-    // Si la clé VAPID a changé depuis la dernière subscription, on force un re-subscribe
+    // Si la clé VAPID a changé (ou localStorage vide = réinstall PWA), on unsubscribe d'abord
     const storedKey = localStorage.getItem(VAPID_KEY_LS)
-    if (storedKey && storedKey !== publicKey) {
+    if (storedKey !== publicKey) {
       const existing = await reg.pushManager.getSubscription()
       if (existing) await existing.unsubscribe()
     }
 
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    })
+    let sub: PushSubscription
+    try {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      })
+    } catch {
+      // Fallback : unsubscribe force puis retry (cas edge PWA réinstallée)
+      const stale = await reg.pushManager.getSubscription()
+      if (stale) await stale.unsubscribe()
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      })
+    }
 
     localStorage.setItem(VAPID_KEY_LS, publicKey)
 
