@@ -359,6 +359,28 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
         )}
       </div>
 
+      {/* ── Encart formule du score ── */}
+      <div className="bg-[#EDF1F7] border border-[#1B3A5C]/10 rounded-2xl px-4 py-3 mb-5 flex flex-wrap items-center gap-3">
+        <span className="text-[#1B3A5C] text-sm font-bold flex-shrink-0">
+          ℹ️ {isFr ? 'Score calculé sur 4 critères' : 'Score based on 4 criteria'}
+        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {([
+            { icon: '⭐', label: isFr ? 'Satisfaction' : 'Satisfaction', pct: '25%', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+            { icon: '⚡', label: isFr ? 'Vitesse résolution' : 'Resolution speed', pct: '25%', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
+            { icon: '🎯', label: 'SLA %', pct: '30%', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+            { icon: '🔔', label: isFr ? '1ère réponse' : '1st response', pct: '20%', cls: 'bg-purple-100 text-purple-800 border-purple-200' },
+          ] as { icon: string; label: string; pct: string; cls: string }[]).map(c => (
+            <span key={c.label} className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border ${c.cls}`}>
+              {c.icon} {c.label} <span className="font-normal opacity-60">{c.pct}</span>
+            </span>
+          ))}
+          <span className="text-xs text-gray-400 italic">
+            {isFr ? '· critère absent → poids redistribué aux autres' : '· missing criterion → weight redistributed'}
+          </span>
+        </div>
+      </div>
+
       {ranked.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 card-shadow flex flex-col items-center py-20">
           <Trophy size={36} className="text-gray-200 mb-3" />
@@ -532,10 +554,50 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                           </div>
                         </td>
                         <td className="px-3 py-3 text-right">
-                          <span className={`font-black text-base ${a.composite !== null ? (a.composite >= 70 ? 'text-emerald-600' : a.composite >= 50 ? 'text-amber-600' : 'text-red-500') : 'text-gray-300'}`}>
-                            {a.composite !== null ? a.composite.toFixed(2) : '—'}
-                          </span>
-                          {a.composite !== null && <span className="text-gray-400 text-xs">/100</span>}
+                          <div className="relative group inline-flex items-baseline gap-0.5 cursor-default">
+                            <span className={`font-black text-base ${a.composite !== null ? (a.composite >= 70 ? 'text-emerald-600' : a.composite >= 50 ? 'text-amber-600' : 'text-red-500') : 'text-gray-300'}`}>
+                              {a.composite !== null ? a.composite.toFixed(2) : '—'}
+                            </span>
+                            {a.composite !== null && <span className="text-gray-400 text-xs">/100</span>}
+                            {/* Tooltip décomposition */}
+                            {a.composite !== null && (() => {
+                              const sat    = a.avgSat    !== null ? +(a.avgSat / 5 * 100).toFixed(1)                              : null
+                              const speed  = a.avgTime   !== null ? +Math.max(0, 100 - a.avgTime   / SLA_CAP * 100).toFixed(1)   : null
+                              const sla    = a.slaGlobal !== null ? +a.slaGlobal.toFixed(1)                                      : null
+                              const firstR = a.avgFirstR !== null ? +Math.max(0, 100 - a.avgFirstR / SLA_CAP * 100).toFixed(1)   : null
+                              const rows = [
+                                { icon: '⭐', label: isFr ? 'Satisfaction'     : 'Satisfaction',   score: sat,    w: 25 },
+                                { icon: '⚡', label: isFr ? 'Vitesse résol.'   : 'Resol. speed',   score: speed,  w: 25 },
+                                { icon: '🎯', label: 'SLA %',                                      score: sla,    w: 30 },
+                                { icon: '🔔', label: isFr ? '1ère réponse'     : '1st response',   score: firstR, w: 20 },
+                              ]
+                              return (
+                                <div className="absolute right-0 bottom-full mb-2 z-50 hidden group-hover:block w-60 bg-[#1B3A5C] text-white rounded-xl p-3 shadow-2xl pointer-events-none">
+                                  <p className="text-[10px] font-bold uppercase tracking-wide text-blue-200 mb-2">
+                                    {isFr ? 'Décomposition du score' : 'Score breakdown'}
+                                  </p>
+                                  <div className="space-y-1.5">
+                                    {rows.map(r => (
+                                      <div key={r.label} className="flex items-center justify-between">
+                                        <span className="text-[11px] text-blue-100">{r.icon} {r.label}</span>
+                                        <div className="flex items-center gap-2">
+                                          {r.score !== null
+                                            ? <span className="text-[11px] font-bold text-white">{r.score}<span className="text-blue-300 font-normal">/100</span></span>
+                                            : <span className="text-[10px] text-blue-400 italic">{isFr ? 'ignoré' : 'ignored'}</span>
+                                          }
+                                          <span className="text-[10px] text-blue-300 w-6 text-right">{r.w}%</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="border-t border-white/20 mt-2.5 pt-2 flex justify-between items-center">
+                                    <span className="text-[11px] text-blue-200">Composite</span>
+                                    <span className="text-sm font-black text-white">{a.composite.toFixed(2)}/100</span>
+                                  </div>
+                                </div>
+                              )
+                            })()}
+                          </div>
                         </td>
                         <td className="px-3 py-3 text-right font-bold text-gray-900">{a.count}</td>
                         <td className="px-3 py-3 text-right">
