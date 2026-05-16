@@ -1,5 +1,7 @@
 import { apiUrl, getToken } from './api-client'
 
+const VAPID_KEY_LS = 'eolis_vapid_pk'
+
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
   const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -26,10 +28,20 @@ export async function subscribeToPush(): Promise<boolean> {
     if (!publicKey) return false
 
     const reg = await navigator.serviceWorker.ready
+
+    // Si la clé VAPID a changé depuis la dernière subscription, on force un re-subscribe
+    const storedKey = localStorage.getItem(VAPID_KEY_LS)
+    if (storedKey && storedKey !== publicKey) {
+      const existing = await reg.pushManager.getSubscription()
+      if (existing) await existing.unsubscribe()
+    }
+
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     })
+
+    localStorage.setItem(VAPID_KEY_LS, publicKey)
 
     const json = sub.toJSON()
     const token = getToken()

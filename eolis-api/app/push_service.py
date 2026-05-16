@@ -66,8 +66,8 @@ def send_push_to_user(
                 vapid_claims={"sub": f"mailto:{settings.VAPID_CLAIMS_EMAIL}"},
             )
         except WebPushException as exc:
-            if exc.response is not None and exc.response.status_code in (404, 410):
-                # Subscription expired or invalid — clean up
+            if exc.response is not None and exc.response.status_code in (400, 404, 410):
+                # Subscription expired, invalid, or VAPID key mismatch — clean up
                 db.delete(sub)
                 try:
                     db.commit()
