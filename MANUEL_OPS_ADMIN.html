@@ -229,6 +229,7 @@
           <li><a href="#classement">7. Classement</a></li>
           <li class="sub"><a href="#score-composite">↳ Score composite</a></li>
           <li class="sub"><a href="#filtre-urgence-classement">↳ Filtre urgence — pourquoi crucial</a></li>
+          <li class="sub"><a href="#ui-score">↳ Encart formule + tooltip</a></li>
           <li class="sub"><a href="#awards">↳ Awards</a></li>
           <li class="sub"><a href="#podium">↳ Podium & tableau</a></li>
           <li><a href="#glossaire">8. Glossaire</a></li>
@@ -426,17 +427,20 @@
       </div>
 
       <div class="code-box">
-        <span class="label">Score satisfaction</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
-        <br><span class="label">Score vitesse</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (temps résolution moy. <span class="op">/</span> 24h) <span class="op">×</span> 100)
-        <br><br><span class="comment">// Si les deux sont disponibles :</span>
-        <br><span class="label">Score final</span> <span class="eq">=</span> (satisfaction <span class="op">×</span> 50%) <span class="op">+</span> (vitesse <span class="op">×</span> 50%)
-        <br><br><span class="comment">// Si aucune note client → satisfaction ignorée, 100% vitesse</span>
-        <br><span class="label">Score final</span> <span class="eq">=</span> vitesse <span class="op">×</span> 100%
-        <br><br><span class="comment">// Exemple 1 : 4.8/5 satisfaction + résolu en 0.5h</span>
-        <br><span class="comment">// satScore = 96 | speedScore = 98 | composite = 97/100</span>
-        <br><span class="comment">// Exemple 2 : 0 avis + résolu en 1h</span>
-        <br><span class="comment">// satScore = ignoré | speedScore = 96 | composite = 96/100</span>
-        <br><span class="comment">// → peut finir 1er si sa vitesse est la meilleure</span>
+        <span class="label">Satisfaction (25%)</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
+        <br><span class="label">Vitesse      (25%)</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (temps résolution moy. <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <br><span class="label">SLA %        (30%)</span> <span class="eq">=</span> % dossiers résolus dans le délai cible de leur urgence
+        <br><span class="comment">// 1ère réponse absente ici — messages non chargés dans ce graphe macro</span>
+        <br><span class="comment">// Composante absente → poids redistribué proportionnellement</span>
+        <br><br><span class="comment">// Exemple : sat=96 | vitesse=98 | SLA=100 → composite = 98.6/100</span>
+        <br><span class="comment">// Sans notes : vitesse=96 | SLA=100 → composite = (96×25+100×30)/55 = 98.2/100</span>
+      </div>
+
+      <div class="alert alert-info" style="margin-top:12px;">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-body">
+          <strong>Pourquoi pas la 1ère réponse ici ?</strong> Ce graphe calcule le score sur des groupes de tickets (tous les HIGH du jour X), sans charger les messages de chaque ticket. Charger les messages pour chaque point du graphe serait trop lourd. La 1ère réponse est disponible dans le <strong>Classement individuel</strong> où les messages sont déjà chargés.
+        </div>
       </div>
 
       <div class="graphe-card">
@@ -682,9 +686,24 @@
         <span class="alert-icon">ℹ️</span>
         <div class="alert-body">
           <strong>Cas "aucune note client"</strong>
-          Si un agent n'a reçu aucune note de satisfaction, la composante satisfaction est <strong>simplement ignorée</strong> — le score composite est calculé à 100% sur la vitesse de résolution. Il n'y a ni pénalité (pas de 0) ni valeur artificielle (pas de 50). Exemple : un agent avec 0 avis mais un délai moyen de 1h obtient un score composite de 96/100 (basé uniquement sur sa vitesse). Il peut tout à fait finir premier si sa vitesse est la meilleure. C'est la règle la plus équitable : on ne juge que ce qu'on peut mesurer.
+          Si un agent n'a reçu aucune note de satisfaction, la composante satisfaction (25%) est <strong>simplement ignorée</strong> et son poids est redistribué proportionnellement aux 3 autres critères disponibles (vitesse, SLA, 1ère réponse). Il n'y a ni pénalité ni valeur artificielle.<br><br>
+          Exemple : un agent avec 0 avis mais vitesse=96, SLA=100, 1ère réponse=90 :<br>
+          Poids redistribués → vitesse=25/75, SLA=30/75, 1ère réponse=20/75<br>
+          Composite = (96×25 + 100×30 + 90×20) / 75 = <strong>95.5/100</strong> — peut finir 1er.
         </div>
       </div>
+
+      <h3 id="ui-score">Interface — Encart formule et tooltip</h3>
+      <p>La page Classement affiche deux aides visuelles permanentes :</p>
+      <ul>
+        <li><strong>Encart formule (sous les filtres)</strong> — toujours visible, rappelle les 4 critères et leurs poids avec des badges colorés :
+          <span style="background:#fef3c7;color:#92400e;font-size:.8rem;padding:2px 8px;border-radius:6px;margin:0 3px;font-weight:700;">⭐ Satisfaction 25%</span>
+          <span style="background:#dbeafe;color:#1e40af;font-size:.8rem;padding:2px 8px;border-radius:6px;margin:0 3px;font-weight:700;">⚡ Vitesse 25%</span>
+          <span style="background:#d1fae5;color:#065f46;font-size:.8rem;padding:2px 8px;border-radius:6px;margin:0 3px;font-weight:700;">🎯 SLA 30%</span>
+          <span style="background:#ede9fe;color:#4c1d95;font-size:.8rem;padding:2px 8px;border-radius:6px;margin:0 3px;font-weight:700;">🔔 1ère réponse 20%</span>
+        </li>
+        <li style="margin-top:8px;"><strong>Tooltip au survol du score</strong> — passer la souris sur le score <code>97.50/100</code> d'un agent affiche la décomposition complète : chaque critère en /100 avec son poids, et le total composite en bas. Si un critère est absent, il affiche <em>"ignoré"</em>.</li>
+      </ul>
 
       <h3 id="filtre-urgence-classement">🔑 Le filtre Urgence — Pourquoi c'est essentiel</h3>
 
@@ -722,7 +741,7 @@
       <div class="alert alert-info">
         <span class="alert-icon">ℹ️</span>
         <div class="alert-body">
-          <strong>Les awards ne déterminent PAS le classement</strong> — ils sont calculés séparément après. Le score composite (satisfaction + vitesse) décide qui est 1er, 2ème, 3ème. Les awards récompensent qui excelle sur un critère précis parmi les 3 premiers.<br><br>
+          <strong>Les awards ne déterminent PAS le classement</strong> — ils sont calculés séparément après. Le score composite (satisfaction + vitesse + SLA + 1ère réponse) décide qui est 1er, 2ème, 3ème. Les awards récompensent qui excelle sur un critère précis parmi les 3 premiers.<br><br>
           Un agent peut être <strong>1er sans aucun award</strong> (bon partout, meilleur nulle part en particulier). Un agent <strong>3ème peut avoir 3 awards</strong> s'il domine tous les critères individuels.<br><br>
           <strong>Différence ⚡ Rapidité vs vitesse du score :</strong> dans le score, la vitesse = temps entre création et clôture du dossier. Dans l'award ⚡ Rapidité = temps entre création et <em>première réponse</em> de l'agent — deux mesures différentes.
         </div>
