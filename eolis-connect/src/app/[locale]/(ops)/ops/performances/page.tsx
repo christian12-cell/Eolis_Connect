@@ -193,6 +193,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   const [monthFilter, setMonthFilter]   = useState<number[]>([])
   const [urgencyFilter, setUrgencyFilter] = useState<string[]>([])
   const [commentsOpen, setCommentsOpen]   = useState(false)
+  const [equite, setEquite]               = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -229,13 +230,42 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   }) : closedAll
 
   // Apply urgency filter on top of period filter
-  const filteredClosed = urgencyFilter.length > 0
+  const filteredClosedRaw = urgencyFilter.length > 0
     ? periodClosed.filter(t => urgencyFilter.includes(t.urgency))
     : periodClosed
 
   const filteredClosedAll = urgencyFilter.length > 0
     ? closedAll.filter(t => urgencyFilter.includes(t.urgency))
     : closedAll
+
+  // Mode équité : N = min dossiers traités parmi tous les agents → N plus récents par agent
+  const equiteN = (() => {
+    if (!equite) return null
+    const counts = new Map<string, number>()
+    for (const t of filteredClosedRaw) {
+      if (t.agentId) counts.set(t.agentId, (counts.get(t.agentId) ?? 0) + 1)
+    }
+    if (!counts.size) return null
+    return Math.min(...Array.from(counts.values()))
+  })()
+
+  const filteredClosed = (() => {
+    if (!equiteN) return filteredClosedRaw
+    const perAgent = new Map<string, any[]>()
+    for (const t of filteredClosedRaw) {
+      if (!t.agentId) continue
+      if (!perAgent.has(t.agentId)) perAgent.set(t.agentId, [])
+      perAgent.get(t.agentId)!.push(t)
+    }
+    const result: any[] = []
+    for (const [, ts] of perAgent) {
+      const sorted = [...ts].sort((a, b) =>
+        new Date(b.closedAt ?? b.updatedAt).getTime() - new Date(a.closedAt ?? a.updatedAt).getTime()
+      )
+      result.push(...sorted.slice(0, equiteN))
+    }
+    return result
+  })()
 
   // Previous period for comparison (same duration before)
   const prevClosed = (() => {
@@ -489,7 +519,34 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
             <X size={14} /> {L.clearAll}
           </button>
         )}
+        <button
+          onClick={() => setEquite(e => !e)}
+          title={equite
+            ? (isFr ? `Mode équité actif — N=${equiteN} dossiers les plus récents par agent` : `Fairness mode active — N=${equiteN} most recent tickets per agent`)
+            : (isFr ? 'Équité : même base de dossiers par agent pour une comparaison juste' : 'Fairness: same ticket base per agent for a fair comparison')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border transition-all ${
+            equite
+              ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
+          }`}
+        >
+          ⚖️ {isFr ? 'Équité' : 'Fairness'}
+          {equite && equiteN !== null && (
+            <span className="ml-1 bg-white/25 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              N={equiteN}
+            </span>
+          )}
+        </button>
       </div>
+      {equite && equiteN !== null && (
+        <div className="mb-4 px-4 py-2.5 rounded-xl bg-violet-50 border border-violet-200 text-xs text-violet-700 flex items-center gap-2">
+          <span>⚖️</span>
+          <span>{isFr
+            ? `Mode équité — scores calculés sur les ${equiteN} dossiers les plus récents par agent`
+            : `Fairness mode — scores based on the ${equiteN} most recent tickets per agent`}
+          </span>
+        </div>
+      )}
 
       {/* ── INDIVIDUAL AGENT VIEW ── */}
       {selectedAgent !== 'all' && selStats && selAgent && (
