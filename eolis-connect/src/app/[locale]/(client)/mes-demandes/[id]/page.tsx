@@ -279,6 +279,16 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
   }, [])
 
+  // Quand le client quitte la page dossier → mark-read + badge mis à jour
+  useEffect(() => {
+    if (!ticketId) return
+    return () => {
+      apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' })
+        .then(() => window.dispatchEvent(new Event('eolis:notifications_read')))
+        .catch(() => {})
+    }
+  }, [ticketId])
+
   useEffect(() => {
     if (!ticketId) return
     const u = getUser()

@@ -48,14 +48,16 @@ export default function NotificationsPage({ params }: { params: Promise<{ locale
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/login`); return }
     setUser(u)
     apiFetch('/api/notifications').then(r => r.json()).then(data => {
-      const list = Array.isArray(data) ? data : []
-      setNotifications(list)
+      setNotifications(Array.isArray(data) ? data : [])
       setLoading(false)
-      // Mark all as read — met à jour la DB et l'état local
-      apiFetch('/api/notifications/read-all', { method: 'POST' })
-        .then(() => setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))))
-        .catch(() => {})
     }).catch(() => setLoading(false))
+
+    // read-all au départ de la page (pas à l'arrivée)
+    return () => {
+      apiFetch('/api/notifications/read-all', { method: 'POST' })
+        .then(() => window.dispatchEvent(new Event('eolis:notifications_read')))
+        .catch(() => {})
+    }
   }, [locale])
 
   if (loading || !user) return null
@@ -70,8 +72,8 @@ export default function NotificationsPage({ params }: { params: Promise<{ locale
     emptySub: isFr ? 'Vous êtes à jour !' : 'You\'re all caught up!',
   }
 
-  async function markAllRead() {
-    await apiFetch('/api/notifications/read-all', { method: 'POST' })
+  function markAllRead() {
+    apiFetch('/api/notifications/read-all', { method: 'POST' }).catch(() => {})
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
   }
 
