@@ -389,9 +389,9 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
     }
   })()
 
-  // All agents stats for comparison table — tri par score composite
+  // All agents stats for comparison table — tri alphabétique
   const allAgentStats = agents.map(a => ({ ...a, stats: computeStats(a.id, filteredClosed) }))
-    .sort((a, b) => (b.stats.composite ?? 0) - (a.stats.composite ?? 0))
+    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
 
   // Selected agent stats
   const selStats = selectedAgent !== 'all' ? computeStats(selectedAgent, filteredClosed) : null
