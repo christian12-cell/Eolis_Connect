@@ -404,23 +404,28 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${pushEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
         </div>
-        {pushEnabled && (
-          <div className="px-6 py-5 space-y-3">
-            {([
-              { key: 'newMessage',       label: t.notifNewMessage },
-              { key: 'finalResponse',    label: t.notifFinalResponse },
-              { key: 'documentRequested',label: t.notifDocRequested },
-            ] as { key: keyof typeof pushPrefs; label: string }[]).map(({ key, label }) => (
-              <div key={key} className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">{label}</span>
-                <button
-                  onClick={() => setPushPrefs(p => ({ ...p, [key]: !p[key] }))}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${pushPrefs[key] ? 'bg-[#4A8FC4]' : 'bg-gray-200'}`}
-                >
-                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${pushPrefs[key] ? 'translate-x-5' : 'translate-x-1'}`} />
-                </button>
-              </div>
-            ))}
+        <div className="px-6 py-5 space-y-3">
+          {!pushEnabled && (
+            <p className="text-xs text-gray-400">
+              {isFr ? 'Activez le toggle ci-dessus puis acceptez la permission navigateur.' : 'Enable the toggle above then accept the browser permission.'}
+            </p>
+          )}
+          {pushEnabled && ([
+            { key: 'newMessage',        label: t.notifNewMessage },
+            { key: 'finalResponse',     label: t.notifFinalResponse },
+            { key: 'documentRequested', label: t.notifDocRequested },
+          ] as { key: keyof typeof pushPrefs; label: string }[]).map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">{label}</span>
+              <button
+                onClick={() => setPushPrefs(p => ({ ...p, [key]: !p[key] }))}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${pushPrefs[key] ? 'bg-[#4A8FC4]' : 'bg-gray-200'}`}
+              >
+                <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${pushPrefs[key] ? 'translate-x-5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          ))}
+          {pushEnabled && (
             <button
               onClick={savePushPrefs}
               disabled={pushSaving}
@@ -429,8 +434,8 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
               {pushSaving && <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
               {isFr ? 'Enregistrer' : 'Save'}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </section>
 
       {/* Language section */}

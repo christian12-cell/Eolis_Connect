@@ -50,7 +50,8 @@ def send_push_to_user(
         logger.warning("pywebpush not installed — skipping push")
         return
 
-    private_key = settings.VAPID_PRIVATE_KEY.replace("\\n", "\n")
+    # VAPID_PRIVATE_KEY is a raw base64url-encoded 32-byte P-256 scalar
+    private_key = settings.VAPID_PRIVATE_KEY
     payload = json.dumps({"title": title, "body": body, "url": url})
 
     for sub in subs:
