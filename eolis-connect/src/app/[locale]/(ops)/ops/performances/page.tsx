@@ -334,7 +334,20 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
       .filter(t => t.satisfactionRating?.comment)
       .map(t => ({ comment: t.satisfactionRating.comment, score: t.satisfactionRating.score, ref: t.ref, date: t.updatedAt ?? t.closedAt }))
 
-    return { count: treated.length, avgSat, avgRes, avgFirstR, avgMsgs, sla, slaGlobal, urgency, active, comments }
+    const satScore    = avgSat      !== null ? (avgSat / 5) * 100 : null
+    const speedScore  = avgRes      !== null ? Math.max(0, 100 - (avgRes    / SLA_CAP) * 100) : null
+    const slaScore    = slaGlobal   !== null ? slaGlobal : null
+    const firstRScore = avgFirstR   !== null ? Math.max(0, 100 - (avgFirstR / SLA_CAP) * 100) : null
+    const cparts = ([
+      { score: satScore, weight: 0.25 }, { score: speedScore, weight: 0.25 },
+      { score: slaScore, weight: 0.30 }, { score: firstRScore, weight: 0.20 },
+    ] as { score: number | null; weight: number }[]).filter(c => c.score !== null) as { score: number; weight: number }[]
+    const cTotal = cparts.reduce((s, c) => s + c.weight, 0)
+    const composite = cparts.length > 0
+      ? +(cparts.reduce((s, c) => s + c.score * (c.weight / cTotal), 0)).toFixed(2)
+      : null
+
+    return { count: treated.length, avgSat, avgRes, avgFirstR, avgMsgs, sla, slaGlobal, urgency, active, comments, composite }
   }
 
   // Team averages — computed on raw values (no intermediate rounding)
@@ -376,22 +389,9 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
     }
   })()
 
-  // All agents stats for comparison table — tri multi-critères
+  // All agents stats for comparison table — tri par score composite
   const allAgentStats = agents.map(a => ({ ...a, stats: computeStats(a.id, filteredClosed) }))
-    .sort((a, b) => {
-      // 1. Volume traité (décroissant)
-      if (b.stats.count !== a.stats.count) return b.stats.count - a.stats.count
-      // 2. Satisfaction — ignoré si l'un des deux n'a pas encore de note (pas de pénalité pour oubli client)
-      if (a.stats.avgSat !== null && b.stats.avgSat !== null) {
-        const satDiff = b.stats.avgSat - a.stats.avgSat
-        if (Math.abs(satDiff) > 0.05) return satDiff
-      }
-      // 3. SLA global % (décroissant)
-      const slaDiff = (b.stats.slaGlobal ?? 0) - (a.stats.slaGlobal ?? 0)
-      if (slaDiff !== 0) return slaDiff
-      // 4. Délai résolution (croissant — plus rapide = meilleur)
-      return (a.stats.avgRes ?? Infinity) - (b.stats.avgRes ?? Infinity)
-    })
+    .sort((a, b) => (b.stats.composite ?? 0) - (a.stats.composite ?? 0))
 
   // Selected agent stats
   const selStats = selectedAgent !== 'all' ? computeStats(selectedAgent, filteredClosed) : null
@@ -469,7 +469,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
       charge:     isFr ? 'Charge actuelle'        : 'Current workload',
     },
     table: {
-      rank:       isFr ? 'Rang'          : 'Rank',
+      score:      isFr ? 'Score'         : 'Score',
       agent:      isFr ? 'Agent'         : 'Agent',
       treated:    isFr ? 'Traités'       : 'Treated',
       sat:        isFr ? 'Satisfaction'  : 'Satisfaction',
@@ -686,7 +686,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wide bg-gray-50">
-                    <th className="px-5 py-3 text-left w-10">{L.table.rank}</th>
+                    <th className="px-4 py-3 text-right w-24">{L.table.score}</th>
                     <th className="px-3 py-3 text-left">{L.table.agent}</th>
                     <th className="px-3 py-3 text-right">{L.table.treated}</th>
                     <th className="px-3 py-3 text-right">{L.table.sat}</th>
@@ -707,8 +707,10 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                     return (
                       <tr key={a.id} className="hover:bg-gray-50 transition-colors cursor-pointer"
                         onClick={() => setSelectedAgent(a.id)}>
-                        <td className="px-5 py-3 text-center">
-                          <span className="text-sm">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : <span className="text-gray-400 text-xs">{i+1}</span>}</span>
+                        <td className="px-4 py-3 text-right">
+                          {s.composite !== null ? (
+                            <span className="font-bold text-sm text-[#1B3A5C]">{s.composite}<span className="text-gray-400 font-normal text-xs">/100</span></span>
+                          ) : <span className="text-gray-300 text-xs">—</span>}
                         </td>
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2">
@@ -743,7 +745,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                   })}
                   {/* Team average row */}
                   <tr className="bg-[#1B3A5C]/5 font-semibold border-t-2 border-[#1B3A5C]/20">
-                    <td className="px-5 py-3" />
+                    <td className="px-4 py-3 text-right text-gray-400 text-xs">—</td>
                     <td className="px-3 py-3 text-xs font-bold text-[#1B3A5C] uppercase tracking-wide">{L.table.teamAvg}</td>
                     <td className="px-3 py-3 text-right text-gray-700">{teamStats.count}</td>
                     <td className="px-3 py-3 text-right text-gray-700">{teamStats.avgSat !== null ? `${teamStats.avgSat}/5` : '—'}</td>
