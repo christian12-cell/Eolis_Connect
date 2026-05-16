@@ -368,9 +368,9 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
         <div className="flex flex-wrap items-center gap-2">
           {([
             { icon: '⭐', label: isFr ? 'Satisfaction' : 'Satisfaction', pct: '25%', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
-            { icon: '⚡', label: isFr ? 'Vitesse résolution' : 'Resolution speed', pct: '25%', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
+            { icon: '🏁', label: isFr ? 'Vitesse résolution' : 'Resolution speed', pct: '25%', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
             { icon: '🎯', label: 'SLA %', pct: '30%', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-            { icon: '🔔', label: isFr ? '1ère réponse' : '1st response', pct: '20%', cls: 'bg-purple-100 text-purple-800 border-purple-200' },
+            { icon: '⚡', label: isFr ? '1ère réponse' : '1st response', pct: '20%', cls: 'bg-purple-100 text-purple-800 border-purple-200' },
           ] as { icon: string; label: string; pct: string; cls: string }[]).map(c => (
             <span key={c.label} className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border ${c.cls}`}>
               {c.icon} {c.label} <span className="font-normal opacity-60">{c.pct}</span>
@@ -659,9 +659,9 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
         const firstR = a.avgFirstR !== null ? +Math.max(0, 100 - a.avgFirstR / SLA_CAP * 100).toFixed(1) : null
         const rows = [
           { icon: '⭐', label: isFr ? 'Satisfaction'   : 'Satisfaction',  score: sat,    w: 25 },
-          { icon: '⚡', label: isFr ? 'Vitesse résol.' : 'Resol. speed',  score: speed,  w: 25 },
+          { icon: '🏁', label: isFr ? 'Vitesse résol.' : 'Resol. speed',  score: speed,  w: 25 },
           { icon: '🎯', label: 'SLA %',                                    score: sla,    w: 30 },
-          { icon: '🔔', label: isFr ? '1ère réponse'  : '1st response',   score: firstR, w: 20 },
+          { icon: '⚡', label: isFr ? '1ère réponse'  : '1st response',   score: firstR, w: 20 },
         ]
         const top  = Math.max(8, scoreTooltip.y - 180)
         const left = Math.max(8, scoreTooltip.x - 240)
