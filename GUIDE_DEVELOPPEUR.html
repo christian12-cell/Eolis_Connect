@@ -153,6 +153,15 @@
     <li><a href="#cheat-back">Backend</a></li>
     <li><a href="#cheat-db">SQL utile</a></li>
   </ul>
+  <div class="toc-section">Services & UI</div>
+  <ul>
+    <li><a href="#cloud-access">Accès Neon / Railway / Vercel / S3</a></li>
+    <li><a href="#changer-labels">Changer les textes & labels</a></li>
+    <li><a href="#splash-animation">Page d'animation splash</a></li>
+    <li><a href="#tailwind-css">Tailwind CSS — Styles & animations</a></li>
+    <li><a href="#composants-ui">Composants réutilisables</a></li>
+    <li><a href="#manifest-pwa">Manifest PWA (icône, nom)</a></li>
+  </ul>
 </div>
 </aside>
 
@@ -1342,6 +1351,465 @@ router = APIRouter(prefix=<span class="s">"/tickets"</span>, tags=[<span class="
 <span class="c">-- Voir la taille des tables</span>
 <span class="k">SELECT</span> relname, pg_size_pretty(pg_total_relation_size(relid))
 <span class="k">FROM</span> pg_catalog.pg_statio_user_tables <span class="k">ORDER BY</span> pg_total_relation_size(relid) <span class="k">DESC</span>;</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="cloud-access">
+  <h2>☁️ Accéder aux services cloud — Neon, Railway, Vercel, S3</h2>
+
+  <h3>🗄️ Neon — Voir et modifier la base de données</h3>
+  <p>Neon est ton PostgreSQL dans le cloud. Tu peux lire/écrire des données directement depuis le navigateur.</p>
+  <div class="flow" style="flex-direction:column;align-items:flex-start;gap:6px;">
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">1</div><div style="font-size:.88rem;padding-top:6px;"><strong>Va sur</strong> <code>neon.tech</code> → connecte-toi avec ton compte</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">2</div><div style="font-size:.88rem;padding-top:6px;">Clique sur ton projet <strong>Eolis</strong> → dans le menu gauche clique <strong>"SQL Editor"</strong></div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">3</div><div style="font-size:.88rem;padding-top:6px;">Tu peux écrire du SQL directement et l'exécuter avec <kbd>Ctrl+Enter</kbd></div></div>
+  </div>
+  <pre><span class="c">-- Voir tous les utilisateurs</span>
+<span class="k">SELECT</span> username, role, status, created_at <span class="k">FROM</span> users;
+
+<span class="c">-- Vider les tickets de test (GARDER les utilisateurs)</span>
+<span class="k">DELETE FROM</span> messages;
+<span class="k">DELETE FROM</span> attachments;
+<span class="k">DELETE FROM</span> notifications;
+<span class="k">DELETE FROM</span> tickets;
+
+<span class="c">-- Remettre à zéro les crédits d'un client</span>
+<span class="k">UPDATE</span> credit_balances <span class="k">SET</span> credits_total=100, credits_used=0
+<span class="k">WHERE</span> client_id = (<span class="k">SELECT</span> id <span class="k">FROM</span> users <span class="k">WHERE</span> username=<span class="s">'Thomas.KAMGA'</span>);
+
+<span class="c">-- Voir l'espace utilisé par chaque table</span>
+<span class="k">SELECT</span> relname <span class="k">AS</span> table, pg_size_pretty(pg_total_relation_size(relid)) <span class="k">AS</span> size
+<span class="k">FROM</span> pg_catalog.pg_statio_user_tables
+<span class="k">ORDER BY</span> pg_total_relation_size(relid) <span class="k">DESC</span>;</pre>
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div class="alert-body"><strong>Neon a un "branching"</strong> — tu peux créer une branche de dev séparée de la prod pour tester sans risque. Dans le menu gauche → "Branches" → "New branch".</div>
+  </div>
+
+  <h3>⚙️ Railway — Voir les logs et accéder au backend</h3>
+  <div class="flow" style="flex-direction:column;align-items:flex-start;gap:6px;">
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">1</div><div style="font-size:.88rem;padding-top:6px;"><strong>Va sur</strong> <code>railway.app</code> → ton projet → clique sur le service backend</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">2</div><div style="font-size:.88rem;padding-top:6px;"><strong>Onglet "Logs"</strong> → voir les logs en temps réel (erreurs, print(), démarrages)</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">3</div><div style="font-size:.88rem;padding-top:6px;"><strong>Onglet "Variables"</strong> → voir/modifier les variables d'environnement (DATABASE_URL, JWT_SECRET, etc.)</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">4</div><div style="font-size:.88rem;padding-top:6px;"><strong>Onglet "Shell"</strong> → terminal direct sur le serveur</div></div>
+  </div>
+  <pre><span class="c"># Dans le Shell Railway — voir les fichiers uploadés</span>
+ls uploads/
+
+<span class="c"># Voir les 50 dernières lignes de logs</span>
+<span class="c"># (ça c'est dans l'onglet Logs de Railway, pas en shell)</span>
+
+<span class="c"># Forcer un redémarrage depuis Railway :</span>
+<span class="c"># Onglet "Deployments" → clique "..." sur le dernier deploy → "Redeploy"</span></pre>
+
+  <h3>🔺 Vercel — Frontend et redéploiements</h3>
+  <div class="flow" style="flex-direction:column;align-items:flex-start;gap:6px;">
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">1</div><div style="font-size:.88rem;padding-top:6px;"><strong>Va sur</strong> <code>vercel.com</code> → ton projet Eolis</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">2</div><div style="font-size:.88rem;padding-top:6px;"><strong>Onglet "Deployments"</strong> → chaque déploiement listé, clique dessus pour voir les logs de build</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">3</div><div style="font-size:.88rem;padding-top:6px;"><strong>Onglet "Settings" → "Environment Variables"</strong> → ajouter/modifier <code>NEXT_PUBLIC_API_URL</code></div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">4</div><div style="font-size:.88rem;padding-top:6px;">Si un build échoue → cliquer dessus → chercher la ligne rouge dans les logs → c'est souvent une erreur TypeScript</div></div>
+  </div>
+
+  <h3>🪣 AWS S3 — Fichiers uploadés</h3>
+  <div class="alert alert-info">
+    <span class="alert-icon">ℹ️</span>
+    <div class="alert-body"><strong>Actuellement</strong> les fichiers sont stockés localement sur Railway (<code>uploads/</code>), pas encore sur S3. S3 sera activé lors du déploiement final. Quand ce sera fait :</div>
+  </div>
+  <div class="flow" style="flex-direction:column;align-items:flex-start;gap:6px;">
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">1</div><div style="font-size:.88rem;padding-top:6px;">Va sur <code>aws.amazon.com</code> → connecte-toi → recherche <strong>"S3"</strong> dans la barre de recherche</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">2</div><div style="font-size:.88rem;padding-top:6px;">Clique sur ton bucket (ex: <code>eolis-uploads</code>) → tu vois tous les dossiers et fichiers</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">3</div><div style="font-size:.88rem;padding-top:6px;">Pour supprimer : sélectionne les fichiers → bouton <strong>"Delete"</strong>. Pour vider entièrement → "Empty bucket"</div></div>
+  </div>
+  <pre><span class="c"># Structure des fichiers dans S3 (une fois migré)</span>
+eolis-uploads/
+  attachments/
+    ticket-id-uuid/
+      scan-document.pdf
+      photo-conteneur.jpg
+  credit-requests/
+    client-id-uuid/
+      screenshot-payment.jpg</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="changer-labels">
+  <h2>🏷️ Changer les textes et labels — Comment ça marche</h2>
+
+  <p>Il y a <strong>deux systèmes de textes</strong> dans l'appli. Il faut savoir lequel est utilisé selon l'endroit.</p>
+
+  <h3>Système 1 — Traductions inline (le plus courant)</h3>
+  <p>La majorité des pages ont un objet <code>t</code> défini directement dans le composant. C'est le cas de toutes les pages client et des pages avec du contenu FR/EN :</p>
+  <pre><span class="c">// Exemple dans nouvelle-demande/page.tsx</span>
+<span class="k">const</span> isFr = locale === <span class="s">'fr'</span>
+
+<span class="k">const</span> t = isFr ? {
+  logTitle: <span class="s">'Informations logistiques'</span>,    <span class="c">← TEXTE FR</span>
+  logSub:   <span class="s">'Ces informations accélèrent...'</span>,
+  blCode:   <span class="s">'N° BL / Code dossier'</span>,
+  shipName: <span class="s">'Nom du navire'</span>,
+  next:     <span class="s">'Continuer'</span>,
+  back:     <span class="s">'Retour'</span>,
+} : {
+  logTitle: <span class="s">'Logistics information'</span>,          <span class="c">← TEXTE EN</span>
+  logSub:   <span class="s">'This information speeds up...'</span>,
+  blCode:   <span class="s">'BL no. / File code'</span>,
+  shipName: <span class="s">'Ship name'</span>,
+  next:     <span class="s">'Continue'</span>,
+  back:     <span class="s">'Back'</span>,
+}</pre>
+  <p>Pour changer un label → chercher la chaîne avec <strong>Ctrl+F</strong> dans le fichier → modifier la valeur dans les deux blocs (FR et EN).</p>
+
+  <h3>Système 2 — next-intl (quelques pages)</h3>
+  <p>Quelques pages utilisent le système next-intl avec des fichiers JSON de traduction :</p>
+  <div class="file-tree">
+<span class="ft-dir">eolis-connect/messages/</span>
+├── <span class="ft-file">fr.json</span>   <span class="ft-comment">← textes français</span>
+└── <span class="ft-file">en.json</span>   <span class="ft-comment">← textes anglais</span>
+  </div>
+  <pre><span class="c">// Exemple fr.json</span>
+{
+  <span class="s">"common"</span>: {
+    <span class="s">"loading"</span>: <span class="s">"Chargement..."</span>,
+    <span class="s">"error"</span>: <span class="s">"Une erreur s'est produite"</span>
+  },
+  <span class="s">"nav"</span>: {
+    <span class="s">"home"</span>: <span class="s">"Accueil"</span>,
+    <span class="s">"requests"</span>: <span class="s">"Mes demandes"</span>
+  }
+}</pre>
+  <p>Pour les modifier : ouvrir <code>messages/fr.json</code> et <code>messages/en.json</code> → changer la valeur → sauvegarder.</p>
+
+  <h3>Changer le nom de l'app ou les métadonnées</h3>
+  <pre><span class="c">// Dans eolis-connect/src/app/layout.tsx</span>
+<span class="k">export const</span> metadata = {
+  title:       <span class="s">"Eolis Connect"</span>,       <span class="c">← Nom dans l'onglet navigateur</span>
+  description: <span class="s">"Plateforme de gestion..."</span>, <span class="c">← Description SEO</span>
+  icons: { icon: <span class="s">"/logo.png"</span> },       <span class="c">← Icône de l'app (fichier dans public/)</span>
+  appleWebApp: { title: <span class="s">"Eolis Connect"</span> } <span class="c">← Nom affiché sur iOS quand installée</span>
+}</pre>
+
+  <h3>Changer les catégories de demande</h3>
+  <pre><span class="c">// Dans nouvelle-demande/page.tsx — chercher CATEGORIES_FR</span>
+<span class="k">const</span> CATEGORIES_FR = [
+  <span class="s">'Livraison'</span>, <span class="s">'Facturation'</span>, <span class="s">'Dossier'</span>, <span class="s">'Information'</span>, <span class="s">'Autre'</span>
+]
+
+<span class="c">// Et les sous-catégories</span>
+<span class="k">const</span> SUBCATEGORIES_FR: Record&lt;string, string[]&gt; = {
+  <span class="s">'Livraison'</span>: [<span class="s">'Conteneur bloqué'</span>, <span class="s">'Retard de livraison'</span>, ...],
+  <span class="s">'Facturation'</span>: [<span class="s">'Erreur de facturation'</span>, ...],
+  ...
+}</pre>
+
+  <h3>Changer les types de conteneurs</h3>
+  <pre><span class="c">// Dans nouvelle-demande/page.tsx — chercher EQUIPMENT_FR</span>
+<span class="k">const</span> EQUIPMENT_FR = [
+  <span class="s">'20 pieds'</span>, <span class="s">'40 pieds'</span>, <span class="s">'40 pieds HC'</span>,
+  <span class="s">'45 pieds'</span>, <span class="s">'Reefer 20'</span>, <span class="s">'Reefer 40'</span>, <span class="s">'Autre'</span>
+]</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="splash-animation">
+  <h2>🌊 La page d'animation (Splash Screen) — Comment elle est faite</h2>
+
+  <p>L'écran de chargement au démarrage ("Eolis Connect — Global Logistics Platform" avec les vagues) est défini dans <code>src/app/layout.tsx</code>. C'est du HTML+CSS pur injecté en ligne — pas un composant React — pour qu'il s'affiche <strong>immédiatement</strong> même avant que React se charge.</p>
+
+  <h3>Anatomie complète</h3>
+  <pre><span class="c">/* 3 animations CSS définies dans splashCSS */</span>
+
+<span class="c">/* 1. Texte qui monte en fondu (titre + sous-titre) */</span>
+@keyframes splashUp {
+  from { opacity: 0; transform: translateY(16px); }  <span class="c">← part de en bas + invisible</span>
+  to   { opacity: 1; transform: translateY(0); }      <span class="c">← arrive en place + visible</span>
+}
+
+<span class="c">/* 2. Points qui rebondissent (loader) */</span>
+@keyframes sdBounce {
+  0%, 80%, 100% { transform: scale(.6); opacity: .4; }  <span class="c">← petit + transparent</span>
+  40%           { transform: scale(1);  opacity: 1;  }  <span class="c">← grand + visible</span>
+}
+<span class="c">/* Les 3 points ont un délai différent (0s, .2s, .4s) → effet cascade */</span>
+
+<span class="c">/* 3. Vagues qui bougent horizontalement */</span>
+@keyframes swMove {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+<span class="c">/* L'astuce : chaque vague fait 200% de largeur (2 copies côte à côte)</span>
+<span class="c">   En déplaçant de -50%, quand la 1ère copie sort, la 2ème prend sa place</span>
+<span class="c">   → boucle infinie sans saut visible */</span>
+}</pre>
+
+  <h3>La structure HTML du splash</h3>
+  <pre><span class="c">&lt;!-- Conteneur principal : plein écran, fond sombre, tout centré --&gt;</span>
+&lt;div id="eolis-splash" style="position:fixed; inset:0; z-index:9999;
+     background:#0f172a; display:flex; flex-direction:column;
+     align-items:center; justify-content:center;"&gt;
+
+  <span class="c">&lt;!-- Titre : animation splashUp avec délai 0s --&gt;</span>
+  &lt;div style="color:#fff; font-size:1.875rem; font-weight:700;
+       animation:splashUp .6s ease forwards;"&gt;
+    Eolis Connect
+  &lt;/div&gt;
+
+  <span class="c">&lt;!-- Sous-titre : même animation mais délai .1s → décalage visuel --&gt;</span>
+  &lt;div style="color:#93c5fd; animation:splashUp .6s ease .1s both;"&gt;
+    Global Logistics Platform
+  &lt;/div&gt;
+
+  <span class="c">&lt;!-- 3 points bouncing --&gt;</span>
+  &lt;div style="display:flex; gap:.5rem;"&gt;
+    &lt;div style="animation:sdBounce 1.2s ease 0s infinite;"&gt;&lt;/div&gt;
+    &lt;div style="animation:sdBounce 1.2s ease .2s infinite;"&gt;&lt;/div&gt;  <span class="c">← délai .2s</span>
+    &lt;div style="animation:sdBounce 1.2s ease .4s infinite;"&gt;&lt;/div&gt;  <span class="c">← délai .4s</span>
+  &lt;/div&gt;
+
+  <span class="c">&lt;!-- 3 vagues SVG superposées, vitesses différentes --&gt;</span>
+  &lt;div style="position:absolute; bottom:0; width:100%; height:160px;"&gt;
+
+    <span class="c">&lt;!-- Vague 1 : la plus haute, la plus rapide (6s) --&gt;</span>
+    &lt;div style="width:200%; animation:swMove 6s linear infinite;"&gt;
+      &lt;svg viewBox="0 0 1440 160"&gt;
+        &lt;path d="M0,80 C180,140 360,20 540,80 C720,140 ..."
+              fill="#1e3a8a" fill-opacity=".8"/&gt;
+      &lt;/svg&gt;
+      &lt;svg ...&gt; <span class="c">← copie identique collée à droite pour la boucle</span> &lt;/svg&gt;
+    &lt;/div&gt;
+
+    <span class="c">&lt;!-- Vague 2 : plus lente (9s), direction inverse, opacity .6 --&gt;</span>
+    &lt;div style="animation:swMove 9s linear infinite reverse; opacity:.6;"&gt;...&lt;/div&gt;
+
+    <span class="c">&lt;!-- Vague 3 : la plus lente (12s), opacity .4 --&gt;</span>
+    &lt;div style="animation:swMove 12s linear infinite; opacity:.4;"&gt;...&lt;/div&gt;
+
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+
+  <h3>Comment le splash disparaît — SplashHider.tsx</h3>
+  <pre><span class="c">// SplashHider est un composant React qui tourne côté client</span>
+<span class="c">// Il attend que la page soit chargée, puis fait disparaître le splash</span>
+
+export <span class="k">function</span> <span class="f">SplashHider</span>() {
+  <span class="f">useEffect</span>(() => {
+    <span class="k">const</span> splash = document.<span class="f">getElementById</span>(<span class="s">'eolis-splash'</span>)
+    <span class="k">if</span> (!splash) <span class="k">return</span>
+
+    <span class="f">setTimeout</span>(() => {
+      splash.style.opacity = <span class="s">'0'</span>              <span class="c">← commence le fondu</span>
+      splash.style.transition = <span class="s">'opacity 0.4s ease'</span>
+      <span class="f">setTimeout</span>(() => splash.<span class="f">remove</span>(), 400) <span class="c">← supprime après le fondu</span>
+    }, 800)  <span class="c">← attendre 800ms pour que la page se rende d'abord</span>
+  }, [])
+  <span class="k">return null</span>  <span class="c">← ne rend rien visuellement</span>
+}</pre>
+
+  <h3>Pour modifier le splash — Ce que tu peux changer</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Ce que tu veux changer</th><th>Où</th><th>Quoi modifier</th></tr></thead>
+    <tbody>
+      <tr><td>Le texte "Eolis Connect"</td><td><code>layout.tsx → splashHTML</code></td><td>Ligne <code>Eolis Connect&lt;/div&gt;</code></td></tr>
+      <tr><td>Le sous-titre "Global Logistics Platform"</td><td><code>layout.tsx → splashHTML</code></td><td>Ligne suivante</td></tr>
+      <tr><td>La couleur du fond</td><td><code>layout.tsx → splashHTML</code></td><td><code>background:#0f172a</code> → changer la couleur hex</td></tr>
+      <tr><td>La couleur des vagues</td><td><code>layout.tsx → splashHTML</code></td><td><code>fill="#1e3a8a"</code> dans les SVG</td></tr>
+      <tr><td>La durée avant disparition</td><td><code>SplashHider.tsx</code></td><td><code>setTimeout(..., 800)</code> → changer 800</td></tr>
+      <tr><td>La durée du fondu</td><td><code>SplashHider.tsx</code></td><td><code>'opacity 0.4s ease'</code> → changer 0.4s</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="tailwind-css">
+  <h2>🎨 Tailwind CSS — Comment styler les éléments</h2>
+
+  <p>Tailwind est un système de classes CSS utilitaires. Au lieu d'écrire du CSS dans un fichier séparé, tu mets des classes directement sur l'élément HTML.</p>
+
+  <h3>Principe de base</h3>
+  <pre><span class="c">&lt;!-- CSS classique --&gt;</span>
+&lt;div class="mon-div"&gt;...&lt;/div&gt;
+<span class="c">/* Dans un .css */</span>
+.mon-div { background: #1B3A5C; color: white; padding: 16px; border-radius: 12px; }
+
+<span class="c">&lt;!-- Tailwind — tout dans la classe, pas de .css --&gt;</span>
+&lt;div className="bg-[#1B3A5C] text-white p-4 rounded-xl"&gt;...&lt;/div&gt;</pre>
+
+  <h3>Cheat sheet des classes les plus utilisées dans Eolis</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Effet</th><th>Classe Tailwind</th><th>Équivalent CSS</th></tr></thead>
+    <tbody>
+      <tr><td>Fond navy Eolis</td><td><code>bg-[#1B3A5C]</code></td><td><code>background:#1B3A5C</code></td></tr>
+      <tr><td>Fond gris clair</td><td><code>bg-gray-50</code></td><td><code>background:#f9fafb</code></td></tr>
+      <tr><td>Texte blanc</td><td><code>text-white</code></td><td><code>color:white</code></td></tr>
+      <tr><td>Texte gris discret</td><td><code>text-gray-400</code></td><td><code>color:#9ca3af</code></td></tr>
+      <tr><td>Padding 16px tous côtés</td><td><code>p-4</code></td><td><code>padding:16px</code></td></tr>
+      <tr><td>Padding haut/bas 12px</td><td><code>py-3</code></td><td><code>padding-top:12px; padding-bottom:12px</code></td></tr>
+      <tr><td>Arrondi léger</td><td><code>rounded-xl</code></td><td><code>border-radius:12px</code></td></tr>
+      <tr><td>Arrondi fort</td><td><code>rounded-2xl</code></td><td><code>border-radius:16px</code></td></tr>
+      <tr><td>Flex en ligne</td><td><code>flex items-center gap-3</code></td><td><code>display:flex; align-items:center; gap:12px</code></td></tr>
+      <tr><td>Flex colonne</td><td><code>flex flex-col gap-4</code></td><td><code>display:flex; flex-direction:column; gap:16px</code></td></tr>
+      <tr><td>Texte gras</td><td><code>font-bold</code></td><td><code>font-weight:700</code></td></tr>
+      <tr><td>Texte petit</td><td><code>text-xs</code></td><td><code>font-size:12px</code></td></tr>
+      <tr><td>Texte normal</td><td><code>text-sm</code></td><td><code>font-size:14px</code></td></tr>
+      <tr><td>Opacité réduite</td><td><code>opacity-50</code></td><td><code>opacity:0.5</code></td></tr>
+      <tr><td>Ombre portée</td><td><code>shadow-lg</code></td><td><code>box-shadow:...</code></td></tr>
+      <tr><td>Bordure grise</td><td><code>border border-gray-200</code></td><td><code>border:1px solid #e5e7eb</code></td></tr>
+      <tr><td>Transition smooth</td><td><code>transition-all</code></td><td><code>transition:all 150ms</code></td></tr>
+      <tr><td>Curseur cliquable</td><td><code>cursor-pointer</code></td><td><code>cursor:pointer</code></td></tr>
+      <tr><td>Caché sur mobile</td><td><code>hidden md:block</code></td><td><code>display:none</code> (mobile), <code>display:block</code> (desktop)</td></tr>
+      <tr><td>Pleine largeur</td><td><code>w-full</code></td><td><code>width:100%</code></td></tr>
+      <tr><td>Hauteur fixe 40px</td><td><code>h-10</code></td><td><code>height:40px</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Classes d'animation Tailwind intégrées</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Classe</th><th>Effet</th><th>Utilisée où</th></tr></thead>
+    <tbody>
+      <tr><td><code>animate-spin</code></td><td>Rotation infinie</td><td>Loader (Loader2 icon quand sending)</td></tr>
+      <tr><td><code>animate-pulse</code></td><td>Pulsation (fondu in/out)</td><td>Indicateur connexion, badge wifi</td></tr>
+      <tr><td><code>animate-bounce</code></td><td>Rebond vertical</td><td>Étoile sur l'écran de succès</td></tr>
+      <tr><td><code>animate-ping</code></td><td>Cercle qui s'élargit et disparaît</td><td>Effets de halo autour des icônes</td></tr>
+    </tbody>
+  </table></div>
+  <pre><span class="c">// Exemple d'un loader spinner</span>
+&lt;Loader2 size={16} className=<span class="s">"animate-spin text-white"</span> /&gt;
+
+<span class="c">// Exemple d'un halo ping (cercle qui s'étend)</span>
+&lt;div className=<span class="s">"relative w-24 h-24"</span>&gt;
+  &lt;div className=<span class="s">"absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-40"</span> /&gt;
+  &lt;div className=<span class="s">"relative w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center"</span>&gt;
+    &lt;Star className=<span class="s">"text-emerald-500 fill-emerald-500 animate-bounce"</span> /&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+
+  <h3>Créer une animation personnalisée (CSS pur)</h3>
+  <pre><span class="c">/* Dans globals.css */</span>
+@keyframes monAnimation {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mon-element-anime {
+  animation: monAnimation 0.5s ease forwards;
+}
+
+<span class="c">// Dans le JSX</span>
+&lt;div className=<span class="s">"mon-element-anime"</span>&gt;...&lt;/div&gt;</pre>
+
+  <h3>Les classes CSS globales définies dans globals.css</h3>
+  <pre><span class="c">/* Variables CSS — les couleurs Eolis */</span>
+:root {
+  --eolis-navy:    #1B3A5C;  <span class="c">← couleur principale</span>
+  --eolis-blue:    #4A8FC4;  <span class="c">← accent/liens</span>
+  --eolis-brown:   #8B5A2B;  <span class="c">← secondaire</span>
+  --eolis-success: #10B981;
+  --eolis-warning: #F59E0B;
+  --eolis-danger:  #EF4444;
+}
+
+<span class="c">/* Classes utilitaires custom */</span>
+.eolis-gradient       { background: linear-gradient(135deg, #1B3A5C 0%, #4A8FC4 100%); }
+.eolis-gradient-soft  { background: linear-gradient(135deg, #1B3A5C, #2d5f8a, #4A8FC4); }
+.card-shadow          { box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(27,58,92,.06); }
+.card-shadow-hover    { box-shadow: 0 4px 12px rgba(0,0,0,.1), 0 8px 24px rgba(27,58,92,.12); }</pre>
+
+  <h3>Responsive — classes selon la taille d'écran</h3>
+  <pre><span class="c">// Préfixes : sm: (640px+), md: (768px+), lg: (1024px+), xl: (1280px+)</span>
+
+&lt;div className=<span class="s">"text-sm md:text-base lg:text-lg"</span>&gt;
+  <span class="c">← mobile: 14px / tablette: 16px / desktop: 18px</span>
+&lt;/div&gt;
+
+&lt;div className=<span class="s">"hidden md:flex"</span>&gt;
+  <span class="c">← invisible sur mobile, flex sur desktop</span>
+&lt;/div&gt;
+
+&lt;div className=<span class="s">"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"</span>&gt;
+  <span class="c">← 1 colonne mobile, 2 tablette, 3 desktop</span>
+&lt;/div&gt;</pre>
+
+  <h3>Conditionnel — classes selon un état</h3>
+  <pre><span class="c">// Pattern le plus courant dans Eolis</span>
+&lt;button className={`py-3 rounded-xl font-bold border-2 transition-all ${
+  isSelected
+    ? <span class="s">'bg-white text-[#1B3A5C] border-white'</span>    <span class="c">← si sélectionné</span>
+    : <span class="s">'bg-transparent text-white border-white/30'</span>  <span class="c">← sinon</span>
+}`}&gt;
+
+<span class="c">// Avec plusieurs conditions</span>
+&lt;div className={`rounded-xl px-3 py-1 text-xs font-bold ${
+  score >= 80 ? <span class="s">'bg-green-100 text-green-700'</span> :
+  score >= 60 ? <span class="s">'bg-orange-100 text-orange-700'</span> :
+                <span class="s">'bg-red-100 text-red-700'</span>
+}`}&gt;</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="composants-ui">
+  <h2>🧱 Les composants réutilisables — Comment les utiliser et modifier</h2>
+
+  <h3>MobileLayout — Le fond navy des pages client</h3>
+  <pre><span class="c">// Utilisation dans chaque page client</span>
+&lt;MobileLayout locale={locale} title=<span class="s">"Mes demandes"</span> showBack&gt;
+  <span class="c">&lt;!-- ton contenu ici --&gt;</span>
+&lt;/MobileLayout&gt;
+
+<span class="c">// Props disponibles</span>
+title:    string    <span class="c">← titre affiché en haut (barre de titre)</span>
+showBack: boolean   <span class="c">← afficher flèche retour en haut à gauche</span>
+locale:   string    <span class="c">← 'fr' ou 'en'</span></pre>
+
+  <h3>StatusBadge et UrgencyBadge</h3>
+  <pre><span class="c">// Dans components/ui/badge.tsx</span>
+&lt;StatusBadge status="PENDING" locale="fr" /&gt;
+<span class="c">// → badge jaune "En attente"</span>
+
+&lt;UrgencyBadge urgency="HIGH" locale="fr" /&gt;
+<span class="c">// → badge rouge "High"</span>
+
+<span class="c">// Pour modifier les couleurs ou textes des badges → ouvrir badge.tsx</span>
+<span class="c">// Chercher le dictionnaire des statuts et modifier les classes ou labels</span></pre>
+
+  <h3>DashboardLayout — Le layout deux colonnes des pages staff</h3>
+  <pre>&lt;DashboardLayout locale={locale} userName={`${user.firstName} ${user.lastName}`}&gt;
+  <span class="c">&lt;!-- contenu principal --&gt;</span>
+&lt;/DashboardLayout&gt;</pre>
+
+  <h3>RecapSection — Les accordéons du récap</h3>
+  <pre><span class="c">// Composant accordéon utilisé dans le récap de nouvelle-demande</span>
+&lt;RecapSection
+  title=<span class="s">"Logistique"</span>
+  isOpen={openRecap.log}
+  onToggle={() =&gt; toggleRecap(<span class="s">'log'</span>)}
+&gt;
+  <span class="c">&lt;!-- contenu qui s'affiche/cache --&gt;</span>
+&lt;/RecapSection&gt;
+
+<span class="c">// État des accordéons : un objet avec true/false par section</span>
+<span class="k">const</span> [openRecap, setOpenRecap] = useState({
+  cat: true, equip: true, log: true, desc: true
+})</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="manifest-pwa">
+  <h2>📱 Manifest PWA — Icône, nom, couleurs de l'app installée</h2>
+
+  <p>Quand un client installe l'app sur son téléphone, les infos viennent de <code>public/manifest.json</code> :</p>
+  <pre><span class="c">// public/manifest.json</span>
+{
+  <span class="s">"name"</span>:             <span class="s">"Eolis Connect"</span>,          <span class="c">← nom complet</span>
+  <span class="s">"short_name"</span>:       <span class="s">"Eolis"</span>,                  <span class="c">← nom sous l'icône</span>
+  <span class="s">"description"</span>:     <span class="s">"Plateforme logistique"</span>,
+  <span class="s">"theme_color"</span>:     <span class="s">"#1B3A5C"</span>,               <span class="c">← couleur de la barre d'état</span>
+  <span class="s">"background_color"</span>:<span class="s">"#1B3A5C"</span>,               <span class="c">← couleur pendant le chargement</span>
+  <span class="s">"display"</span>:         <span class="s">"standalone"</span>,             <span class="c">← pas de barre d'URL (mode app)</span>
+  <span class="s">"start_url"</span>:       <span class="s">"/fr/accueil"</span>,            <span class="c">← page d'ouverture</span>
+  <span class="s">"icons"</span>: [
+    { <span class="s">"src"</span>: <span class="s">"/logo.png"</span>, <span class="s">"sizes"</span>: <span class="s">"192x192"</span> },
+    { <span class="s">"src"</span>: <span class="s">"/logo.png"</span>, <span class="s">"sizes"</span>: <span class="s">"512x512"</span> }
+  ]
+}</pre>
+  <p>Pour changer l'icône → remplacer <code>public/logo.png</code> par ta nouvelle image (PNG carré, 512×512 minimum).</p>
 </div>
 
 </main>
