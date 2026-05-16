@@ -104,6 +104,22 @@ Format : `[Date] — Type — Description`
 
 ---
 
+## [2026-05-16] — Session classement OPS, score composite, badges, documentation, tooltip fix
+
+### Frontend — `eolis-connect`
+
+#### Fix tooltip Performance globale par urgence (`ops/dashboard/OpsDashboardCharts.tsx`, `ops/dashboard/page.tsx`)
+- `UrgencyDetail` interface : ajout de `slaScore`, `firstRScore`, `avgFirstR` (3 champs manquants).
+- `computeDetail()` : `avgFirstR` ajouté dans le `return` (présent dans le calcul mais pas retourné).
+- `PerfTooltip` : affiche désormais les **4 critères** (⭐ Satisfaction / 🏁 Délai moy. / 🎯 SLA % / ⚡ 1ère réponse) avec le score en pts pour chacun.
+- Sous-titre `perfSub` mis à jour : `"Score 0-100 : satisfaction(25%)⭐ + vitesse(25%)🏁 + SLA(30%)🎯 + 1ère réponse(20%)⚡"`.
+
+### Documentation
+- **`MANUEL_AGENT.html`** : nouvelle section *"Comment l'urgence est-elle assignée ?"* — tableau complet catégorie/sous-catégorie → urgence + alerte sur le cas "Autre" (fallback LOW).
+- **`MANUEL_OPS_ADMIN.html`** : idem, inséré avant la section SLA avec ancre `#classification-urgence` + entrée dans la table des matières.
+
+---
+
 ## [2026-05-16] — Session classement OPS, score composite, badges, documentation
 
 ### Frontend — `eolis-connect`
