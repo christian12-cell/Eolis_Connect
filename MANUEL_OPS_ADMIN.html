@@ -228,6 +228,7 @@
           <li class="sub"><a href="#perf-individuelle">↳ Vue individuelle</a></li>
           <li><a href="#classement">7. Classement</a></li>
           <li class="sub"><a href="#score-composite">↳ Score composite</a></li>
+          <li class="sub"><a href="#filtre-urgence-classement">↳ Filtre urgence — pourquoi crucial</a></li>
           <li class="sub"><a href="#awards">↳ Awards</a></li>
           <li class="sub"><a href="#podium">↳ Podium & tableau</a></li>
           <li><a href="#glossaire">8. Glossaire</a></li>
@@ -413,20 +414,40 @@
 
       <div class="graphe-card">
         <div class="graphe-title">Graphe 3 — Global Performance by Urgency (graphe bas gauche)</div>
-        <div class="graphe-desc">Score composite 0–100 par niveau d'urgence. Le graphe le plus important pour suivre la qualité du service dans le temps.</div>
+        <div class="graphe-desc">
+          <strong>Le graphe le plus important.</strong> Score composite 0–100 par niveau d'urgence dans le temps. Trois lignes : 🔴 HIGH, 🟡 MEDIUM, 🟢 LOW.<br><br>
+          <strong>Comment lire :</strong><br>
+          • Score qui <strong>monte</strong> = l'équipe s'améliore (plus rapide et/ou clients plus satisfaits)<br>
+          • Score qui <strong>descend</strong> = dégradation — soit les délais s'allongent, soit la satisfaction baisse<br>
+          • Ligne HIGH basse avec LOW haute = l'équipe gère bien les dossiers simples mais pas les urgences<br>
+          • Toutes les lignes basses sur un mois = surcharge probable ou problème systémique<br><br>
+          <strong>Ce que le système mesure pour calculer ce score :</strong>
+        </div>
       </div>
 
       <div class="code-box">
         <span class="label">Score satisfaction</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
         <br><span class="label">Score vitesse</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (temps résolution moy. <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <br><br><span class="comment">// Si les deux sont disponibles :</span>
         <br><span class="label">Score final</span> <span class="eq">=</span> (satisfaction <span class="op">×</span> 50%) <span class="op">+</span> (vitesse <span class="op">×</span> 50%)
-        <br><br><span class="comment">// Exemple : 4.8/5 satisfaction + résolu en 0.5h</span>
-        <br><span class="comment">// satScore = 96/100 | speedScore = 98/100 | composite = 97/100</span>
+        <br><br><span class="comment">// Si aucune note client → satisfaction ignorée, 100% vitesse</span>
+        <br><span class="label">Score final</span> <span class="eq">=</span> vitesse <span class="op">×</span> 100%
+        <br><br><span class="comment">// Exemple 1 : 4.8/5 satisfaction + résolu en 0.5h</span>
+        <br><span class="comment">// satScore = 96 | speedScore = 98 | composite = 97/100</span>
+        <br><span class="comment">// Exemple 2 : 0 avis + résolu en 1h</span>
+        <br><span class="comment">// satScore = ignoré | speedScore = 96 | composite = 96/100</span>
+        <br><span class="comment">// → peut finir 1er si sa vitesse est la meilleure</span>
       </div>
 
       <div class="graphe-card">
         <div class="graphe-title">Graphe 4 — By Category (donut bas droit)</div>
-        <div class="graphe-desc">Répartition par catégorie client : Livraison, Facturation, Dossier, Information, Autre. Identifier les demandes les plus fréquentes pour adapter les ressources.</div>
+        <div class="graphe-desc">
+          Répartition par catégorie client : Livraison, Facturation, Dossier, Information, Autre.<br><br>
+          <strong>Comment lire :</strong><br>
+          • Grande part "Livraison" = les clients ont surtout des problèmes de livraison — former les agents sur ce sujet<br>
+          • Grande part "Facturation" = problème de facturation récurrent à investiguer en interne<br>
+          • Grosse part "Autre" = les catégories ne couvrent pas assez les cas réels → envisager d'en ajouter
+        </div>
       </div>
 
       <h3 id="records">Les 3 cartes "Best time" — Records</h3>
@@ -625,12 +646,24 @@
       <h3 id="score-composite">Score composite (0 → 100)</h3>
 
       <div class="code-box">
-        <span class="label">Satisfaction</span> <span class="eq">(50%)</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
-        <br><span class="label">Vitesse</span> <span class="eq">(50%)</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (délai moyen en h <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <span class="label">Satisfaction</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
+        <br><span class="label">Vitesse</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (délai moyen en h <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <br><br><span class="comment">// Les deux disponibles → 50% + 50%</span>
         <br><span class="label">Score composite</span> <span class="eq">=</span> (satScore <span class="op">×</span> 0.5) <span class="op">+</span> (speedScore <span class="op">×</span> 0.5)
-        <br><br><span class="comment">// Exemple : 5.0/5 satisfaction + 3min de délai :</span>
-        <br><span class="comment">// satScore = 100 | speedScore = 99.79 | composite = 99.90/100</span>
-        <br><span class="comment">// Un score 100/100 exact est intentionnellement quasi-impossible</span>
+        <br><br><span class="comment">// Aucune note client → satisfaction ignorée, 100% vitesse</span>
+        <br><span class="label">Score composite</span> <span class="eq">=</span> speedScore <span class="op">×</span> 1.0
+        <br><br><span class="comment">// Exemple A : 5.0/5 + 3min → satScore=100 | speedScore=99.79 | composite=99.90</span>
+        <br><span class="comment">// Exemple B : 0 avis + 1h  → satScore=ignoré | speedScore=96  | composite=96.00</span>
+        <br><span class="comment">// → Exemple B peut battre un agent avec 4/5 de satisfaction mais 8h de délai</span>
+        <br><span class="comment">// Un score 100/100 exact est quasi-impossible (délai 0 seconde requis)</span>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">💡</span>
+        <div class="alert-body">
+          <strong>Pourquoi la vitesse est la composante la plus fiable</strong>
+          La satisfaction dépend du bon vouloir du client — certains ne notent jamais même quand tout s'est bien passé. La vitesse, elle, est <em>toujours</em> calculée automatiquement par le système à partir des timestamps de création et de clôture. C'est une donnée certaine et non manipulable. Un classement basé sur la vitesse seule est donc pleinement fiable.
+        </div>
       </div>
 
       <div class="table-wrap">
@@ -652,10 +685,34 @@
         </div>
       </div>
 
-      <h4>Règle de tri en cas d'égalité</h4>
+      <h3 id="filtre-urgence-classement">🔑 Le filtre Urgence — Pourquoi c'est essentiel</h3>
+
+      <div class="alert alert-warn">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Sans filtre urgence, le classement est injuste</strong><br>
+          Un agent qui traite uniquement des dossiers LOW (délai cible 10h) sera mécaniquement plus "rapide" qu'un agent qui traite des HIGH (délai cible 3h). Il aurait un score vitesse plus élevé sans avoir fourni plus d'effort. Le filtre urgence corrige cette injustice en ne comparant que des dossiers de même niveau de difficulté.
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Filtre urgence sélectionné</th><th>Ce que tu mesures</th><th>Usage recommandé</th></tr></thead>
+          <tbody>
+            <tr><td>Aucun (All)</td><td>Performance globale toutes urgences confondues</td><td>Vue d'ensemble rapide</td></tr>
+            <tr><td>HIGH uniquement</td><td>Qui gère le mieux les urgences critiques (&lt;3h)</td><td>Pour trouver les agents à mettre sur les dossiers sensibles</td></tr>
+            <tr><td>MEDIUM uniquement</td><td>Qui gère le mieux le volume standard (&lt;5h)</td><td>Évaluation quotidienne</td></tr>
+            <tr><td>LOW uniquement</td><td>Qui gère le mieux les dossiers de fond (&lt;10h)</td><td>Comparaison équitable quand tout est LOW</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>Exemple concret :</strong> Jean et Marie ont tous deux un composite de 87/100 sur "All". Mais en filtrant sur HIGH uniquement, Jean monte à 94/100 et Marie descend à 76/100 — Jean est clairement meilleur sur les urgences critiques même si globalement ils semblent égaux.</p>
+
+      <h4>Règle de tri en cas d'égalité de score composite</h4>
       <div class="sort-steps">
         <div class="sort-step"><div class="sort-num">1</div><div class="sort-body"><strong>Satisfaction moyenne</strong> (décroissant) — ignorée si l'un n'a pas de notes</div></div>
-        <div class="sort-step"><div class="sort-num">2</div><div class="sort-body"><strong>SLA %</strong> global (décroissant)</div></div>
+        <div class="sort-step"><div class="sort-num">2</div><div class="sort-body"><strong>SLA %</strong> global (décroissant) — % de dossiers résolus dans les délais cibles</div></div>
         <div class="sort-step"><div class="sort-num">3</div><div class="sort-body"><strong>Délai moyen</strong> (croissant — le plus rapide gagne)</div></div>
       </div>
 
