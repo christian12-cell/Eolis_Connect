@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle, BookOpen, Wallet } from 'lucide-react'
@@ -32,6 +32,7 @@ export function MobileLayout({
   const [isOffline, setIsOffline]       = useState(false)
   const [toast, setToast]               = useState<string | null>(null)
   const [liveUnread, setLiveUnread]     = useState(unreadCount)
+  const fetchIdRef = useRef(0)
   const [accountDeleted, setAccountDeleted] = useState(false)
 
   useEffect(() => {
@@ -56,14 +57,18 @@ export function MobileLayout({
     const u = getUser()
     if (u?.role === 'CLIENT') {
       function fetchNotifCount() {
+        const id = ++fetchIdRef.current
         apiFetch('/api/notifications')
           .then(r => r.json())
-          .then(d => { if (Array.isArray(d)) setLiveUnread(d.filter((n: any) => !n.isRead).length) })
+          .then(d => {
+            // Ignorer les réponses périmées (une requête plus récente a déjà répondu)
+            if (fetchIdRef.current !== id) return
+            if (Array.isArray(d)) setLiveUnread(d.filter((n: any) => !n.isRead).length)
+          })
           .catch(() => {})
       }
       fetchNotifCount()
       const notifInterval = setInterval(fetchNotifCount, 30_000)
-      // Refresh immédiat quand la page conversation appelle mark-read
       window.addEventListener('eolis:notifications_read', fetchNotifCount)
       return () => {
         clearInterval(notifInterval)
