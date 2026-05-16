@@ -69,6 +69,13 @@ def send_push_to_user(
         logger.warning("[PUSH] skip — no subscriptions for user=%s", user_id)
         return
 
+    # ── Check présence WebSocket : user déjà sur la page → pas de push ────────
+    if ticket_id:
+        from .ws_manager import ws_manager
+        if ws_manager.is_user_on_ticket(user_id, ticket_id):
+            logger.warning("[PUSH] skip — user=%s has active WS on ticket=%s", user_id, ticket_id)
+            return
+
     # ── Délai : laisse mark-read s'exécuter si l'user est sur la page ─────────
     if delay_seconds > 0:
         logger.warning("[PUSH] sleeping %ds before send user=%s", delay_seconds, user_id)

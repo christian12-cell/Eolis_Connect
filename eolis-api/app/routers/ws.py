@@ -34,11 +34,11 @@ async def ticket_ws(
         db.close()
 
     # ── Accept & listen ───────────────────────────────────────────────────────
-    await ws_manager.connect(ticket_id, websocket)
+    await ws_manager.connect(ticket_id, websocket, user_id)
     try:
         while True:
             msg = await websocket.receive_text()
             if msg == "ping":
                 await websocket.send_text("pong")
     except WebSocketDisconnect:
-        ws_manager.disconnect(ticket_id, websocket)
+        ws_manager.disconnect(ticket_id, websocket, user_id)
