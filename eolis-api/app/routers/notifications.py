@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from ..database import get_db
 from ..models import User, Notification, Message, Ticket
+from ..push_service import send_push_to_user
 from ..schemas import NotificationResponse
 from ..deps import get_current_user
 
@@ -112,6 +113,13 @@ def check_final_unread(
                 msg_fr=f"{client_name} n'a pas encore lu la réponse finale de {agent_name}.{phone_fr}",
                 msg_en=f"{client_name} has not yet read the final response from {agent_name}.{phone_en}",
             )
+            lang = getattr(user, "language", "fr") or "fr"
+            send_push_to_user(
+                db, user.id, "FINAL_UNREAD",
+                f"Réponse finale non lue — {ticket.ref}" if lang != "en" else f"Final response not viewed — {ticket.ref}",
+                f"{client_name} n'a pas encore lu la réponse finale." if lang != "en" else f"{client_name} has not yet read the final response.",
+                f"/fr/agent/dossiers/{ticket.id}", ticket.urgency,
+            )
         created += 1
 
     # ── 2. CLIENT message unread by team for >1h ───────────────────────────
@@ -146,6 +154,13 @@ def check_final_unread(
                 title_en=f"Unread message — {ticket.ref}",
                 msg_fr=f"{client_name} attend une réponse depuis plus d'1h.",
                 msg_en=f"{client_name} has been waiting for a reply for over 1h.",
+            )
+            lang = getattr(user, "language", "fr") or "fr"
+            send_push_to_user(
+                db, user.id, "CLIENT_MSG_UNREAD",
+                f"Message non lu — {ticket.ref}" if lang != "en" else f"Unread message — {ticket.ref}",
+                f"{client_name} attend une réponse depuis plus d'1h." if lang != "en" else f"{client_name} has been waiting for a reply for over 1h.",
+                f"/fr/agent/dossiers/{ticket.id}", ticket.urgency,
             )
         created += 1
 

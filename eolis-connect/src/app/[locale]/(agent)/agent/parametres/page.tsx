@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { Save, Lock, User, CheckCircle, AlertCircle, Phone, RefreshCw, Globe, Eye, EyeOff } from 'lucide-react'
+import { Save, Lock, User, CheckCircle, AlertCircle, Phone, RefreshCw, Globe, Eye, EyeOff, Bell } from 'lucide-react'
 import { getUser, apiFetch, saveSession, getToken, apiUrl } from '@/lib/api-client'
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from '@/lib/push'
 import { PhoneInput } from '@/components/ui/PhoneInput'
 
 function Msg({ msg }: { msg: { ok: boolean; text: string } | null }) {
@@ -37,6 +38,22 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpError, setOtpError]     = useState('')
   const [otpResent, setOtpResent]   = useState(false)
+
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushPrefs, setPushPrefs] = useState({ newMessage: true, internalNote: true, mention: true, clientMsgUnread: true, finalUnread: true, highOnly: false })
+  const [pushSaving, setPushSaving] = useState(false)
+  const [pushMsg, setPushMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  useEffect(() => {
+    isPushSubscribed().then(setPushEnabled)
+    apiFetch('/api/push/preferences').then(r => r.json()).then(d => {
+      if (d) setPushPrefs(p => ({ ...p, ...{
+        newMessage: d.newMessage ?? true, internalNote: d.internalNote ?? true,
+        mention: d.mention ?? true, clientMsgUnread: d.clientMsgUnread ?? true,
+        finalUnread: d.finalUnread ?? true, highOnly: d.highOnly ?? false,
+      }}))
+    }).catch(() => {})
+  }, [])
 
   const [currentPw, setCurrentPw]   = useState('')
   const [newPw, setNewPw]           = useState('')
@@ -162,6 +179,24 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
       setProfileMsg({ ok: false, text: t.profileErr })
     }
     setProfileSaving(false)
+  }
+
+  async function togglePush() {
+    if (pushEnabled) {
+      await unsubscribeFromPush()
+      setPushEnabled(false)
+    } else {
+      const ok = await subscribeToPush()
+      setPushEnabled(ok)
+    }
+  }
+
+  async function savePushPrefs() {
+    setPushSaving(true)
+    setPushMsg(null)
+    const res = await apiFetch('/api/push/preferences', { method: 'PATCH', body: JSON.stringify(pushPrefs) }).catch(() => null)
+    setPushMsg(res?.ok ? { ok: true, text: isFr ? 'Préférences sauvegardées.' : 'Preferences saved.' } : { ok: false, text: isFr ? 'Erreur.' : 'Error.' })
+    setPushSaving(false)
   }
 
   async function changePassword() {
@@ -290,6 +325,50 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1B3A5C] text-white text-sm font-semibold hover:bg-[#152d47] disabled:opacity-60 transition-colors">
             <Save size={15} /> {t.save}
           </button>
+        </div>
+
+        {/* Notifications */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell size={16} className="text-amber-500" />
+              <h2 className="font-semibold text-gray-900">{isFr ? 'Notifications push' : 'Push notifications'}</h2>
+            </div>
+            <button
+              onClick={togglePush}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${pushEnabled ? 'bg-[#1B3A5C]' : 'bg-gray-200'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${pushEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 -mt-2">{isFr ? 'Alertes système sur votre téléphone/ordinateur même app fermée.' : 'System alerts on your phone/computer even when app is closed.'}</p>
+          {pushEnabled && (
+            <div className="space-y-2.5 pt-1">
+              {([
+                { key: 'newMessage',      label: isFr ? 'Nouveau message client' : 'New client message' },
+                { key: 'internalNote',    label: isFr ? 'Note interne' : 'Internal note' },
+                { key: 'mention',         label: isFr ? 'Mention @nom' : '@mention' },
+                { key: 'clientMsgUnread', label: isFr ? 'Client non répondu depuis 1h' : 'Client unanswered for 1h' },
+                { key: 'finalUnread',     label: isFr ? 'Réponse finale non lue 12h' : 'Final response unread 12h' },
+                { key: 'highOnly',        label: isFr ? 'Uniquement urgence HIGH' : 'HIGH urgency only' },
+              ] as { key: keyof typeof pushPrefs; label: string }[]).map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{label}</span>
+                  <button
+                    onClick={() => setPushPrefs(p => ({ ...p, [key]: !p[key] }))}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${pushPrefs[key] ? 'bg-[#4A8FC4]' : 'bg-gray-200'}`}
+                  >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${pushPrefs[key] ? 'translate-x-5' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              ))}
+              <Msg msg={pushMsg} />
+              <button onClick={savePushPrefs} disabled={pushSaving}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1B3A5C] text-white text-sm font-semibold hover:bg-[#152d47] disabled:opacity-60 transition-colors">
+                <Save size={14} /> {isFr ? 'Enregistrer' : 'Save'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Password */}

@@ -9,7 +9,7 @@ from sqlalchemy import text
 from .config import settings
 from .database import engine
 from .models import Base
-from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config, ws, whisper, credits, finance
+from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config, ws, whisper, credits, finance, push
 
 app = FastAPI(title="Eolis Connect API", version="1.0.0")
 app.state.limiter = limiter
@@ -53,6 +53,7 @@ app.include_router(admin_config.router, prefix="/api")
 app.include_router(whisper.router, prefix="/api")
 app.include_router(credits.router, prefix="/api")
 app.include_router(finance.router, prefix="/api")
+app.include_router(push.router, prefix="/api")
 app.include_router(ws.router)  # WebSocket — no /api prefix, path is /ws/ticket/{id}
 
 
@@ -242,6 +243,31 @@ def startup():
                 invoice_url VARCHAR(500),
                 added_by VARCHAR(36) NOT NULL REFERENCES users(id),
                 created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS push_subscriptions (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                endpoint TEXT NOT NULL UNIQUE,
+                p256dh VARCHAR(255) NOT NULL,
+                auth VARCHAR(100) NOT NULL,
+                user_agent TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS push_preferences (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                new_message BOOLEAN NOT NULL DEFAULT TRUE,
+                final_response BOOLEAN NOT NULL DEFAULT TRUE,
+                document_requested BOOLEAN NOT NULL DEFAULT TRUE,
+                internal_note BOOLEAN NOT NULL DEFAULT TRUE,
+                mention BOOLEAN NOT NULL DEFAULT TRUE,
+                client_msg_unread BOOLEAN NOT NULL DEFAULT TRUE,
+                final_unread BOOLEAN NOT NULL DEFAULT TRUE,
+                high_only BOOLEAN NOT NULL DEFAULT FALSE
             )
         """))
         conn.commit()

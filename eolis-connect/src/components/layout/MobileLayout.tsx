@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle, BookOpen, Wallet } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { clearSession, isTokenExpired, getUser, apiFetch } from '@/lib/api-client'
+import { subscribeToPush } from '@/lib/push'
 import { syncPending } from '@/lib/offline-sync'
 import { offlineDb } from '@/lib/offline-db'
 
@@ -75,9 +76,11 @@ export function MobileLayout({
       }
     }, 60_000)
 
-    // Register service worker
+    // Register service worker + auto-subscribe to push
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {})
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => subscribeToPush())
+        .catch(() => {})
     }
 
     // Set initial online state

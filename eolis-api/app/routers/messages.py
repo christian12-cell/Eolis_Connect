@@ -8,6 +8,7 @@ from ..schemas import MessageCreateRequest, MessageResponse
 from ..deps import get_current_user
 from ..config import settings
 from ..sms_service import sms_final_response, sms_document_requested, sms_docs_submitted
+from ..push_service import send_push_to_user
 from ..ws_manager import ws_manager
 
 router = APIRouter(prefix="/tickets/{ticket_id}/messages", tags=["messages"])
@@ -177,6 +178,12 @@ def send_message(
                     client.phone, client.first_name, current_user.first_name,
                     ticket.ref, client.language or "fr",
                 )
+            background_tasks.add_task(
+                send_push_to_user, db, ticket.client_id, "FINAL_RESPONSE",
+                "Réponse finale" if (client.language != "en") else "Final response",
+                f"Votre dossier {ticket.ref} a été clôturé. Consultez la réponse." if (client.language != "en") else f"Your request {ticket.ref} has been closed.",
+                f"/{client.language or 'fr'}/mes-demandes/{ticket_id}", ticket.urgency,
+            )
 
     elif sender_type == "DOCUMENT_REQUEST":
         if client:
@@ -192,9 +199,14 @@ def send_message(
                     sms_document_requested,
                     client.phone, client.first_name, ticket.ref, client.language or "fr",
                 )
+            background_tasks.add_task(
+                send_push_to_user, db, ticket.client_id, "DOCUMENT_REQUEST",
+                "Documents requis" if (client.language != "en") else "Documents required",
+                f"Documents demandés pour le dossier {ticket.ref}" if (client.language != "en") else f"Documents requested for {ticket.ref}",
+                f"/{client.language or 'fr'}/mes-demandes/{ticket_id}", ticket.urgency,
+            )
 
     elif sender_type == "AGENT":
-        # Notify client (in-app notification only — no SMS)
         if ticket.client_id and client:
             db.add(Notification(
                 user_id=ticket.client_id,
@@ -203,6 +215,12 @@ def send_message(
                 title="Nouveau message" if (client.language != "en") else "New message",
                 message=f"Nouveau message dans le dossier {ticket.ref}",
             ))
+            background_tasks.add_task(
+                send_push_to_user, db, ticket.client_id, "NEW_MESSAGE",
+                "Nouveau message" if (client.language != "en") else "New message",
+                f"Réponse sur le dossier {ticket.ref}" if (client.language != "en") else f"Reply on {ticket.ref}",
+                f"/{client.language or 'fr'}/mes-demandes/{ticket_id}", ticket.urgency,
+            )
 
     elif sender_type == "INTERNAL_NOTE":
         import re
@@ -223,7 +241,6 @@ def send_message(
             )
         already_notified_ids: set = set()
         if mentioned_users:
-            # Targeted notification for each @mentioned user
             for u in mentioned_users:
                 db.add(Notification(
                     user_id=u.id,
@@ -232,6 +249,12 @@ def send_message(
                     title=f"Mention — {ticket.ref}",
                     message=f"{current_user.first_name} vous a mentionné dans une note sur le dossier {ticket.ref}",
                 ))
+                background_tasks.add_task(
+                    send_push_to_user, db, u.id, "MENTION",
+                    f"Mention — {ticket.ref}",
+                    f"{current_user.first_name} vous a mentionné dans une note",
+                    f"/fr/agent/dossiers/{ticket_id}", ticket.urgency,
+                )
                 already_notified_ids.add(u.id)
         else:
             # No @mention — broadcast to all active OPS_ADMIN
@@ -272,9 +295,14 @@ def send_message(
                 sms_docs_submitted,
                 ticket.agent.phone, client.first_name, ticket.ref,
             )
+        background_tasks.add_task(
+            send_push_to_user, db, ticket.agent_id, "DOCS_SUBMITTED",
+            "Documents reçus",
+            f"Le client a envoyé les documents pour {ticket.ref}",
+            f"/fr/agent/dossiers/{ticket_id}", ticket.urgency,
+        )
 
     elif sender_type == "CLIENT" and ticket.agent_id:
-        # Notify the agent (in-app notification only — no SMS)
         db.add(Notification(
             user_id=ticket.agent_id,
             ticket_id=ticket_id,
@@ -282,6 +310,12 @@ def send_message(
             title="Réponse client",
             message=f"Le client a répondu sur le dossier {ticket.ref}",
         ))
+        background_tasks.add_task(
+            send_push_to_user, db, ticket.agent_id, "NEW_MESSAGE",
+            f"Réponse client — {ticket.ref}",
+            f"Le client a répondu sur le dossier {ticket.ref}",
+            f"/fr/agent/dossiers/{ticket_id}", ticket.urgency,
+        )
 
     db.commit()
     db.refresh(msg)

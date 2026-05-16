@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     AWS_REGION: str = "eu-west-1"
     AWS_S3_BUCKET: str = ""
 
+    # Web Push — VAPID keys (generate once with generate_vapid.py)
+    VAPID_PRIVATE_KEY: str = ""   # PEM string avec \n échappés
+    VAPID_PUBLIC_KEY: str = ""    # base64url uncompressed point
+    VAPID_CLAIMS_EMAIL: str = "noreply@eolisconnect.online"
+
     # Payment info (configurable via Railway env vars)
     ORANGE_MONEY_NUMBER: str = "689 506 319"
     MTN_MONEY_NUMBER: str = "676 652 945"

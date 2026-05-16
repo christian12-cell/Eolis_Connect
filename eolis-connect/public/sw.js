@@ -18,6 +18,33 @@ self.addEventListener('activate', e => {
   )
 })
 
+self.addEventListener('push', e => {
+  if (!e.data) return
+  let data = {}
+  try { data = e.data.json() } catch { data = { title: 'Eolis Connect', body: e.data.text() } }
+  const options = {
+    body:    data.body  || '',
+    icon:    '/logo.png',
+    badge:   '/logo.png',
+    data:    { url: data.url || '/' },
+    vibrate: [200, 100, 200],
+  }
+  e.waitUntil(self.registration.showNotification(data.title || 'Eolis Connect', options))
+})
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close()
+  const url = e.notification.data?.url || '/'
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if ('focus' in c) return c.focus()
+      }
+      if (clients.openWindow) return clients.openWindow(url)
+    })
+  )
+})
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
 

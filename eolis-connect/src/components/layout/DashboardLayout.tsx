@@ -5,6 +5,7 @@ import { Navbar } from './Navbar'
 import { Sidebar } from './Sidebar'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
 import { isTokenExpired, clearSession } from '@/lib/api-client'
+import { subscribeToPush } from '@/lib/push'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -25,6 +26,13 @@ export function DashboardLayout({ children, locale, userName = '', role }: Dashb
         window.location.href = `/${locale}/login`
       }
     }, 60_000)
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => subscribeToPush())
+        .catch(() => {})
+    }
+
     return () => clearInterval(sessionCheck)
   }, [locale])
 

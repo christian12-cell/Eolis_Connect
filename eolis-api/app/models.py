@@ -230,6 +230,42 @@ class BLDocument(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class PushSubscription(Base):
+    """One row per browser/device per user."""
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_id)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    endpoint: Mapped[str] = mapped_column(Text, unique=True)
+    p256dh: Mapped[str] = mapped_column(String(255))
+    auth: Mapped[str] = mapped_column(String(100))
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship("User")
+
+
+class PushPreference(Base):
+    """One row per user — all push toggles."""
+    __tablename__ = "push_preferences"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_id)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), unique=True, index=True)
+    # Common
+    new_message: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # Client
+    final_response: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    document_requested: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # Staff
+    internal_note: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    mention: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    client_msg_unread: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    final_unread: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    high_only: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    user: Mapped["User"] = relationship("User")
+
+
 class InfrastructureCost(Base):
     """Manual infrastructure cost entries (Vercel, Railway, Cloudflare, etc.)."""
     __tablename__ = "infrastructure_costs"
