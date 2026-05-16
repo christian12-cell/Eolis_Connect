@@ -48,10 +48,13 @@ export default function NotificationsPage({ params }: { params: Promise<{ locale
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/login`); return }
     setUser(u)
     apiFetch('/api/notifications').then(r => r.json()).then(data => {
-      setNotifications(Array.isArray(data) ? data : [])
+      const list = Array.isArray(data) ? data : []
+      setNotifications(list)
       setLoading(false)
-      // Mark all as read silently
-      apiFetch('/api/notifications/read-all', { method: 'POST' }).catch(() => {})
+      // Mark all as read — met à jour la DB et l'état local
+      apiFetch('/api/notifications/read-all', { method: 'POST' })
+        .then(() => setNotifications(prev => prev.map(n => ({ ...n, isRead: true }))))
+        .catch(() => {})
     }).catch(() => setLoading(false))
   }, [locale])
 
