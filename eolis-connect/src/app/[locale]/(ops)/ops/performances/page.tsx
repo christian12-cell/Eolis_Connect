@@ -744,8 +744,16 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                     )
                   })}
                   {/* Team average row */}
+                  {(() => {
+                    const composites = allAgentStats.map(a => a.stats.composite).filter(c => c !== null) as number[]
+                    const teamComposite = composites.length ? +(composites.reduce((a, b) => a + b, 0) / composites.length).toFixed(2) : null
+                    return (
                   <tr className="bg-[#1B3A5C]/5 font-semibold border-t-2 border-[#1B3A5C]/20">
-                    <td className="px-4 py-3 text-right text-gray-400 text-xs">—</td>
+                    <td className="px-4 py-3 text-right">
+                      {teamComposite !== null ? (
+                        <span className="font-bold text-sm text-[#1B3A5C]">{teamComposite}<span className="text-gray-400 font-normal text-xs">/100</span></span>
+                      ) : <span className="text-gray-300 text-xs">—</span>}
+                    </td>
                     <td className="px-3 py-3 text-xs font-bold text-[#1B3A5C] uppercase tracking-wide">{L.table.teamAvg}</td>
                     <td className="px-3 py-3 text-right text-gray-700">{teamStats.count}</td>
                     <td className="px-3 py-3 text-right text-gray-700">{teamStats.avgSat !== null ? `${teamStats.avgSat}/5` : '—'}</td>
@@ -762,6 +770,8 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                     <td className="px-3 py-3" />
                     <td className="px-3 py-3" />
                   </tr>
+                    )
+                  })()}
                 </tbody>
               </table>
             </div>
