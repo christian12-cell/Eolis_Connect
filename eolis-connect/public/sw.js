@@ -22,14 +22,26 @@ self.addEventListener('push', e => {
   if (!e.data) return
   let data = {}
   try { data = e.data.json() } catch { data = { title: 'Eolis Connect', body: e.data.text() } }
-  const options = {
-    body:    data.body  || '',
-    icon:    '/logo.png',
-    badge:   '/logo.png',
-    data:    { url: data.url || '/' },
-    vibrate: [200, 100, 200],
-  }
-  e.waitUntil(self.registration.showNotification(data.title || 'Eolis Connect', options))
+
+  const ticketId = data.ticketId || null
+  const url      = data.url || '/'
+
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      // Si le user est déjà sur la conversation en question → pas de notif
+      if (ticketId) {
+        const alreadyThere = list.some(c => c.visibilityState === 'visible' && c.url.includes(ticketId))
+        if (alreadyThere) return
+      }
+      return self.registration.showNotification(data.title || 'Eolis Connect', {
+        body:    data.body || '',
+        icon:    '/logo.png',
+        badge:   '/logo.png',
+        data:    { url, ticketId },
+        vibrate: [200, 100, 200],
+      })
+    })
+  )
 })
 
 self.addEventListener('notificationclick', e => {
@@ -43,6 +55,17 @@ self.addEventListener('notificationclick', e => {
       if (clients.openWindow) return clients.openWindow(url)
     })
   )
+})
+
+// Ferme les notifs affichées pour un ticket quand le user ouvre la conversation
+self.addEventListener('message', e => {
+  if (e.data?.type === 'CLOSE_NOTIFICATIONS' && e.data.ticketId) {
+    self.registration.getNotifications().then(notifs => {
+      notifs.forEach(n => {
+        if (n.data?.ticketId === e.data.ticketId) n.close()
+      })
+    })
+  }
 })
 
 self.addEventListener('fetch', e => {

@@ -27,6 +27,7 @@ def send_push_to_user(
     body: str,
     url: str = "/",
     urgency: str | None = None,
+    ticket_id: str | None = None,
 ) -> None:
     if not settings.VAPID_PRIVATE_KEY or not settings.VAPID_PUBLIC_KEY:
         return
@@ -52,7 +53,7 @@ def send_push_to_user(
 
     # VAPID_PRIVATE_KEY is a raw base64url-encoded 32-byte P-256 scalar
     private_key = settings.VAPID_PRIVATE_KEY
-    payload = json.dumps({"title": title, "body": body, "url": url})
+    payload = json.dumps({"title": title, "body": body, "url": url, "ticketId": ticket_id})
 
     for sub in subs:
         try:

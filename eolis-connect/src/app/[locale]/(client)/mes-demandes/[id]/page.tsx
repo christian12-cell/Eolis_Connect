@@ -307,7 +307,13 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
     onMessagesUpdated: () => {
       if (!ticketId) return
       apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' })
-        .then(() => window.dispatchEvent(new Event('eolis:notifications_read')))
+        .then(() => {
+          window.dispatchEvent(new Event('eolis:notifications_read'))
+          // Ferme les notifs push affichées pour ce dossier
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATIONS', ticketId })
+          }
+        })
         .catch(() => {})
       Promise.all([
         apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
@@ -447,7 +453,13 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       setMessages(msgArray)
       prevMsgLenRef.current = msgArray.length
       apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' })
-        .then(() => window.dispatchEvent(new Event('eolis:notifications_read')))
+        .then(() => {
+          window.dispatchEvent(new Event('eolis:notifications_read'))
+          // Ferme les notifs push affichées pour ce dossier
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATIONS', ticketId })
+          }
+        })
         .catch(() => {})
     } catch {}
     setLoading(false)

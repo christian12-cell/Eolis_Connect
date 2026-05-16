@@ -229,14 +229,26 @@ export default function AgentTicketActions({
     apiFetch('/api/users/staff/mentions').then(r => r.json()).then(staff => {
       if (Array.isArray(staff)) setAllStaff(staff)
     }).catch(() => {})
-    apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' }).catch(() => {})
+    apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' })
+      .then(() => {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATIONS', ticketId })
+        }
+      })
+      .catch(() => {})
   }, [ticketId])
 
   // WebSocket — real-time updates
   useTicketWS(ticketId, {
     onMessagesUpdated: () => {
       // Auto-mark notifications as read since agent is actively viewing the ticket
-      apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' }).catch(() => {})
+      apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' })
+      .then(() => {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATIONS', ticketId })
+        }
+      })
+      .catch(() => {})
       Promise.all([
         apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
         apiFetch(`/api/tickets/${ticketId}`).then(r => r.json()),
