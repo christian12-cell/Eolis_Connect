@@ -1757,18 +1757,108 @@ eolis-uploads/
   appleWebApp: { title: <span class="s">"Eolis Connect"</span> } <span class="c">← Nom affiché sur iOS quand installée</span>
 }</pre>
 
-  <h3>Changer les catégories de demande</h3>
-  <pre><span class="c">// Dans nouvelle-demande/page.tsx — chercher CATEGORIES_FR</span>
-<span class="k">const</span> CATEGORIES_FR = [
-  <span class="s">'Livraison'</span>, <span class="s">'Facturation'</span>, <span class="s">'Dossier'</span>, <span class="s">'Information'</span>, <span class="s">'Autre'</span>
-]
+  <h3>Ajouter / modifier des catégories et sous-catégories de demande</h3>
 
-<span class="c">// Et les sous-catégories</span>
+  <p>Deux fichiers à modifier à chaque fois — toujours les deux ensemble :</p>
+
+  <table>
+    <thead><tr><th>Fichier</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/app/[locale]/(client)/nouvelle-demande/page.tsx</code></td><td>Les boutons que le client voit (UI)</td></tr>
+      <tr><td><code>src/lib/utils.ts</code></td><td>La règle urgence assignée à chaque combinaison</td></tr>
+    </tbody>
+  </table>
+
+  <h4>État actuel complet — Fichier 1 : nouvelle-demande/page.tsx (lignes 18–35)</h4>
+  <pre><span class="c">// Catégories principales affichées au client</span>
+<span class="k">const</span> CATEGORIES_FR = [<span class="s">'Livraison'</span>, <span class="s">'Facturation'</span>, <span class="s">'Dossier'</span>, <span class="s">'Information'</span>, <span class="s">'Autre'</span>]
+<span class="k">const</span> CATEGORIES_EN = [<span class="s">'Delivery'</span>, <span class="s">'Billing'</span>, <span class="s">'File'</span>, <span class="s">'Information'</span>, <span class="s">'Other'</span>]
+
+<span class="c">// Sous-catégories par catégorie</span>
 <span class="k">const</span> SUBCATEGORIES_FR: Record&lt;string, string[]&gt; = {
-  <span class="s">'Livraison'</span>: [<span class="s">'Conteneur bloqué'</span>, <span class="s">'Retard de livraison'</span>, ...],
-  <span class="s">'Facturation'</span>: [<span class="s">'Erreur de facturation'</span>, ...],
-  ...
+  Livraison:   [<span class="s">'Conteneur bloqué'</span>, <span class="s">'Retard de livraison'</span>, <span class="s">'Problème à la réception'</span>, <span class="s">'Autre'</span>],
+  Facturation: [<span class="s">'Retard de paiement'</span>, <span class="s">'Paiement incomplet'</span>, <span class="s">'Remboursement'</span>, <span class="s">'Autre'</span>],
+  Dossier:     [<span class="s">'Dossier incomplet'</span>, <span class="s">'Document manquant'</span>, <span class="s">'Validation de dossier'</span>, <span class="s">'Autre'</span>],
+  Information: [<span class="s">"Demande d'information"</span>, <span class="s">'Procédure'</span>, <span class="s">'Autre'</span>],
+  Autre:       [],   <span class="c">// ← pas de sous-cat, client tape du texte libre</span>
+}
+<span class="c">// Pareil en anglais :</span>
+<span class="k">const</span> SUBCATEGORIES_EN: Record&lt;string, string[]&gt; = {
+  Delivery:    [<span class="s">'Blocked container'</span>, <span class="s">'Delivery delay'</span>, <span class="s">'Reception issue'</span>, <span class="s">'Other'</span>],
+  Billing:     [<span class="s">'Late payment'</span>, <span class="s">'Incomplete payment'</span>, <span class="s">'Refund'</span>, <span class="s">'Other'</span>],
+  File:        [<span class="s">'Incomplete file'</span>, <span class="s">'Missing document'</span>, <span class="s">'File validation'</span>, <span class="s">'Other'</span>],
+  Information: [<span class="s">'Information request'</span>, <span class="s">'Procedure'</span>, <span class="s">'Other'</span>],
+  Other:       [],
 }</pre>
+
+  <h4>État actuel complet — Fichier 2 : src/lib/utils.ts (lignes 14–55)</h4>
+  <pre><span class="k">export function</span> <span class="f">getUrgency</span>(category: string, subcategory: string): string {
+  <span class="k">const</span> map = {
+    <span class="c">// ── Français ──</span>
+    Livraison:   { <span class="s">'Conteneur bloqué'</span>: <span class="s">'HIGH'</span>, <span class="s">'Retard de livraison'</span>: <span class="s">'HIGH'</span>, <span class="s">'Problème à la réception'</span>: <span class="s">'HIGH'</span> },
+    Facturation: { <span class="s">'Retard de paiement'</span>: <span class="s">'MEDIUM'</span>, <span class="s">'Paiement incomplet'</span>: <span class="s">'MEDIUM'</span>, <span class="s">'Remboursement'</span>: <span class="s">'LOW'</span> },
+    Dossier:     { <span class="s">'Dossier incomplet'</span>: <span class="s">'MEDIUM'</span>, <span class="s">'Document manquant'</span>: <span class="s">'MEDIUM'</span>, <span class="s">'Validation de dossier'</span>: <span class="s">'LOW'</span> },
+    Information: { <span class="s">"Demande d'information"</span>: <span class="s">'LOW'</span>, <span class="s">'Procédure'</span>: <span class="s">'LOW'</span> },
+    <span class="c">// ── Anglais ──</span>
+    Delivery:    { <span class="s">'Blocked container'</span>: <span class="s">'HIGH'</span>, <span class="s">'Delivery delay'</span>: <span class="s">'HIGH'</span>, <span class="s">'Reception issue'</span>: <span class="s">'HIGH'</span> },
+    Billing:     { <span class="s">'Late payment'</span>: <span class="s">'MEDIUM'</span>, <span class="s">'Incomplete payment'</span>: <span class="s">'MEDIUM'</span>, <span class="s">'Refund'</span>: <span class="s">'LOW'</span> },
+    File:        { <span class="s">'Incomplete file'</span>: <span class="s">'MEDIUM'</span>, <span class="s">'Missing document'</span>: <span class="s">'MEDIUM'</span>, <span class="s">'File validation'</span>: <span class="s">'LOW'</span> },
+    Information_en: { <span class="s">'Information request'</span>: <span class="s">'LOW'</span>, <span class="s">'Procedure'</span>: <span class="s">'LOW'</span> },
+  }
+  <span class="k">return</span> map[category]?.[subcategory] ?? <span class="s">'LOW'</span>
+  <span class="c">//                                        ↑ fallback : tout ce qui ne matche pas → LOW</span>
+  <span class="c">//                                          C'est aussi ce qui s'applique au cas "Autre"</span>
+}</pre>
+
+  <h4>Règle urgence actuelle</h4>
+  <table>
+    <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th>Urgence</th></tr></thead>
+    <tbody>
+      <tr><td>Livraison</td><td>Conteneur bloqué</td><td>🔴 HIGH</td></tr>
+      <tr><td>Livraison</td><td>Retard de livraison</td><td>🔴 HIGH</td></tr>
+      <tr><td>Livraison</td><td>Problème à la réception</td><td>🔴 HIGH</td></tr>
+      <tr><td>Facturation</td><td>Retard de paiement</td><td>🟡 MEDIUM</td></tr>
+      <tr><td>Facturation</td><td>Paiement incomplet</td><td>🟡 MEDIUM</td></tr>
+      <tr><td>Facturation</td><td>Remboursement</td><td>🟢 LOW</td></tr>
+      <tr><td>Dossier</td><td>Dossier incomplet</td><td>🟡 MEDIUM</td></tr>
+      <tr><td>Dossier</td><td>Document manquant</td><td>🟡 MEDIUM</td></tr>
+      <tr><td>Dossier</td><td>Validation de dossier</td><td>🟢 LOW</td></tr>
+      <tr><td>Information</td><td>Demande d'information</td><td>🟢 LOW</td></tr>
+      <tr><td>Information</td><td>Procédure</td><td>🟢 LOW</td></tr>
+      <tr><td><em>Autre (texte libre)</em></td><td><em>n'importe quoi</em></td><td>🟢 LOW (fallback)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Exemple : ajouter une nouvelle catégorie "Transit" avec "Marchandise perdue" → HIGH</h4>
+  <pre><span class="c">// ── Étape 1 : nouvelle-demande/page.tsx ──</span>
+
+<span class="c">// Ajouter 'Transit' dans la liste des catégories (avant 'Autre')</span>
+<span class="k">const</span> CATEGORIES_FR = [<span class="s">'Livraison'</span>, <span class="s">'Facturation'</span>, <span class="s">'Dossier'</span>, <span class="s">'Information'</span>, <span class="s">'Transit'</span>, <span class="s">'Autre'</span>]
+<span class="k">const</span> CATEGORIES_EN = [<span class="s">'Delivery'</span>, <span class="s">'Billing'</span>, <span class="s">'File'</span>, <span class="s">'Information'</span>, <span class="s">'Transit'</span>, <span class="s">'Other'</span>]
+
+<span class="c">// Ajouter les sous-catégories</span>
+<span class="k">const</span> SUBCATEGORIES_FR = {
+  ...
+  Transit: [<span class="s">'Marchandise perdue'</span>, <span class="s">'Dommage en transit'</span>, <span class="s">'Autre'</span>],
+}
+<span class="k">const</span> SUBCATEGORIES_EN = {
+  ...
+  Transit: [<span class="s">'Lost cargo'</span>, <span class="s">'Transit damage'</span>, <span class="s">'Other'</span>],
+}
+
+<span class="c">// ── Étape 2 : src/lib/utils.ts ──</span>
+
+<span class="c">// Ajouter les règles d'urgence pour les 2 langues</span>
+Transit: {
+  <span class="s">'Marchandise perdue'</span>: <span class="s">'HIGH'</span>,
+  <span class="s">'Dommage en transit'</span>: <span class="s">'HIGH'</span>,
+},
+Transit_en: {
+  <span class="s">'Lost cargo'</span>:    <span class="s">'HIGH'</span>,
+  <span class="s">'Transit damage'</span>: <span class="s">'HIGH'</span>,
+},</pre>
+
+  <p><strong>Pas de backend à toucher.</strong> L'urgence est calculée côté frontend puis envoyée avec la requête de création de ticket. Le reste du système (SLA, classement OPS, filtres) récupère automatiquement la valeur stockée en base.</p>
 
   <h3>Changer les types de conteneurs</h3>
   <pre><span class="c">// Dans nouvelle-demande/page.tsx — chercher EQUIPMENT_FR</span>
