@@ -104,6 +104,43 @@ Format : `[Date] — Type — Description`
 
 ---
 
+## [2026-05-16] — Session Web Push, équité OPS, fixes notifications
+
+### Frontend — `eolis-connect`
+
+#### Web Push — notifications système sur téléphone/PC
+- **`src/lib/push.ts`** : `subscribeToPush()`, `unsubscribeFromPush()`, `isPushSubscribed()`. Détection rotation clé VAPID via `localStorage` → unsubscribe + re-subscribe automatique.
+- **`public/sw.js`** : handler `push` + `notificationclick` + message `CLOSE_NOTIFICATIONS` (ferme notifs quand dossier ouvert).
+- **Auto-subscribe** : `MobileLayout` + `DashboardLayout` s'abonnent au chargement.
+- **Paramètres client** : section Notifications, toggle + 3 catégories + gestion états permission `granted/denied/default`.
+- **Paramètres agent** : idem + 6 catégories dont `HIGH only` et `client non-répondu 1h`.
+
+#### Fix badge cloche client
+- `mark-read` via WebSocket `onMessagesUpdated` (parité agent).
+- `eolis:notifications_read` event → refresh badge instantané.
+- `useRef fetchIdRef` anti-race-condition : réponse périmée ignorée.
+- Mark-read au **départ** du dossier (`useEffect` cleanup).
+- Page notifications : affiche vrai statut. `read-all` au **départ** (pas à l'arrivée).
+
+#### Mode Équité ⚖️ (OPS)
+- **Classement** + **Performances** + **Dashboard** : bouton ⚖️ — normalise au même N dossiers (les N plus récents) pour comparaison équitable agents ou urgences.
+
+### Backend — `eolis-api`
+
+#### Web Push
+- **`push_service.py`** : sessions DB indépendantes, délai 5s + check `is_read`, check présence WebSocket (skip immédiat si user sur le ticket).
+- **`ws_manager.py`** : tracking présence `user_id → set[ticket_id]`, `is_user_on_ticket()`.
+- **`routers/push.py`** : 5 endpoints (vapid-public-key, subscribe, unsubscribe, GET/PATCH preferences).
+- **`models.py`** : `PushSubscription` + `PushPreference`.
+- **`generate_vapid.py`** : génération clés VAPID (base64url raw P-256).
+- Clés VAPID dans Railway : `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_CLAIMS_EMAIL`.
+
+### Documentation
+- **`MANUEL_AGENT.html`** + **`MANUEL_OPS_ADMIN.html`** : tableau classification urgence + cas "Autre".
+- **`GUIDE_DEVELOPPEUR.html`** : section complète ajout/modif catégories avec exemple.
+
+---
+
 ## [2026-05-16] — Session classement OPS, score composite, badges, documentation, tooltip fix
 
 ### Frontend — `eolis-connect`
@@ -154,7 +191,7 @@ Format : `[Date] — Type — Description`
 
 ## Prochaines étapes prévues
 - [ ] Mode offline pour le BL upload (scan/upload sans réseau, sync à la reconnexion)
-- [ ] OPS : dashboard enrichi (filtres avancés, stats par agent)
 - [ ] SYSTEM ADMIN : redesign dashboard
-- [ ] SMS auto après 1h si réponse finale non lue (APScheduler côté backend)
 - [ ] OTP SMS Twilio : investiguer non-réception
+- [ ] Badge cloche client : pb résiduel d'affichage en temps réel (prototype OK, non bloquant)
+- [ ] APScheduler : automatiser `check-final-unread` (actuellement appelé manuellement par le frontend)
