@@ -648,7 +648,7 @@
         <span class="alert-icon">ℹ️</span>
         <div class="alert-body">
           <strong>Cas "aucune note client"</strong>
-          Si un client a oublié de noter, l'agent n'est pas pénalisé. La composante satisfaction est remplacée par une valeur neutre (50) — pas par 0.
+          Si un client n'a laissé aucune note, la composante satisfaction est remplacée par <strong>50/100</strong> (valeur neutre centrale) — pas par 0, et pas ignorée. Concrètement : un agent sans aucune note obtient un score composite basé uniquement sur sa vitesse, comme s'il avait une satisfaction "moyenne". Cela évite de pénaliser un agent dont les clients ont simplement oublié de noter, tout en l'empêchant d'avoir un score artificiellement parfait sans feedback client.
         </div>
       </div>
 
