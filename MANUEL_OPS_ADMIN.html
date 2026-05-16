@@ -227,14 +227,17 @@
           <li><a href="#performance">6. Performance agents</a></li>
           <li class="sub"><a href="#perf-all">↳ Vue All agents</a></li>
           <li class="sub"><a href="#perf-individuelle">↳ Vue individuelle</a></li>
+          <li class="sub"><a href="#mode-equite-perf">↳ Mode Équité ⚖️</a></li>
           <li><a href="#classement">7. Classement</a></li>
           <li class="sub"><a href="#score-composite">↳ Score composite</a></li>
           <li class="sub"><a href="#filtre-urgence-classement">↳ Filtre urgence — pourquoi crucial</a></li>
+          <li class="sub"><a href="#mode-equite-classement">↳ Mode Équité ⚖️</a></li>
           <li class="sub"><a href="#ui-score">↳ Encart formule + tooltip</a></li>
           <li class="sub"><a href="#awards">↳ 5 badges — tableau détaillé</a></li>
           <li class="sub"><a href="#overview-vs-classement">↳ Overview vs Classement — différence</a></li>
           <li class="sub"><a href="#podium">↳ Podium & tableau</a></li>
-          <li><a href="#glossaire">8. Glossaire</a></li>
+          <li><a href="#notifications-push">8. Notifications push</a></li>
+          <li><a href="#glossaire">9. Glossaire</a></li>
           <hr class="toc-divider">
           <li class="section-header"><a href="#sysadmin-section">SYSTEM_ADMIN uniquement</a></li>
           <li><a href="#utilisateurs">9. Gestion utilisateurs</a></li>
@@ -585,6 +588,27 @@
         <li><strong>Urgency (multi-sélection) :</strong> comparer les agents sur des dossiers de même complexité</li>
       </ul>
 
+      <h3 id="mode-equite-perf">⚖️ Mode Équité — comparaison équitable entre agents</h3>
+      <p>Le bouton <strong>⚖️ Équité</strong> (à côté des filtres) normalise la base de calcul pour comparer des agents sur un pied d'égalité.</p>
+      <div class="alert alert-info">
+        <span class="alert-icon">⚖️</span>
+        <div class="alert-body">
+          <strong>Problème résolu :</strong> un agent ayant traité 20 dossiers et un agent en ayant traité 3 ne sont pas directement comparables — le premier a plus de données, donc un score potentiellement plus stable ou plus élevé juste par volume.<br><br>
+          <strong>Solution :</strong> le mode Équité identifie le minimum de dossiers traités parmi tous les agents filtrés, puis réduit chaque agent à ses <em>N dossiers les plus récents</em> (N = ce minimum). Les scores sont alors recalculés sur une base identique.
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Sans Équité</th><th>Avec Équité (ex: N=3)</th></tr></thead>
+          <tbody>
+            <tr><td>Jean : 20 dossiers → score calculé sur 20</td><td>Jean : 3 dossiers les plus récents → score recalculé</td></tr>
+            <tr><td>Marie : 3 dossiers → score calculé sur 3</td><td>Marie : 3 dossiers (déjà au minimum)</td></tr>
+            <tr><td>Paul : 8 dossiers → score calculé sur 8</td><td>Paul : 3 dossiers les plus récents → score recalculé</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Quand le mode est actif, le bouton devient <strong style="color:#7c3aed">violet</strong> et affiche le badge <strong>N=X</strong>. Un bandeau rappelle la règle appliquée.</p>
+
       <h3 id="perf-all">Vue "All agents" — 3 graphes globaux + tableau</h3>
 
       <div class="table-wrap">
@@ -714,6 +738,15 @@
           Exemple : un agent avec 0 avis mais vitesse=96, SLA=100, 1ère réponse=90 :<br>
           Poids redistribués → vitesse=25/75, SLA=30/75, 1ère réponse=20/75<br>
           Composite = (96×25 + 100×30 + 90×20) / 75 = <strong>95.5/100</strong> — peut finir 1er.
+        </div>
+      </div>
+
+      <h3 id="mode-equite-classement">⚖️ Mode Équité — même principe que la page Performance</h3>
+      <p>Le bouton <strong>⚖️ Équité</strong> fonctionne exactement comme dans la page Performance : il normalise chaque agent aux N dossiers les plus récents (N = minimum du filtre actuel). Les scores et le classement sont entièrement recalculés sur cette base équitable.</p>
+      <div class="alert alert-info">
+        <span class="alert-icon">💡</span>
+        <div class="alert-body">
+          <strong>Usage recommandé :</strong> combine le filtre Urgence (ex: HIGH) + mode Équité pour une comparaison à la fois sur le même niveau de difficulté ET le même volume. C'est la comparaison la plus juste possible.
         </div>
       </div>
 
@@ -880,9 +913,69 @@
       </div>
     </section>
 
-    <!-- Section 8 — Glossaire -->
+    <!-- Section 8 — Notifications push -->
+    <section class="section" id="notifications-push">
+      <h2><span class="sec-num">8</span> Notifications push</h2>
+
+      <p>Eolis Connect envoie des <strong>notifications système</strong> (téléphone ou PC) quand des événements importants se produisent, même app fermée.</p>
+
+      <h3>Ce que reçoivent les agents</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Événement</th><th>Qui reçoit</th><th>Activé par défaut</th></tr></thead>
+          <tbody>
+            <tr><td>Nouveau message client</td><td>Agent assigné</td><td>✅</td></tr>
+            <tr><td>Note interne</td><td>Agent assigné + OPS_ADMIN</td><td>✅</td></tr>
+            <tr><td>Mention @nom</td><td>Utilisateur mentionné</td><td>✅</td></tr>
+            <tr><td>Documents reçus (client)</td><td>Agent assigné</td><td>✅</td></tr>
+            <tr><td>Client non-répondu depuis 1h</td><td>Agent assigné + OPS_ADMIN</td><td>✅</td></tr>
+            <tr><td>Réponse finale non lue 12h</td><td>Agent assigné + OPS_ADMIN</td><td>✅</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Ce que reçoivent les clients</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Événement</th><th>Activé par défaut</th></tr></thead>
+          <tbody>
+            <tr><td>Nouveau message de l'agent</td><td>✅</td></tr>
+            <tr><td>Réponse finale (dossier clôturé)</td><td>✅</td></tr>
+            <tr><td>Document requis par l'agent</td><td>✅</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Comportement intelligent</h3>
+      <div class="alert alert-success">
+        <span class="alert-icon">✅</span>
+        <div class="alert-body">
+          <strong>Pas de spam :</strong> si l'utilisateur est déjà en train de lire le dossier concerné (WebSocket actif), la notification ne part pas. Elle ne se déclenche que si l'utilisateur n'est pas sur la page du dossier.
+        </div>
+      </div>
+
+      <h3>Activer / modifier les préférences</h3>
+      <p>Chaque utilisateur (agent, client) gère ses préférences dans <strong>Paramètres → Notifications push</strong> :</p>
+      <ul>
+        <li>Toggle principal : activer/désactiver toutes les notifs</li>
+        <li>Toggles par catégorie : choisir précisément ce qu'on veut recevoir</li>
+        <li>Option <strong>"Uniquement urgence HIGH"</strong> pour les agents — filtre les notifs de faible priorité</li>
+      </ul>
+
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Si un agent dit "je ne reçois pas les notifications"</strong> — vérifier que :<br>
+          1. Il a activé le toggle dans ses Paramètres<br>
+          2. Il a cliqué "Autoriser" quand le navigateur a demandé la permission<br>
+          3. S'il avait cliqué "Bloquer" : il doit aller dans les paramètres de son navigateur pour réautoriser le site
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 9 — Glossaire -->
     <section class="section" id="glossaire">
-      <h2><span class="sec-num">8</span> Glossaire</h2>
+      <h2><span class="sec-num">9</span> Glossaire</h2>
 
       <div class="glossary-grid">
         <div class="glossary-item">

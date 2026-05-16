@@ -681,8 +681,52 @@
         <div class="alert-body">Si votre session expire en cours de traitement d'un dossier, vos messages non envoyés peuvent être perdus. Pensez à envoyer régulièrement ou à garder votre session active.</div>
       </div>
 
+      <h2><span class="sec-num">8</span> Notifications push — Alertes sur téléphone / PC</h2>
+
+      <p>Eolis Connect peut envoyer des <strong>notifications système</strong> directement sur votre téléphone ou ordinateur, même quand l'application est fermée ou en arrière-plan.</p>
+
+      <h3>Activer les notifications</h3>
+      <ol>
+        <li>Allez dans <strong>Paramètres</strong> (icône engrenage dans la sidebar)</li>
+        <li>Section <strong>Notifications push</strong> — activez le toggle principal</li>
+        <li>Le navigateur affiche une demande de permission → cliquez <strong>Autoriser</strong></li>
+        <li>Choisissez quelles alertes vous souhaitez recevoir</li>
+      </ol>
+
+      <h3>Catégories disponibles pour l'agent</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Catégorie</th><th>Déclenché quand</th><th>Par défaut</th></tr></thead>
+          <tbody>
+            <tr><td>Nouveau message client</td><td>Un client répond sur l'un de vos dossiers</td><td>✅ Activé</td></tr>
+            <tr><td>Note interne</td><td>Un collègue ajoute une note interne sur votre dossier</td><td>✅ Activé</td></tr>
+            <tr><td>Mention @nom</td><td>Quelqu'un vous mentionne dans une note (<code>@votre.nom</code>)</td><td>✅ Activé</td></tr>
+            <tr><td>Client non-répondu 1h</td><td>Un client attend une réponse depuis plus d'1h</td><td>✅ Activé</td></tr>
+            <tr><td>Réponse finale non lue 12h</td><td>Un client n'a pas lu votre réponse finale depuis 12h</td><td>✅ Activé</td></tr>
+            <tr><td>Uniquement urgence HIGH</td><td>Filtre toutes les autres urgences — ne notifie que sur les dossiers HIGH</td><td>❌ Désactivé</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">💡</span>
+        <div class="alert-body">
+          <strong>Intelligent :</strong> si vous êtes déjà en train de lire le dossier concerné, la notification n'arrive pas (système de détection de présence). Elle arrive uniquement si vous n'êtes pas sur la page du dossier.
+        </div>
+      </div>
+
+      <h3>Désactiver ou modifier les préférences</h3>
+      <p>À tout moment dans <strong>Paramètres → Notifications push</strong> : désactivez le toggle principal pour stopper toutes les notifications, ou ajustez catégorie par catégorie.</p>
+
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Si vous avez cliqué "Bloquer" par erreur</strong> lors de la demande de permission du navigateur, vous devez réactiver manuellement dans les paramètres du navigateur (ou de l'OS sur iPhone). Eolis Connect ne peut pas contourner cette restriction.
+        </div>
+      </div>
+
       <p style="margin-top:24px;color:var(--muted);font-size:0.83rem;text-align:center;">
-        Document mis à jour le 2026-05-15 — Eolis Connect v2 &nbsp;·&nbsp; Eolis Cameroun
+        Document mis à jour le 2026-05-16 — Eolis Connect v2 &nbsp;·&nbsp; Eolis Cameroun
       </p>
     </section>
 
