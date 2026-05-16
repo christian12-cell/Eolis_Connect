@@ -388,18 +388,30 @@ export default function OpsDashboardPage({ params }: { params: Promise<{ locale:
 
     function computeDetail(pts: any[], urgency: string) {
       const uts = pts.filter(t => t.urgency === urgency)
-      if (!uts.length) return { composite: null, avgSat: null, avgTime: null, satScore: null, speedScore: null, count: 0 }
+      if (!uts.length) return { composite: null, avgSat: null, avgTime: null, satScore: null, speedScore: null, slaScore: null, count: 0 }
       const scores  = uts.filter(t => t.satisfactionRating?.score).map(t => t.satisfactionRating.score)
       const avgSat  = scores.length ? +(scores.reduce((a: number, b: number) => a + b, 0) / scores.length).toFixed(2) : null
       const rawT    = uts.filter(t => t.closedAt ?? t.updatedAt)
         .map(t => (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000)
         .filter(h => !isNaN(h) && isFinite(h))
       const avgTime = rawT.length ? +(rawT.reduce((a, b) => a + b, 0) / rawT.length).toFixed(2) : null
-      const satScore   = avgSat  !== null ? +(avgSat / 5 * 100).toFixed(1)                                          : null
+      // SLA : % de tickets résolus dans le délai cible de leur urgence
+      const slaTarget = SLA_HOURS[urgency] ?? 10
+      const slaOk  = rawT.filter(h => h <= slaTarget).length
+      const slaScore = rawT.length > 0 ? +(slaOk / rawT.length * 100).toFixed(1) : null
+      // Score composite : sat(25%) + vitesse(25%) + SLA(30%) — 1ère réponse(20%) absent ici (messages non chargés)
+      // Les poids manquants sont redistribués proportionnellement
+      const satScore   = avgSat  !== null ? +(avgSat / 5 * 100).toFixed(1) : null
       const speedScore = avgTime !== null ? +Math.max(0, 100 - (avgTime / SLA_CAP) * 100).toFixed(1) : null
-      const composite  = satScore !== null || speedScore !== null
-        ? +((satScore ?? 50) * 0.5 + (speedScore ?? 50) * 0.5).toFixed(1) : null
-      return { composite, avgSat, avgTime, satScore, speedScore, count: uts.length }
+      const components = ([
+        { score: satScore,   weight: 0.25 },
+        { score: speedScore, weight: 0.25 },
+        { score: slaScore,   weight: 0.30 },
+      ] as { score: number | null; weight: number }[]).filter(c => c.score !== null) as { score: number; weight: number }[]
+      const totalW  = components.reduce((s, c) => s + c.weight, 0)
+      const composite = components.length > 0
+        ? +(components.reduce((s, c) => s + c.score * (c.weight / totalW), 0)).toFixed(1) : null
+      return { composite, avgSat, avgTime, satScore, speedScore, slaScore, count: uts.length }
     }
 
     return series.map(p => {
