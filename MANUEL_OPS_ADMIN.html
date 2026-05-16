@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide OPS Admin & System Admin — Eolis Connect</title>
+<style>
+  :root {
+    --navy: #1B3A5C;
+    --blue: #4A8FC4;
+    --bg: #EDF1F7;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --white: #ffffff;
+    --border: #d1d5db;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --purple: #7c3aed;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; }
+
+  .site-header { background: var(--navy); color: var(--white); padding: 18px 32px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .site-header .logo { font-size: 1.6rem; font-weight: 800; }
+  .site-header .subtitle { font-size: 0.85rem; color: #93c5fd; background: rgba(74,143,196,0.25); padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(74,143,196,0.4); }
+
+  .layout { display: flex; max-width: 1400px; margin: 0 auto; padding: 24px 16px; gap: 28px; }
+
+  .toc { width: 260px; flex-shrink: 0; }
+  .toc-inner { position: sticky; top: 80px; background: var(--white); border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 16px; max-height: calc(100vh - 110px); overflow-y: auto; }
+  .toc h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--navy); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--bg); }
+  .toc ul { list-style: none; }
+  .toc ul li { margin: 2px 0; }
+  .toc ul li a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 0.82rem; transition: all 0.15s; }
+  .toc ul li a:hover { background: var(--bg); color: var(--navy); font-weight: 600; }
+  .toc ul li.sub a { padding-left: 18px; font-size: 0.77rem; }
+  .toc ul li.section-header a { font-weight: 700; color: var(--navy); font-size: 0.8rem; }
+  .toc-divider { border: none; border-top: 1px solid var(--bg); margin: 6px 0; }
+
+  .content { flex: 1; min-width: 0; }
+
+  .hero { background: linear-gradient(135deg, #1B3A5C 0%, #3730a3 100%); border-radius: 12px; padding: 32px; color: var(--white); margin-bottom: 28px; }
+  .hero h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
+  .hero p { color: #c7d2fe; font-size: 0.95rem; }
+  .hero-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .hero-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; }
+
+  .section { background: var(--white); border-radius: 12px; padding: 28px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .section.sysadmin-only { border-left: 4px solid var(--danger); }
+  .section h2 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid var(--bg); display: flex; align-items: center; gap: 10px; }
+  .section h2 .sec-num { background: var(--navy); color: var(--white); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+  .section h2 .sec-num.red { background: var(--danger); }
+  .section h3 { font-size: 1rem; font-weight: 700; color: var(--navy); margin: 22px 0 10px; padding-top: 8px; }
+  .section h4 { font-size: 0.9rem; font-weight: 700; color: var(--blue); margin: 14px 0 8px; }
+  .section p { margin-bottom: 12px; }
+  .section ul, .section ol { margin: 10px 0 14px 20px; }
+  .section li { margin-bottom: 6px; }
+
+  .sysadmin-badge { display: inline-flex; align-items: center; gap: 6px; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 14px; }
+
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-navy { background: var(--navy); color: var(--white); }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-success { background: #d1fae5; color: #065f46; }
+  .badge-warning { background: #fef3c7; color: #92400e; }
+  .badge-danger { background: #fee2e2; color: #991b1b; }
+  .badge-purple { background: #ede9fe; color: #5b21b6; }
+  .badge-ops { background: #e0f2fe; color: #075985; }
+  .badge-sysadmin { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+  .alert { border-radius: 8px; padding: 14px 16px; margin: 14px 0; border-left: 4px solid; display: flex; gap: 10px; }
+  .alert-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .alert-body { flex: 1; }
+  .alert-body strong { display: block; margin-bottom: 4px; }
+  .alert-info { background: #eff6ff; border-color: var(--blue); color: #1e40af; }
+  .alert-warning { background: #fffbeb; border-color: var(--warning); color: #92400e; }
+  .alert-danger { background: #fef2f2; border-color: var(--danger); color: #991b1b; }
+  .alert-success { background: #f0fdf4; border-color: var(--success); color: #065f46; }
+
+  .table-wrap { overflow-x: auto; margin: 14px 0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--navy); color: var(--white); padding: 10px 14px; text-align: left; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.03em; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:nth-child(odd) { background: var(--white); }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 0.87rem; vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #eff6ff; }
+  tfoot tr td { background: var(--navy); color: var(--white); font-weight: 700; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .kpi-card { border-radius: 10px; padding: 16px; border: 1px solid var(--border); background: var(--bg); }
+  .kpi-card .kpi-icon { font-size: 1.4rem; margin-bottom: 6px; }
+  .kpi-card .kpi-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .kpi-card .kpi-desc { font-size: 0.83rem; color: var(--text); margin-top: 4px; }
+
+  .sla-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .sla-card { border-radius: 10px; padding: 16px; text-align: center; }
+  .sla-card.high { background: #fef2f2; border: 2px solid var(--danger); }
+  .sla-card.medium { background: #fffbeb; border: 2px solid var(--warning); }
+  .sla-card.low { background: #f0fdf4; border: 2px solid var(--success); }
+  .sla-card .sla-title { font-weight: 800; font-size: 0.9rem; }
+  .sla-card.high .sla-title { color: #991b1b; }
+  .sla-card.medium .sla-title { color: #92400e; }
+  .sla-card.low .sla-title { color: #065f46; }
+  .sla-card .sla-target { font-size: 1.3rem; font-weight: 800; margin: 4px 0; }
+  .sla-card .sla-formula { font-size: 0.78rem; color: var(--muted); font-family: 'Courier New', monospace; }
+
+  .code-box { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 16px; margin: 14px 0; font-family: 'Courier New', monospace; font-size: 0.87rem; line-height: 1.8; overflow-x: auto; }
+  .code-box .comment { color: #64748b; }
+  .code-box .label { color: #93c5fd; font-weight: 700; }
+  .code-box .op { color: #f472b6; }
+  .code-box .val { color: #86efac; }
+  .code-box .eq { color: #fde047; }
+
+  .podium { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; align-items: end; }
+  .podium-card { border-radius: 10px; padding: 16px; text-align: center; border: 2px solid; }
+  .podium-card.gold { background: #fefce8; border-color: #eab308; }
+  .podium-card.silver { background: #f8fafc; border-color: #94a3b8; }
+  .podium-card.bronze { background: #fff7ed; border-color: #f97316; }
+  .podium-card .medal { font-size: 2rem; }
+  .podium-card .podium-name { font-weight: 700; color: var(--navy); font-size: 0.9rem; margin: 6px 0 4px; }
+  .podium-card .podium-score { font-size: 1.4rem; font-weight: 800; }
+  .podium-card.gold .podium-score { color: #ca8a04; }
+  .podium-card.silver .podium-score { color: #64748b; }
+  .podium-card.bronze .podium-score { color: #ea580c; }
+
+  .awards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+  .award-card { border-radius: 8px; padding: 12px; text-align: center; background: var(--bg); border: 1px solid var(--border); }
+  .award-card .award-icon { font-size: 1.6rem; }
+  .award-card .award-label { font-size: 0.78rem; font-weight: 700; color: var(--navy); margin-top: 4px; }
+  .award-card .award-desc { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
+
+  .comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .comp-col { border-radius: 10px; padding: 16px; }
+  .comp-col.ops { background: #e0f2fe; border: 1px solid #7dd3fc; }
+  .comp-col.sys { background: #fef2f2; border: 1px solid #fca5a5; }
+  .comp-col h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .comp-col.ops h4 { color: #075985; }
+  .comp-col.sys h4 { color: #991b1b; }
+  .comp-col ul { list-style: none; padding: 0; margin: 0; }
+  .comp-col li { font-size: 0.83rem; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; gap: 6px; }
+  .comp-col li:last-child { border-bottom: none; }
+  .comp-col li .check { color: var(--success); }
+  .comp-col li .cross { color: var(--danger); }
+
+  .graphe-card { border-radius: 8px; padding: 14px; background: var(--bg); border: 1px solid var(--border); margin-bottom: 12px; }
+  .graphe-card .graphe-title { font-weight: 700; color: var(--navy); font-size: 0.9rem; margin-bottom: 6px; }
+  .graphe-card .graphe-desc { font-size: 0.83rem; color: var(--muted); }
+
+  .stat-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+  .stat-item { background: var(--bg); border-radius: 8px; padding: 12px 16px; border: 1px solid var(--border); flex: 1; min-width: 140px; }
+  .stat-item .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .stat-item .stat-value { font-weight: 700; color: var(--navy); font-size: 0.95rem; margin-top: 2px; }
+
+  .sort-steps { counter-reset: sortctr; margin: 12px 0; }
+  .sort-step { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+  .sort-num { background: var(--purple); color: var(--white); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; flex-shrink: 0; }
+  .sort-body { flex: 1; font-size: 0.87rem; padding-top: 2px; }
+
+  code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 0.85em; font-family: 'Courier New', monospace; color: var(--navy); }
+
+  .check { color: var(--success); font-weight: 700; }
+  .cross { color: var(--danger); font-weight: 700; }
+
+  .toc-toggle { display: none; background: var(--navy); color: var(--white); border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; margin-bottom: 16px; }
+
+  .glossary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .glossary-item { background: var(--bg); border-radius: 8px; padding: 12px; border: 1px solid var(--border); }
+  .glossary-item .term { font-weight: 700; color: var(--navy); font-size: 0.9rem; }
+  .glossary-item .def { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; padding: 12px; }
+    .toc { width: 100%; }
+    .toc-inner { position: static; max-height: none; }
+    .toc-toggle { display: block; }
+    .toc-content { display: none; }
+    .toc-content.open { display: block; }
+    .site-header { padding: 12px 16px; }
+    .site-header .subtitle { display: none; }
+    .hero h1 { font-size: 1.4rem; }
+    .section { padding: 18px; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .sla-grid { grid-template-columns: 1fr; }
+    .podium { grid-template-columns: 1fr; }
+    .awards-grid { grid-template-columns: 1fr 1fr; }
+    .comp-grid { grid-template-columns: 1fr; }
+    .glossary-grid { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    .toc { display: none; }
+    .site-header { position: static; }
+    .section { box-shadow: none; border: 1px solid var(--border); break-inside: avoid; }
+    .layout { padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">⚓ Eolis Connect</div>
+  <div class="subtitle">Guide OPS Admin &amp; System Admin</div>
+</header>
+
+<div class="layout">
+
+  <nav class="toc">
+    <button class="toc-toggle" onclick="document.querySelector('.toc-content').classList.toggle('open')">☰ Table des matières</button>
+    <div class="toc-inner">
+      <div class="toc-content">
+        <h3>Table des matières</h3>
+        <ul>
+          <li><a href="#differences">1. OPS_ADMIN vs SYSTEM_ADMIN</a></li>
+          <li><a href="#navigation">2. Navigation</a></li>
+          <li><a href="#overview">3. Page Overview</a></li>
+          <li class="sub"><a href="#kpis6">↳ 6 cartes KPI</a></li>
+          <li class="sub"><a href="#sla3">↳ 3 cartes SLA</a></li>
+          <li class="sub"><a href="#filtres-ov">↳ Filtres Year/Month/Day</a></li>
+          <li class="sub"><a href="#graphes-ov">↳ 4 Graphes</a></li>
+          <li class="sub"><a href="#records">↳ Records "Best time"</a></li>
+          <li class="sub"><a href="#urgent-queue">↳ Urgent queue</a></li>
+          <li><a href="#ticket-queue">4. Ticket Queue</a></li>
+          <li><a href="#treated">5. Treated Tickets</a></li>
+          <li><a href="#performance">6. Performance agents</a></li>
+          <li class="sub"><a href="#perf-all">↳ Vue All agents</a></li>
+          <li class="sub"><a href="#perf-individuelle">↳ Vue individuelle</a></li>
+          <li><a href="#classement">7. Classement</a></li>
+          <li class="sub"><a href="#score-composite">↳ Score composite</a></li>
+          <li class="sub"><a href="#awards">↳ Awards</a></li>
+          <li class="sub"><a href="#podium">↳ Podium & tableau</a></li>
+          <li><a href="#glossaire">8. Glossaire</a></li>
+          <hr class="toc-divider">
+          <li class="section-header"><a href="#sysadmin-section">SYSTEM_ADMIN uniquement</a></li>
+          <li><a href="#utilisateurs">9. Gestion utilisateurs</a></li>
+          <li><a href="#logs">10. Logs d'audit</a></li>
+          <li><a href="#sys-params">11. Paramètres système</a></li>
+          <li><a href="#auth2fa">12. Authentification 2FA</a></li>
+          <li><a href="#gros-recharges">13. Grosses recharges</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="content">
+
+    <div class="hero">
+      <h1>Guide OPS Admin &amp; System Admin</h1>
+      <p>Manuel complet pour superviser les performances, gérer les utilisateurs et administrer la plateforme Eolis Connect</p>
+      <div class="hero-badges">
+        <span class="hero-badge">📊 Analytics temps réel</span>
+        <span class="hero-badge">🏆 Classement agents</span>
+        <span class="hero-badge">👥 Gestion utilisateurs</span>
+        <span class="hero-badge">🔒 2FA obligatoire (SYSTEM)</span>
+        <span class="hero-badge">📋 Logs d'audit</span>
+      </div>
+    </div>
+
+    <!-- Section 1 — Différences -->
+    <section class="section" id="differences">
+      <h2><span class="sec-num">1</span> Différence OPS_ADMIN vs SYSTEM_ADMIN</h2>
+
+      <div class="comp-grid">
+        <div class="comp-col ops">
+          <h4><span class="badge badge-ops">OPS_ADMIN</span></h4>
+          <ul>
+            <li><span class="check">✅</span> Vue d'ensemble (analytics)</li>
+            <li><span class="check">✅</span> Performances des agents</li>
+            <li><span class="check">✅</span> Classement des agents</li>
+            <li><span class="check">✅</span> Tickets — lecture et actions</li>
+            <li><span class="cross">❌</span> Gestion des utilisateurs</li>
+            <li><span class="cross">❌</span> Logs d'audit</li>
+            <li><span class="cross">❌</span> Paramètres système</li>
+            <li><span class="cross">❌</span> Accès finance</li>
+            <li><span class="cross">❌</span> Confirmation grosses recharges</li>
+          </ul>
+        </div>
+        <div class="comp-col sys">
+          <h4><span class="badge badge-sysadmin">SYSTEM_ADMIN</span></h4>
+          <ul>
+            <li><span class="check">✅</span> Tout l'OPS_ADMIN</li>
+            <li><span class="check">✅</span> Gestion des utilisateurs</li>
+            <li><span class="check">✅</span> Logs d'audit complets</li>
+            <li><span class="check">✅</span> Paramètres système</li>
+            <li><span class="check">✅</span> Finances (lecture seule)</li>
+            <li><span class="check">✅</span> Confirmation grosses recharges</li>
+            <li><span class="check">✅</span> Réinitialisation BDD (irréversible)</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Navigation sidebar selon le rôle</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Entrée sidebar</th><th>OPS_ADMIN</th><th>SYSTEM_ADMIN</th></tr></thead>
+          <tbody>
+            <tr><td>Vue d'ensemble</td><td><span class="check">✅</span></td><td><span class="check">✅</span></td></tr>
+            <tr><td>Tickets (Queue + Treated)</td><td><span class="check">✅</span></td><td><span class="check">✅</span></td></tr>
+            <tr><td>Performances</td><td><span class="check">✅</span></td><td><span class="check">✅</span></td></tr>
+            <tr><td>Classement</td><td><span class="check">✅</span></td><td><span class="check">✅</span></td></tr>
+            <tr><td>Paramètres (profil)</td><td><span class="check">✅</span></td><td><span class="check">✅</span></td></tr>
+            <tr><td>Utilisateurs</td><td><span class="cross">❌</span></td><td><span class="check">✅</span></td></tr>
+            <tr><td>Logs audit</td><td><span class="cross">❌</span></td><td><span class="check">✅</span></td></tr>
+            <tr><td>Système</td><td><span class="cross">❌</span></td><td><span class="check">✅</span></td></tr>
+            <tr><td>Finances (lecture)</td><td><span class="cross">❌</span></td><td><span class="check">✅</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 3 — Overview -->
+    <section class="section" id="overview">
+      <h2><span class="sec-num">3</span> Page Overview (Vue d'ensemble)</h2>
+      <p>Tableau de bord principal de l'OPS Admin. Se rafraîchit automatiquement toutes les <strong>60 secondes</strong> — affiche l'état en temps réel de toute l'activité.</p>
+
+      <h3 id="kpis6">Les 6 cartes KPI (ligne du haut)</h3>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon">📊</div>
+          <div class="kpi-label">Total tickets</div>
+          <div class="kpi-desc">Tous statuts confondus. Indicateur de tendance : ↑ rouge (plus cette semaine), ↓ vert (moins), → gris (stable). Comparaison 7 derniers jours vs 7 jours précédents.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">⏳</div>
+          <div class="kpi-label">Pending</div>
+          <div class="kpi-desc">Statut <code>PENDING</code>. Sous-texte : "X non assigné(s)" — dossiers sans agent. Priorité maximale.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">🔄</div>
+          <div class="kpi-label">In progress</div>
+          <div class="kpi-desc">Statut <code>IN_PROGRESS</code> — dossiers pris en charge, traitement en cours.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-label">Treated today</div>
+          <div class="kpi-desc">Clôturés depuis minuit WAT (West Africa Time = UTC+1). Repart à 0 chaque nuit à minuit.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">⭐</div>
+          <div class="kpi-label">Avg satisfaction</div>
+          <div class="kpi-desc">Moyenne des notes /5 laissées par les clients. Arrondi à 1 décimale. Affiché "—" si aucune note.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">⏱</div>
+          <div class="kpi-label">Avg resolution</div>
+          <div class="kpi-desc">Temps moyen entre création et clôture, en heures. Affiché "—" si aucun dossier traité.</div>
+        </div>
+      </div>
+
+      <h3 id="sla3">Les 3 cartes SLA</h3>
+      <p><strong>SLA = Service Level Agreement</strong> — engagement de délai de résolution. Chaque carte mesure : quel % de dossiers de cette urgence ont été résolus dans le délai cible ?</p>
+
+      <div class="code-box">
+        <span class="label">% SLA</span> <span class="eq">=</span> (<span class="val">dossiers résolus dans le délai</span> <span class="op">/</span> <span class="val">total dossiers résolus</span>) <span class="op">×</span> 100
+      </div>
+
+      <div class="sla-grid">
+        <div class="sla-card high">
+          <div class="sla-title">🔴 HIGH</div>
+          <div class="sla-target">&lt; 3h</div>
+          <div class="sla-formula">% = résolus &lt; 3h / total HIGH</div>
+        </div>
+        <div class="sla-card medium">
+          <div class="sla-title">🟡 MEDIUM</div>
+          <div class="sla-target">&lt; 5h</div>
+          <div class="sla-formula">% = résolus &lt; 5h / total MEDIUM</div>
+        </div>
+        <div class="sla-card low">
+          <div class="sla-title">🟢 LOW</div>
+          <div class="sla-target">&lt; 10h</div>
+          <div class="sla-formula">% = résolus &lt; 10h / total LOW</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Score SLA</th><th>Couleur</th><th>Signification</th></tr></thead>
+          <tbody>
+            <tr><td>≥ 80%</td><td><span class="badge badge-success">🟢 Vert</span></td><td>Objectif atteint</td></tr>
+            <tr><td>60–79%</td><td><span class="badge badge-warning">🟠 Orange</span></td><td>Attention</td></tr>
+            <tr><td>&lt; 60%</td><td><span class="badge badge-danger">🔴 Rouge</span></td><td>Objectif non atteint</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="filtres-ov">Filtres Year / Month / Day</h3>
+      <p>Trois menus multi-sélection. <strong>Ils n'affectent PAS</strong> les 6 cartes KPI ni les 3 cartes SLA (toujours en temps réel). Ils filtrent uniquement les <strong>4 graphes</strong>.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Filtre actif</th><th>Granularité des graphes</th></tr></thead>
+          <tbody>
+            <tr><td>Aucun filtre</td><td>30 derniers jours, un point par jour</td></tr>
+            <tr><td>Mois sélectionné</td><td>Chaque jour du mois sélectionné</td></tr>
+            <tr><td>Année sélectionnée</td><td>Chaque mois de l'année</td></tr>
+            <tr><td>Combinaison</td><td>Intersection des filtres appliqués</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="graphes-ov">Les 4 graphes</h3>
+
+      <div class="graphe-card">
+        <div class="graphe-title">Graphe 1 — Ticket Volume (grand graphe gauche)</div>
+        <div class="graphe-desc">Graphe combiné barres + courbes. Barres bleues = nouveaux dossiers créés | Courbe rouge = HIGH clôturés | Courbe verte = LOW clôturés | Courbe orange = MEDIUM clôturés. Visualiser les pics et si les dossiers sont traités aussi vite qu'ils arrivent.</div>
+      </div>
+
+      <div class="graphe-card">
+        <div class="graphe-title">Graphe 2 — Status Breakdown (donut haut droit)</div>
+        <div class="graphe-desc">Répartition par statut : 🟡 Jaune = Pending | 🔵 Bleu = In progress | 🟢 Vert = Treated/Closed. Soumis aux filtres. Si tout traité → 100% vert.</div>
+      </div>
+
+      <div class="graphe-card">
+        <div class="graphe-title">Graphe 3 — Global Performance by Urgency (graphe bas gauche)</div>
+        <div class="graphe-desc">Score composite 0–100 par niveau d'urgence. Le graphe le plus important pour suivre la qualité du service dans le temps.</div>
+      </div>
+
+      <div class="code-box">
+        <span class="label">Score satisfaction</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
+        <br><span class="label">Score vitesse</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (temps résolution moy. <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <br><span class="label">Score final</span> <span class="eq">=</span> (satisfaction <span class="op">×</span> 50%) <span class="op">+</span> (vitesse <span class="op">×</span> 50%)
+        <br><br><span class="comment">// Exemple : 4.8/5 satisfaction + résolu en 0.5h</span>
+        <br><span class="comment">// satScore = 96/100 | speedScore = 98/100 | composite = 97/100</span>
+      </div>
+
+      <div class="graphe-card">
+        <div class="graphe-title">Graphe 4 — By Category (donut bas droit)</div>
+        <div class="graphe-desc">Répartition par catégorie client : Livraison, Facturation, Dossier, Information, Autre. Identifier les demandes les plus fréquentes pour adapter les ressources.</div>
+      </div>
+
+      <h3 id="records">Les 3 cartes "Best time" — Records</h3>
+      <p>Record absolu de résolution le plus rapide pour chaque urgence (tous agents et toutes périodes). <strong>Non affectées par les filtres</strong> — reflètent toujours le meilleur temps historique.</p>
+      <p>Chaque carte affiche : temps record, référence dossier, agent, catégorie/sous-catégorie, date, lien "View ticket".</p>
+
+      <h3 id="urgent-queue">Urgent queue — HIGH pending</h3>
+      <div class="alert alert-danger">
+        <span class="alert-icon">🚨</span>
+        <div class="alert-body">
+          <strong>Tableau d'alerte critique</strong>
+          Affiche les 5 dossiers HIGH les plus anciens encore ouverts (PENDING ou IN_PROGRESS). Si un dossier HIGH reste plus de 2 heures, une alerte rouge apparaît en haut de la page Overview.
+        </div>
+      </div>
+      <p>Colonnes : référence, client, catégorie, agent assigné (ou "Non assigné"), temps de soumission. Lien "View full queue" vers la file complète.</p>
+    </section>
+
+    <!-- Section 4 — Ticket Queue -->
+    <section class="section" id="ticket-queue">
+      <h2><span class="sec-num">4</span> Page Ticket Queue</h2>
+      <p>Vue opérationnelle de la file de dossiers actifs (PENDING + IN_PROGRESS).</p>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-body">L'OPS Admin peut accéder à <strong>n'importe quel dossier</strong>, même ceux assignés à un autre agent. Un simple AGENT voit le bouton "Voir" grisé si le dossier appartient à quelqu'un d'autre.</div>
+      </div>
+
+      <h3>Les 3 cartes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Carte</th><th>Calcul</th></tr></thead>
+          <tbody>
+            <tr><td><strong>New</strong></td><td>Tickets <code>status === 'PENDING'</code></td></tr>
+            <tr><td><strong>In progress</strong></td><td>Tickets <code>status === 'IN_PROGRESS'</code></td></tr>
+            <tr><td><strong>Treated today</strong></td><td>Clôturés depuis minuit WAT (Douala)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>La file de dossiers</h3>
+      <ul>
+        <li><strong>Tri :</strong> toujours par urgence HIGH → MEDIUM → LOW. À égale urgence, les plus anciens en premier</li>
+        <li>Point coloré d'urgence + Référence (<code>REF-2026-XXXX</code>) + Client + Badge langue 🇫🇷/🇬🇧 + Catégorie + Statut + Temps depuis soumission + Bouton Voir</li>
+        <li><strong>Filtre urgence :</strong> All / High / Medium / Low</li>
+        <li><strong>Recherche :</strong> par référence ou nom du client</li>
+        <li><strong>Auto-refresh :</strong> toutes les 60 secondes avec compteur SVG. Bouton "Refresh" pour forcer immédiatement</li>
+      </ul>
+    </section>
+
+    <!-- Section 5 — Treated tickets -->
+    <section class="section" id="treated">
+      <h2><span class="sec-num">5</span> Page Treated Tickets</h2>
+      <p>Archive consultable de tous les dossiers clôturés.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>OPS Admin</th><th>Agent simple</th></tr></thead>
+          <tbody>
+            <tr><td>Titre</td><td>"Treated tickets"</td><td>"Mon historique"</td></tr>
+            <tr><td>Dossiers visibles</td><td><strong>Tous</strong> les dossiers clôturés du système</td><td>Uniquement ses propres dossiers</td></tr>
+            <tr><td>Colonne "Agent"</td><td><span class="check">✅</span> Visible</td><td><span class="cross">❌</span> Cachée</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Colonnes du tableau</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Colonne</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Reference</strong></td><td>Référence unique (<code>REF-2026-XXXX</code>)</td></tr>
+            <tr><td><strong>Client</strong></td><td>Nom du client</td></tr>
+            <tr><td><strong>Category</strong></td><td>Catégorie + sous-catégorie</td></tr>
+            <tr><td><strong>Urgency</strong></td><td>Badge coloré High/Medium/Low</td></tr>
+            <tr><td><strong>Agent</strong></td><td>Agent ayant traité — OPS Admin uniquement</td></tr>
+            <tr><td><strong>Closed on</strong></td><td>Date et heure de clôture</td></tr>
+            <tr><td><strong>View</strong></td><td>Lien vers le dossier complet</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Filtres combinables</h4>
+      <ul>
+        <li>Recherche textuelle : référence ou nom client</li>
+        <li>Urgency : multi-sélect — High, Medium, Low</li>
+        <li>Year / Month / Day : filtrer par période de clôture</li>
+        <li>Bouton "Effacer les filtres" (apparaît dès qu'un filtre est actif)</li>
+      </ul>
+    </section>
+
+    <!-- Section 6 — Performance -->
+    <section class="section" id="performance">
+      <h2><span class="sec-num">6</span> Page Performance</h2>
+
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Règle importante</strong>
+          Les dossiers traités par un OPS_ADMIN ou SYSTEM_ADMIN n'entrent PAS dans les statistiques de performance. Seuls les comptes de rôle <code>AGENT</code> sont analysés. Ces dossiers sont bien comptabilisés dans l'Overview (volume global, SLA global).
+        </div>
+      </div>
+
+      <h4>Filtres</h4>
+      <ul>
+        <li><strong>Sélecteur d'agent :</strong> vue globale "All agents" ou fiche individuelle</li>
+        <li><strong>Year / Month :</strong> filtrer la période. Sans filtre = toutes les données</li>
+        <li><strong>Urgency (multi-sélection) :</strong> comparer les agents sur des dossiers de même complexité</li>
+      </ul>
+
+      <h3 id="perf-all">Vue "All agents" — 3 graphes globaux + tableau</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Graphe</th><th>Description</th><th>Granularité auto</th></tr></thead>
+          <tbody>
+            <tr><td>Treated tickets (courbe)</td><td>Dossiers clôturés par période</td><td>≤14j=jour | ≤60j=semaine | &gt;60j=mois</td></tr>
+            <tr><td>Avg satisfaction /5 (courbe)</td><td>Note moyenne de satisfaction</td><td>Même axe auto-adaptatif</td></tr>
+            <tr><td>Urgency breakdown (barres)</td><td>Répartition 🔴 High / 🟡 Medium / 🟢 Low</td><td>—</td></tr>
+            <tr><td>Avg resolution (h) (courbe)</td><td>Temps moyen de résolution dans le temps</td><td>Même axe auto-adaptatif</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Tableau comparatif — Ordre de tri multi-critères</h4>
+      <div class="sort-steps">
+        <div class="sort-step">
+          <div class="sort-num">1</div>
+          <div class="sort-body"><strong>Volume</strong> — nombre de dossiers traités (décroissant) — critère principal</div>
+        </div>
+        <div class="sort-step">
+          <div class="sort-num">2</div>
+          <div class="sort-body"><strong>Satisfaction</strong> — note moyenne /5 (décroissante) — départage si même volume</div>
+        </div>
+        <div class="sort-step">
+          <div class="sort-num">3</div>
+          <div class="sort-body"><strong>SLA %</strong> — taux de respect des délais (décroissant) — départage si même satisfaction</div>
+        </div>
+        <div class="sort-step">
+          <div class="sort-num">4</div>
+          <div class="sort-body"><strong>Délai moyen</strong> — temps de résolution (croissant, le plus rapide gagne)</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Colonne</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Rank</td><td>🥇🥈🥉 pour les 3 premiers + numéro</td></tr>
+            <tr><td>Agent</td><td>Nom de l'agent</td></tr>
+            <tr><td>Traités</td><td>Dossiers clôturés sur la période</td></tr>
+            <tr><td>Satisfaction</td><td>Note /5 — <span class="badge badge-success">vert</span> si ≥ moy. équipe, <span class="badge badge-danger">rouge</span> si &lt; moy.</td></tr>
+            <tr><td>Délai moy.</td><td>Temps entre création et clôture</td></tr>
+            <tr><td>1ère réponse</td><td>Temps entre création et premier message agent</td></tr>
+            <tr><td>SLA %</td><td><span class="badge badge-success">≥80% vert</span> | <span class="badge badge-warning">60-79% orange</span> | <span class="badge badge-danger">&lt;60% rouge</span></td></tr>
+            <tr><td>Msgs/dossier</td><td>Nombre moyen de messages par dossier</td></tr>
+            <tr><td>En cours</td><td>Dossiers actifs actuellement</td></tr>
+            <tr><td>Détail →</td><td>Ouvre la fiche individuelle</td></tr>
+          </tbody>
+          <tfoot>
+            <tr><td colspan="2">Dernière ligne = TEAM AVERAGE — fond bleu foncé — référence équipe</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <h3 id="perf-individuelle">Vue individuelle — 6 KPIs + SLA + Commentaires</h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>KPI</th><th>Calcul</th><th>Comparaison affichée</th></tr></thead>
+          <tbody>
+            <tr><td>Dossiers traités</td><td>Nombre de dossiers clôturés</td><td>± vs période précédente</td></tr>
+            <tr><td>Satisfaction moy.</td><td>Moyenne des notes /5</td><td>± vs moyenne équipe</td></tr>
+            <tr><td>Délai résolution moy.</td><td><code>(closedAt − createdAt)</code> en h/min</td><td>vs moyenne équipe</td></tr>
+            <tr><td>1ère réponse moy.</td><td>Temps entre création et premier message</td><td>vs moyenne équipe</td></tr>
+            <tr><td>Messages / dossier</td><td>Moyenne des échanges par dossier</td><td>vs moyenne équipe</td></tr>
+            <tr><td>Charge actuelle</td><td>PENDING + IN_PROGRESS assignés maintenant</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ul>
+        <li><strong>SLA Compliance individuelle :</strong> % de dossiers résolus dans les délais cibles par urgence</li>
+        <li><strong>Commentaires clients :</strong> les 8 derniers commentaires écrits avec la note étoile associée</li>
+      </ul>
+    </section>
+
+    <!-- Section 7 — Classement -->
+    <section class="section" id="classement">
+      <h2><span class="sec-num">7</span> Page Classement (Rankings)</h2>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-body">Seuls les comptes de rôle <code>AGENT</code> apparaissent dans le classement. Les dossiers traités par OPS_ADMIN ou SYSTEM_ADMIN ne comptent pas.</div>
+      </div>
+
+      <h3 id="score-composite">Score composite (0 → 100)</h3>
+
+      <div class="code-box">
+        <span class="label">Satisfaction</span> <span class="eq">(50%)</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
+        <br><span class="label">Vitesse</span> <span class="eq">(50%)</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (délai moyen en h <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <br><span class="label">Score composite</span> <span class="eq">=</span> (satScore <span class="op">×</span> 0.5) <span class="op">+</span> (speedScore <span class="op">×</span> 0.5)
+        <br><br><span class="comment">// Exemple : 5.0/5 satisfaction + 3min de délai :</span>
+        <br><span class="comment">// satScore = 100 | speedScore = 99.79 | composite = 99.90/100</span>
+        <br><span class="comment">// Un score 100/100 exact est intentionnellement quasi-impossible</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Score</th><th>Couleur</th></tr></thead>
+          <tbody>
+            <tr><td>≥ 70</td><td><span class="badge badge-success">🟢 Vert</span></td></tr>
+            <tr><td>50–69</td><td><span class="badge badge-warning">🟡 Orange</span></td></tr>
+            <tr><td>&lt; 50</td><td><span class="badge badge-danger">🔴 Rouge</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-body">
+          <strong>Cas "aucune note client"</strong>
+          Si un client a oublié de noter, l'agent n'est pas pénalisé. La composante satisfaction est remplacée par une valeur neutre (50) — pas par 0.
+        </div>
+      </div>
+
+      <h4>Règle de tri en cas d'égalité</h4>
+      <div class="sort-steps">
+        <div class="sort-step"><div class="sort-num">1</div><div class="sort-body"><strong>Satisfaction moyenne</strong> (décroissant) — ignorée si l'un n'a pas de notes</div></div>
+        <div class="sort-step"><div class="sort-num">2</div><div class="sort-body"><strong>SLA %</strong> global (décroissant)</div></div>
+        <div class="sort-step"><div class="sort-num">3</div><div class="sort-body"><strong>Délai moyen</strong> (croissant — le plus rapide gagne)</div></div>
+      </div>
+
+      <h3 id="awards">Bloc Awards (distinctions)</h3>
+      <div class="awards-grid">
+        <div class="award-card">
+          <div class="award-icon">🏆</div>
+          <div class="award-label">Volume</div>
+          <div class="award-desc">Plus grand nombre de dossiers traités</div>
+        </div>
+        <div class="award-card">
+          <div class="award-icon">⭐</div>
+          <div class="award-label">Satisfaction</div>
+          <div class="award-desc">Meilleure note moyenne client</div>
+        </div>
+        <div class="award-card">
+          <div class="award-icon">⚡</div>
+          <div class="award-label">Rapidité</div>
+          <div class="award-desc">Meilleur temps de 1ère réponse</div>
+        </div>
+        <div class="award-card">
+          <div class="award-icon">🎯</div>
+          <div class="award-label">SLA</div>
+          <div class="award-desc">Meilleur taux de respect des délais</div>
+        </div>
+      </div>
+      <p>Un agent peut cumuler plusieurs badges. Awards attribués uniquement aux 3 premiers du podium.</p>
+
+      <h3 id="podium">Podium — Top 3</h3>
+      <div class="podium">
+        <div class="podium-card silver">
+          <div class="medal">🥈</div>
+          <div class="podium-name">2ème agent</div>
+          <div class="podium-score">97.45</div>
+        </div>
+        <div class="podium-card gold">
+          <div class="medal">🥇</div>
+          <div class="podium-name">1er agent</div>
+          <div class="podium-score">99.90</div>
+        </div>
+        <div class="podium-card bronze">
+          <div class="medal">🥉</div>
+          <div class="podium-name">3ème agent</div>
+          <div class="podium-score">94.20</div>
+        </div>
+      </div>
+
+      <h4>Classement complet (accordion)</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Colonne</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Rang</td><td>Position dans le classement</td></tr>
+            <tr><td>Agent</td><td>Nom de l'agent</td></tr>
+            <tr><td>Score</td><td>Score composite /100 (2 décimales)</td></tr>
+            <tr><td>Traités</td><td>Nombre de dossiers clôturés</td></tr>
+            <tr><td>Satisfaction</td><td>Note moyenne /5</td></tr>
+            <tr><td>Délai moy.</td><td>Temps moyen entre création et clôture</td></tr>
+            <tr><td>1ère réponse</td><td>Temps moyen avant le premier message</td></tr>
+            <tr><td>SLA %</td><td>% dossiers résolus dans les délais cibles</td></tr>
+            <tr><td>Trend (Évol.)</td><td>↑ monté | ↓ descendu | — stable vs période précédente équivalente</td></tr>
+            <tr><td>Awards</td><td>Badges obtenus — cliquer pour détail</td></tr>
+            <tr><td>Performances →</td><td>Lien vers la fiche individuelle dans Performance</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 8 — Glossaire -->
+    <section class="section" id="glossaire">
+      <h2><span class="sec-num">8</span> Glossaire</h2>
+
+      <div class="glossary-grid">
+        <div class="glossary-item">
+          <div class="term">SLA</div>
+          <div class="def">Service Level Agreement — engagement de délai. HIGH &lt;3h, MEDIUM &lt;5h, LOW &lt;10h.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">KPI</div>
+          <div class="def">Key Performance Indicator — indicateur clé de performance (satisfaction, délai, volume).</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">WAT</div>
+          <div class="def">West Africa Time = UTC+1. Fuseau de Douala (Cameroun). Référence pour "aujourd'hui" et les calculs.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">Urgence HIGH</div>
+          <div class="def">Dossier critique — délai cible : &lt; 3 heures.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">Urgence MEDIUM</div>
+          <div class="def">Dossier standard — délai cible : &lt; 5 heures.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">Urgence LOW</div>
+          <div class="def">Dossier faible priorité — délai cible : &lt; 10 heures.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">PENDING</div>
+          <div class="def">Statut : dossier soumis, pas encore pris en charge.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">IN_PROGRESS</div>
+          <div class="def">Statut : dossier pris en charge, traitement en cours.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">TREATED / CLOSED</div>
+          <div class="def">Statut : dossier clôturé après réponse finale.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">Avg resolution</div>
+          <div class="def">Temps moyen entre création du dossier et clôture.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">1st response</div>
+          <div class="def">Temps entre création et premier message de l'agent (hors notes internes). Mesure la réactivité.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">Score composite</div>
+          <div class="def">Score 0–100 = 50% satisfaction + 50% vitesse de résolution. Base du classement.</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">Msgs/ticket</div>
+          <div class="def">Nombre moyen de messages échangés par dossier (hors notes internes).</div>
+        </div>
+        <div class="glossary-item">
+          <div class="term">Principle 4 yeux</div>
+          <div class="def">Toute grosse recharge (≥30 000 FCFA) nécessite validation de 2 personnes distinctes.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- SYSTEM_ADMIN UNIQUEMENT -->
+    <!-- ============================================================ -->
+
+    <div id="sysadmin-section">
+      <div style="background: linear-gradient(90deg, #fef2f2, #fff); border-radius: 12px; padding: 16px 20px; margin: 28px 0 16px; border: 2px solid var(--danger); display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.5rem;">🔒</span>
+        <div>
+          <div style="font-weight: 800; color: #991b1b; font-size: 1rem;">Pages réservées au SYSTEM_ADMIN</div>
+          <div style="font-size: 0.85rem; color: #7f1d1d;">Les sections suivantes ne sont pas accessibles aux OPS_ADMIN</div>
+        </div>
+      </div>
+
+      <!-- Section 9 — Utilisateurs -->
+      <section class="section sysadmin-only" id="utilisateurs">
+        <h2><span class="sec-num red">9</span> Gestion des utilisateurs <span class="sysadmin-badge">🔒 SYSTEM_ADMIN</span></h2>
+
+        <p>Page listant tous les comptes de la plateforme : clients, agents, ops admins, system admins.</p>
+
+        <h3>Fonctionnalités</h3>
+        <ul>
+          <li>Recherche par <strong>nom</strong> ou <strong>email</strong></li>
+          <li>Pagination : <strong>15 comptes par page</strong></li>
+          <li>Filtre par rôle et statut</li>
+        </ul>
+
+        <h3>Statuts des comptes</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Statut</th><th>Couleur</th><th>Signification</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>PENDING_APPROVAL</code></td>
+                <td><span class="badge badge-warning">🟡 Amber</span></td>
+                <td>Compte créé mais non approuvé — ne peut pas se connecter</td>
+              </tr>
+              <tr>
+                <td><code>ACTIVE</code></td>
+                <td><span class="badge badge-success">🟢 Vert</span></td>
+                <td>Compte actif et fonctionnel</td>
+              </tr>
+              <tr>
+                <td><code>SUSPENDED</code></td>
+                <td><span class="badge badge-danger">🔴 Rouge</span></td>
+                <td>Compte suspendu — accès bloqué</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Actions disponibles</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Action</th><th>Condition</th><th>Effet</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>✅ Approuver</strong></td>
+                <td>Statut <code>PENDING_APPROVAL</code></td>
+                <td>Passe en <code>ACTIVE</code> + email de bienvenue envoyé au client</td>
+              </tr>
+              <tr>
+                <td><strong>❌ Rejeter</strong></td>
+                <td>Statut <code>PENDING_APPROVAL</code></td>
+                <td>Compte refusé + email de notification envoyé</td>
+              </tr>
+              <tr>
+                <td><strong>🚫 Suspendre</strong></td>
+                <td>Statut <code>ACTIVE</code></td>
+                <td>Passe en <code>SUSPENDED</code> + email de notification</td>
+              </tr>
+              <tr>
+                <td><strong>♻️ Réactiver</strong></td>
+                <td>Statut <code>SUSPENDED</code></td>
+                <td>Passe en <code>ACTIVE</code> + email de notification</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-success">
+          <span class="alert-icon">✉️</span>
+          <div class="alert-body">Un email automatique est envoyé au compte concerné à chaque action (approbation, rejet, suspension, réactivation).</div>
+        </div>
+      </section>
+
+      <!-- Section 10 — Logs -->
+      <section class="section sysadmin-only" id="logs">
+        <h2><span class="sec-num red">10</span> Logs d'audit <span class="sysadmin-badge">🔒 SYSTEM_ADMIN</span></h2>
+
+        <p>Trace de toutes les actions sensibles de la plateforme. <strong>20 entrées par page</strong>, filtrable par type d'action.</p>
+
+        <div class="alert alert-danger">
+          <span class="alert-icon">🔒</span>
+          <div class="alert-body">Le journal d'audit est immuable — aucune entrée ne peut être modifiée ou supprimée. C'est une trace permanente des actions sensibles.</div>
+        </div>
+
+        <h4>Types d'actions tracées</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>LOGIN</code></td><td>Connexion d'un utilisateur (avec IP)</td></tr>
+              <tr><td><code>TICKET_CREATE</code></td><td>Création d'un dossier client</td></tr>
+              <tr><td><code>ACCOUNT_APPROVE</code></td><td>Approbation d'un nouveau compte</td></tr>
+              <tr><td><code>ACCOUNT_REJECT</code></td><td>Rejet d'un nouveau compte</td></tr>
+              <tr><td><code>ACCOUNT_SUSPEND</code></td><td>Suspension d'un compte</td></tr>
+              <tr><td><code>CREDIT_APPROVE</code></td><td>Recharge approuvée</td></tr>
+              <tr><td><code>CREDIT_REJECT</code></td><td>Recharge refusée</td></tr>
+              <tr><td><code>CREDIT_ADMIN_CONFIRM</code></td><td>Grosse recharge confirmée par admin</td></tr>
+              <tr><td><code>INFRA_COST_ADD</code></td><td>Charge infrastructure ajoutée</td></tr>
+              <tr><td><code>INFRA_COST_DELETE</code></td><td>Charge infrastructure supprimée</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Informations par entrée</h4>
+        <div class="stat-row">
+          <div class="stat-item"><div class="stat-label">Qui a agi</div><div class="stat-value">Nom + @username + rôle</div></div>
+          <div class="stat-item"><div class="stat-label">Entité concernée</div><div class="stat-value">Client ou dossier cible</div></div>
+          <div class="stat-item"><div class="stat-label">Adresse IP</div><div class="stat-value">IP de l'action</div></div>
+          <div class="stat-item"><div class="stat-label">Horodatage</div><div class="stat-value">Date + heure exacte UTC</div></div>
+        </div>
+      </section>
+
+      <!-- Section 11 — Paramètres système -->
+      <section class="section sysadmin-only" id="sys-params">
+        <h2><span class="sec-num red">11</span> Paramètres système <span class="sysadmin-badge">🔒 SYSTEM_ADMIN</span></h2>
+
+        <p>Page <code>/admin/systeme</code> — accessible uniquement au SYSTEM_ADMIN.</p>
+
+        <h3>Taux de change</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Paramètre</th><th>Valeur par défaut</th><th>Usage</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>1 USD = X FCFA</td>
+                <td><code>600</code></td>
+                <td>Taux opérationnel Eolis — utilisé pour les coûts OpenAI</td>
+              </tr>
+              <tr>
+                <td>1 EUR = X FCFA</td>
+                <td><code>655.957</code></td>
+                <td>Taux fixe officiel XAF/EUR — fixé par traité depuis 1999</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-info">
+          <span class="alert-icon">ℹ️</span>
+          <div class="alert-body">Ces taux sont sauvegardés en base de données et utilisés partout dans l'application pour les conversions affichées en $, €.</div>
+        </div>
+
+        <h3>Autres paramètres</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Paramètre</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Fuseau horaire</strong></td>
+                <td>Configure l'heure affichée dans toute l'application (défaut : <code>Africa/Douala</code>)</td>
+              </tr>
+              <tr>
+                <td><strong>Test SMS Twilio</strong></td>
+                <td>Envoyer un SMS de test pour vérifier que la configuration est opérationnelle</td>
+              </tr>
+              <tr>
+                <td><strong>Réinitialisation BDD</strong></td>
+                <td>Supprime toutes les données opérationnelles (tickets, messages) sans supprimer les comptes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-danger">
+          <span class="alert-icon">🚨</span>
+          <div class="alert-body">
+            <strong>Réinitialisation BDD — ACTION IRRÉVERSIBLE</strong>
+            Nécessite de taper "RESET" manuellement pour confirmer. Cette action supprime définitivement toutes les données opérationnelles. Impossible d'annuler après confirmation.
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 12 — 2FA -->
+      <section class="section sysadmin-only" id="auth2fa">
+        <h2><span class="sec-num red">12</span> Authentification 2FA — SYSTEM_ADMIN <span class="sysadmin-badge">🔒 SYSTEM_ADMIN</span></h2>
+
+        <p>L'authentification à deux facteurs est <strong>obligatoire</strong> pour le SYSTEM_ADMIN à chaque connexion.</p>
+
+        <div class="code-box">
+          <span class="label">Étape 1</span> → Saisir identifiant <span class="op">+</span> mot de passe
+          <br><span class="label">Étape 2</span> → Recevoir un code à <span class="val">6 chiffres</span> par SMS
+          <br><span class="label">Étape 3</span> → Saisir le code dans l'application
+          <br><span class="label">Accès accordé</span> → Session ouverte
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Règle de sécurité</th><th>Valeur</th></tr></thead>
+            <tbody>
+              <tr><td>Durée de validité du code</td><td>10 minutes</td></tr>
+              <tr><td>Tentatives maximum</td><td>5 avant blocage du compte</td></tr>
+              <tr><td>Rate limit SMS</td><td>5 tentatives par minute</td></tr>
+              <tr><td>Anti-double envoi</td><td>Aucun nouveau SMS si un code envoyé dans les 30 dernières secondes</td></tr>
+              <tr><td>En cas de problème</td><td>Réinitialisation manuelle en base de données uniquement</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 13 — Grosses recharges -->
+      <section class="section sysadmin-only" id="gros-recharges">
+        <h2><span class="sec-num red">13</span> Confirmation des grosses recharges <span class="sysadmin-badge">🔒 SYSTEM_ADMIN</span></h2>
+
+        <p>Les demandes de recharge ≥ 30 000 FCFA nécessitent une double validation : FINANCE_AGENT + SYSTEM_ADMIN (<strong>principe des 4 yeux</strong>).</p>
+
+        <h3>Onglet "⚠️ À confirmer" dans Validation crédits</h3>
+        <p>Cet onglet affiche :</p>
+        <ul>
+          <li>Les demandes en statut <code>pending_admin</code> (approuvées par FINANCE_AGENT, en attente admin)</li>
+          <li>Les grosses demandes <code>pending</code> ≥ 30 000 FCFA non encore traitées par FINANCE_AGENT (accès direct admin)</li>
+        </ul>
+
+        <h3>Procédure obligatoire</h3>
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠️</span>
+          <div class="alert-body">
+            <strong>Le justificatif doit être ouvert avant de pouvoir agir</strong>
+            Le bouton d'approbation/refus reste désactivé tant que le justificatif (screenshot paiement) n'a pas été consulté.
+          </div>
+        </div>
+
+        <h3>Actions disponibles</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Action</th><th>Effet</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>✅ Approuver directement</strong></td>
+                <td>Crédits ajoutés immédiatement au client + notification</td>
+              </tr>
+              <tr>
+                <td><strong>❌ Refuser avec motif</strong></td>
+                <td>Demande refusée + motif enregistré + notification client</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Traçabilité</h3>
+        <div class="alert alert-info">
+          <span class="alert-icon">📋</span>
+          <div class="alert-body">Chaque action (approbation ou refus) est enregistrée dans le journal d'audit financier immuable avec : identité de l'admin, montant, IP, horodatage exact UTC.</div>
+        </div>
+
+        <p style="margin-top:24px;color:var(--muted);font-size:0.83rem;text-align:center;">
+          Document mis à jour le 2026-05-15 — Eolis Connect v2 &nbsp;·&nbsp; Eolis Cameroun
+        </p>
+      </section>
+
+    </div><!-- end sysadmin-section -->
+
+  </main>
+</div>
+
+</body>
+</html>

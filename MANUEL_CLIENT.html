@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide Client — Eolis Connect</title>
+<style>
+  :root {
+    --navy: #1B3A5C;
+    --blue: #4A8FC4;
+    --bg: #EDF1F7;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --white: #ffffff;
+    --light: #f8fafc;
+    --border: #d1d5db;
+    --text: #1f2937;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; }
+
+  /* Header */
+  .site-header { background: var(--navy); color: var(--white); padding: 18px 32px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .site-header .logo { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; }
+  .site-header .subtitle { font-size: 0.85rem; color: #93c5fd; background: rgba(74,143,196,0.25); padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(74,143,196,0.4); }
+
+  /* Layout */
+  .layout { display: flex; max-width: 1280px; margin: 0 auto; padding: 24px 16px; gap: 28px; }
+
+  /* Sidebar TOC */
+  .toc { width: 240px; flex-shrink: 0; }
+  .toc-inner { position: sticky; top: 80px; background: var(--white); border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 16px; }
+  .toc h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--navy); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--bg); }
+  .toc ul { list-style: none; }
+  .toc ul li { margin: 2px 0; }
+  .toc ul li a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 0.83rem; transition: all 0.15s; }
+  .toc ul li a:hover { background: var(--bg); color: var(--navy); font-weight: 600; }
+  .toc ul li.sub a { padding-left: 18px; font-size: 0.78rem; }
+
+  /* Content */
+  .content { flex: 1; min-width: 0; }
+
+  /* Hero */
+  .hero { background: linear-gradient(135deg, var(--navy) 0%, #2d5a8e 100%); border-radius: 12px; padding: 32px; color: var(--white); margin-bottom: 28px; }
+  .hero h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
+  .hero p { color: #93c5fd; font-size: 0.95rem; }
+  .hero-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .hero-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; }
+
+  /* Sections */
+  .section { background: var(--white); border-radius: 12px; padding: 28px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .section h2 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid var(--bg); display: flex; align-items: center; gap: 10px; }
+  .section h2 .sec-num { background: var(--navy); color: var(--white); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+  .section h3 { font-size: 1rem; font-weight: 700; color: var(--navy); margin: 20px 0 10px; }
+  .section h4 { font-size: 0.9rem; font-weight: 700; color: var(--blue); margin: 16px 0 8px; }
+  .section p { margin-bottom: 12px; }
+  .section ul, .section ol { margin: 10px 0 14px 20px; }
+  .section li { margin-bottom: 6px; }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-navy { background: var(--navy); color: var(--white); }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-success { background: #d1fae5; color: #065f46; }
+  .badge-warning { background: #fef3c7; color: #92400e; }
+  .badge-danger { background: #fee2e2; color: #991b1b; }
+  .badge-premium { background: linear-gradient(90deg, #f59e0b, #d97706); color: var(--white); }
+
+  /* Alert boxes */
+  .alert { border-radius: 8px; padding: 14px 16px; margin: 14px 0; border-left: 4px solid; display: flex; gap: 10px; }
+  .alert-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .alert-body { flex: 1; }
+  .alert-body strong { display: block; margin-bottom: 4px; }
+  .alert-info { background: #eff6ff; border-color: var(--blue); color: #1e40af; }
+  .alert-warning { background: #fffbeb; border-color: var(--warning); color: #92400e; }
+  .alert-danger { background: #fef2f2; border-color: var(--danger); color: #991b1b; }
+  .alert-success { background: #f0fdf4; border-color: var(--success); color: #065f46; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; margin: 14px 0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--navy); color: var(--white); padding: 10px 14px; text-align: left; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.03em; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:nth-child(odd) { background: var(--white); }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 0.87rem; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #eff6ff; }
+
+  /* Steps */
+  .steps { margin: 16px 0; }
+  .step { display: flex; gap: 14px; margin-bottom: 16px; }
+  .step-num { width: 32px; height: 32px; background: var(--blue); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+  .step-body { flex: 1; padding-top: 4px; }
+  .step-body strong { color: var(--navy); }
+
+  /* Cards row */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; }
+  .card { background: var(--bg); border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+  .card .card-icon { font-size: 1.6rem; margin-bottom: 8px; }
+  .card .card-title { font-weight: 700; color: var(--navy); font-size: 0.9rem; margin-bottom: 4px; }
+  .card .card-desc { font-size: 0.82rem; color: var(--muted); }
+
+  /* Status dots */
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-yellow { background: var(--warning); }
+  .dot-blue { background: var(--blue); }
+  .dot-green { background: var(--success); }
+
+  /* Code inline */
+  code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 0.85em; font-family: 'Courier New', monospace; color: var(--navy); }
+
+  /* Premium block */
+  .premium-box { background: linear-gradient(135deg, #fef3c7 0%, #fff7ed 100%); border: 1px solid #f59e0b; border-radius: 10px; padding: 16px; margin: 14px 0; }
+  .premium-box .premium-title { color: #92400e; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+
+  /* Mobile toggle */
+  .toc-toggle { display: none; background: var(--navy); color: var(--white); border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; margin-bottom: 16px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; padding: 12px; }
+    .toc { width: 100%; }
+    .toc-inner { position: static; }
+    .toc-toggle { display: block; }
+    .toc-content { display: none; }
+    .toc-content.open { display: block; }
+    .site-header { padding: 12px 16px; }
+    .site-header .subtitle { display: none; }
+    .hero { padding: 20px; }
+    .hero h1 { font-size: 1.4rem; }
+    .section { padding: 18px; }
+    .cards { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Print */
+  @media print {
+    .toc { display: none; }
+    .site-header { position: static; }
+    .section { box-shadow: none; border: 1px solid var(--border); break-inside: avoid; }
+    .layout { padding: 0; }
+    a { text-decoration: none; color: var(--navy); }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">⚓ Eolis Connect</div>
+  <div class="subtitle">Guide Client</div>
+</header>
+
+<div class="layout">
+
+  <!-- TOC Sidebar -->
+  <nav class="toc">
+    <button class="toc-toggle" onclick="document.querySelector('.toc-content').classList.toggle('open')">☰ Table des matières</button>
+    <div class="toc-inner">
+      <div class="toc-content">
+        <h3>Table des matières</h3>
+        <ul>
+          <li><a href="#intro">1. Qu'est-ce qu'Eolis Connect ?</a></li>
+          <li><a href="#connexion">2. Connexion et compte</a></li>
+          <li><a href="#navigation">3. Navigation</a></li>
+          <li><a href="#nouvelle-demande">4. Créer une demande</a></li>
+          <li class="sub"><a href="#parcours-manuel">↳ Parcours Manuel</a></li>
+          <li class="sub"><a href="#parcours-premium">↳ Parcours Premium</a></li>
+          <li><a href="#mes-demandes">5. Mes demandes</a></li>
+          <li><a href="#credits">6. Crédits Premium</a></li>
+          <li><a href="#hors-ligne">7. Mode hors ligne</a></li>
+          <li><a href="#parametres">8. Paramètres</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="content">
+
+    <div class="hero">
+      <h1>Guide Client — Eolis Connect</h1>
+      <p>Tout ce qu'il faut savoir pour soumettre et suivre vos demandes logistiques</p>
+      <div class="hero-badges">
+        <span class="hero-badge">📱 Application mobile</span>
+        <span class="hero-badge">🌐 PWA</span>
+        <span class="hero-badge">🇫🇷 FR / 🇬🇧 EN</span>
+        <span class="hero-badge">📶 Mode hors ligne</span>
+      </div>
+    </div>
+
+    <!-- Section 1 -->
+    <section class="section" id="intro">
+      <h2><span class="sec-num">1</span> Qu'est-ce qu'Eolis Connect ?</h2>
+      <p>Eolis Connect est la plateforme numérique d'Eolis Cameroun pour gérer vos demandes logistiques. Elle <strong>remplace les appels téléphoniques et WhatsApp</strong> par un système de dossiers structuré, rapide et traçable.</p>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">📱</div>
+          <div class="card-title">Application PWA</div>
+          <div class="card-desc">Accessible depuis votre navigateur mobile, sans installation de store</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🌐</div>
+          <div class="card-title">Bilingue FR / EN</div>
+          <div class="card-desc">Interface disponible en français et en anglais selon votre préférence</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">📶</div>
+          <div class="card-title">Mode hors ligne</div>
+          <div class="card-desc">Vos demandes sont sauvegardées et envoyées à la reconnexion</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">⚡</div>
+          <div class="card-title">IA Premium</div>
+          <div class="card-desc">Extraction automatique des données BL en quelques secondes</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-body">
+          <strong>Pourquoi utiliser Eolis Connect ?</strong>
+          Toutes vos demandes sont enregistrées, traçables et suivies par un agent dédié. Vous recevez des notifications à chaque mise à jour de votre dossier.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="section" id="connexion">
+      <h2><span class="sec-num">2</span> Connexion et compte</h2>
+      <h3>Se connecter</h3>
+      <p>Sur la page de connexion, entrez votre <strong>identifiant</strong> et votre <strong>mot de passe</strong>. Appuyez sur "Connexion".</p>
+
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Premier accès</strong>
+          Votre compte doit être approuvé par l'administrateur avant de pouvoir vous connecter. Si votre connexion échoue, contactez Eolis Cameroun pour vérifier l'état de votre compte.
+        </div>
+      </div>
+
+      <h3>Mot de passe oublié</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">Sur la page de connexion, cliquez sur <strong>"Mot de passe oublié"</strong></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">Entrez votre adresse email ou identifiant</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">Suivez les instructions reçues par email ou SMS</div>
+        </div>
+      </div>
+
+      <h3>Vérification du numéro de téléphone</h3>
+      <p>Dans <strong>Paramètres > Vérifier mon numéro</strong>, vous pouvez associer votre numéro de téléphone à votre compte. Un code OTP vous sera envoyé par SMS pour confirmation. Cette vérification renforce la sécurité de votre compte.</p>
+    </section>
+
+    <!-- Section 3 -->
+    <section class="section" id="navigation">
+      <h2><span class="sec-num">3</span> Navigation — 5 onglets en bas</h2>
+      <p>L'application se navigue via <strong>5 onglets fixes</strong> en bas de l'écran, accessibles depuis n'importe quelle page.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Icône</th>
+              <th>Onglet</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>🏠</td>
+              <td><strong>Accueil</strong></td>
+              <td>Vue d'ensemble : statistiques rapides, activité récente, raccourcis</td>
+            </tr>
+            <tr>
+              <td>📋</td>
+              <td><strong>Mes demandes</strong></td>
+              <td>Liste complète de tous vos dossiers avec leur statut en temps réel</td>
+            </tr>
+            <tr>
+              <td>➕</td>
+              <td><strong>Nouvelle demande</strong></td>
+              <td>Créer un nouveau dossier (manuel ou Premium scan BL)</td>
+            </tr>
+            <tr>
+              <td>🔔</td>
+              <td><strong>Notifications</strong></td>
+              <td>Alertes et messages non lus — badge rouge indique le nombre non lu</td>
+            </tr>
+            <tr>
+              <td>⚙️</td>
+              <td><strong>Paramètres</strong></td>
+              <td>Profil, langue, préférences, recharges Premium</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 4 -->
+    <section class="section" id="nouvelle-demande">
+      <h2><span class="sec-num">4</span> Créer une nouvelle demande</h2>
+
+      <p>Pour créer un dossier, appuyez sur l'onglet <strong>➕ Nouvelle demande</strong>. Deux parcours s'offrent à vous :</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Parcours</th>
+              <th>Comment ça marche</th>
+              <th>Avantage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Manuel</strong></td>
+              <td>Vous remplissez les informations vous-même, champ par champ</td>
+              <td>Toujours disponible, sans crédits</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-premium">⚡ Premium</span> <strong>Scan BL</strong></td>
+              <td>Vous uploadez votre Booking Confirmation — l'IA extrait tout en quelques secondes</td>
+              <td>Rapide, précis, sans erreur de saisie (~50 crédits)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Parcours Manuel -->
+      <h3 id="parcours-manuel">Parcours Manuel — 5 étapes</h3>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Catégorie</strong><br>
+            Choisissez parmi : Livraison, Facturation, Dossier, Information, Autre — puis la sous-catégorie si applicable.
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Équipement</strong> — 3 modes disponibles :
+            <ul style="margin-top:8px">
+              <li><strong>Conteneur unique :</strong> sélectionner le type (20 pieds, 40 pieds…) + numéro de conteneur optionnel (format <code>MSCU1234567</code>, validé automatiquement)</li>
+              <li><strong>Multi-conteneurs :</strong> ajouter plusieurs conteneurs, préciser si même navire ou navires distincts</li>
+              <li><strong>Conventionnel :</strong> décrire la nature des marchandises en texte libre</li>
+            </ul>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Logistique</strong><br>
+            <span class="badge badge-danger">* Obligatoires</span> : Nom du navire + N° BL / Code dossier<br>
+            <span class="badge badge-blue">Optionnels</span> : ETS (départ estimé), N° voyage<br><br>
+            Des sections accordéon optionnelles permettent d'entrer les détails BL : Références, Transport (ETA, ports), Pickup/Conteneur, Délais terminal (VGM, douane), Marchandises.
+            <div class="alert alert-info" style="margin-top:10px">
+              <span class="alert-icon">💡</span>
+              <div class="alert-body">Si vous ignorez les sections BL, une fenêtre vous proposera de scanner votre BL avec la fonctionnalité Premium à la place.</div>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Description</strong><br>
+            Décrivez votre situation en détail (minimum 10 caractères). Vous pouvez aussi :
+            <ul style="margin-top:6px">
+              <li>Joindre des documents (photos, PDF)</li>
+              <li>Utiliser le <span class="badge badge-premium">⚡ micro Premium</span> pour dicter votre message (~10 crédits/min)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Récapitulatif</strong><br>
+            Vérifiez toutes les informations avant d'envoyer. Si les données BL sont incomplètes, un badge <span class="badge badge-warning">⚠️ Infos BL incomplètes</span> s'affiche — vous pouvez envoyer quand même ou compléter.
+          </div>
+        </div>
+      </div>
+
+      <!-- Parcours Premium -->
+      <h3 id="parcours-premium">Parcours Premium — Scan BL <span class="badge badge-premium">⚡</span></h3>
+
+      <div class="premium-box">
+        <div class="premium-title">⚡ Fonctionnalité Premium — ~50 crédits par extraction</div>
+        <p>L'intelligence artificielle analyse votre document BL et extrait automatiquement toutes les informations logistiques.</p>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">Sélectionner un BL déjà analysé OU uploader un nouveau document (PDF ou image)</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">L'IA extrait automatiquement : navire, voyage, ETA, ports de chargement/déchargement, référence pickup, délais terminal VGM et douane, description des marchandises, etc.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">Vérifiez et complétez les champs extraits si nécessaire</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">Continuez avec la catégorie et la description de votre demande</div>
+        </div>
+      </div>
+
+      <div class="alert alert-success">
+        <span class="alert-icon">✅</span>
+        <div class="alert-body">
+          <strong>Avantage du dossier Premium</strong>
+          Les agents voient immédiatement le badge <span class="badge badge-premium">⚡ Premium</span> sur votre dossier et ont accès à toutes les données BL extraites — le traitement est plus rapide.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5 -->
+    <section class="section" id="mes-demandes">
+      <h2><span class="sec-num">5</span> Mes demandes — Suivre vos dossiers</h2>
+
+      <h3>Statuts des dossiers</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Statut</th>
+              <th>Signification</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="status"><span class="dot dot-yellow"></span> En attente (PENDING)</span></td>
+              <td>Votre dossier a été soumis, en attente de prise en charge par un agent</td>
+            </tr>
+            <tr>
+              <td><span class="status"><span class="dot dot-blue"></span> En cours (IN_PROGRESS)</span></td>
+              <td>Un agent traite votre demande — des échanges peuvent suivre</td>
+            </tr>
+            <tr>
+              <td><span class="status"><span class="dot dot-green"></span> Traité (TREATED/CLOSED)</span></td>
+              <td>Dossier clôturé après réponse finale de l'équipe Eolis</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Ouvrir un dossier</h3>
+      <p>Appuyez sur un dossier pour l'ouvrir. Vous y trouverez :</p>
+      <ul>
+        <li>Toutes les informations logistiques (navire, BL, ETA, ports, pickup…)</li>
+        <li>L'historique complet de vos échanges avec l'agent</li>
+      </ul>
+
+      <h3>Chat avec l'agent</h3>
+      <div class="alert alert-info">
+        <span class="alert-icon">💬</span>
+        <div class="alert-body">
+          Vos messages apparaissent en <span class="badge badge-navy">navy</span> à droite. Les réponses de l'agent apparaissent en <span class="badge badge-blue">bleu clair</span> à gauche.
+        </div>
+      </div>
+      <ul>
+        <li>Envoyez des messages à tout moment pendant le traitement</li>
+        <li>Joindre des documents supplémentaires (photos, PDF) via le bouton trombone</li>
+        <li><span class="badge badge-premium">⚡ Micro Premium</span> : dicter vos messages vocalement (~10 crédits/min)</li>
+      </ul>
+
+      <h3>Satisfaction client</h3>
+      <p>Après la clôture d'un dossier, vous pouvez noter le traitement de <strong>1 à 5 étoiles</strong> (optionnel). Votre avis aide Eolis à améliorer son service.</p>
+    </section>
+
+    <!-- Section 6 -->
+    <section class="section" id="credits">
+      <h2><span class="sec-num">6</span> Crédits Premium</h2>
+
+      <div class="alert alert-success">
+        <span class="alert-icon">🎁</span>
+        <div class="alert-body"><strong>100 crédits offerts à l'inscription !</strong> Profitez-en pour tester les fonctionnalités IA gratuitement.</div>
+      </div>
+
+      <h3>Coût des fonctionnalités IA</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fonctionnalité</th>
+              <th>Coût en crédits</th>
+              <th>Équivalent FCFA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>⚡ Extraction BL (Scan BL)</td>
+              <td><span class="badge badge-warning">~50 crédits</span></td>
+              <td>50 FCFA par extraction</td>
+            </tr>
+            <tr>
+              <td>🎤 Dictée vocale</td>
+              <td><span class="badge badge-warning">~10 crédits/min</span></td>
+              <td>10 FCFA par minute</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Recharger ses crédits</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">Aller dans <strong>Paramètres > Recharger</strong></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">Effectuer un virement via <strong>Orange Money</strong> ou <strong>MTN Mobile Money</strong> au numéro Eolis indiqué</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">Prendre un <strong>screenshot SMS</strong> de la confirmation de paiement</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">Uploader le screenshot dans l'application</div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">Attendre la <strong>validation par l'équipe Finance</strong> (généralement quelques minutes à heures ouvrables)</div>
+        </div>
+      </div>
+
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">Les demandes de recharge ≥ 30 000 FCFA nécessitent une double validation (Finance + Admin) — prévoir un délai légèrement plus long.</div>
+      </div>
+    </section>
+
+    <!-- Section 7 -->
+    <section class="section" id="hors-ligne">
+      <h2><span class="sec-num">7</span> Fonctionnement hors ligne</h2>
+
+      <p>Eolis Connect est conçu pour fonctionner même sans connexion internet.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Situation</th>
+              <th>Ce qui se passe</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Perte de connexion pendant la création</td>
+              <td>Votre demande est sauvegardée localement. Icône WifiOff + message "Votre dossier sera envoyé automatiquement à la reconnexion"</td>
+            </tr>
+            <tr>
+              <td>BL déjà analysés</td>
+              <td>Restent accessibles hors ligne dans votre historique</td>
+            </tr>
+            <tr>
+              <td>Solde de crédits</td>
+              <td>Mis en cache — affiché même hors ligne (peut être légèrement décalé)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-success">
+        <span class="alert-icon">✅</span>
+        <div class="alert-body">Dès que la connexion revient, toutes les demandes en attente sont envoyées automatiquement. Aucune perte de données.</div>
+      </div>
+    </section>
+
+    <!-- Section 8 -->
+    <section class="section" id="parametres">
+      <h2><span class="sec-num">8</span> Paramètres</h2>
+
+      <p>Accédez aux paramètres via l'onglet ⚙️ en bas de l'application.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Paramètre</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Profil</strong></td>
+              <td>Modifier prénom, nom, email, numéro de téléphone</td>
+            </tr>
+            <tr>
+              <td><strong>Langue</strong></td>
+              <td>Choisir entre Français (FR) et Anglais (EN)</td>
+            </tr>
+            <tr>
+              <td><strong>Mot de passe</strong></td>
+              <td>Changer votre mot de passe de connexion</td>
+            </tr>
+            <tr>
+              <td><strong>Vérification téléphone</strong></td>
+              <td>Confirmer votre numéro par OTP SMS</td>
+            </tr>
+            <tr>
+              <td><strong>Page de démarrage</strong></td>
+              <td>Choisir la page affichée à l'ouverture : Accueil ou Mes demandes</td>
+            </tr>
+            <tr>
+              <td><strong>Recharger</strong></td>
+              <td>Soumettre une demande de recharge de crédits Premium</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-body">Toute modification de profil est prise en compte immédiatement. Pour le changement d'email, une vérification peut être requise.</div>
+      </div>
+
+      <p style="margin-top:20px;color:var(--muted);font-size:0.83rem;text-align:center;">
+        Document mis à jour le 2026-05-15 — Eolis Connect v2 &nbsp;·&nbsp; Eolis Cameroun
+      </p>
+    </section>
+
+  </main>
+</div>
+
+</body>
+</html>

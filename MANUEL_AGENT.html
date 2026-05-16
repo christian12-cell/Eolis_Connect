@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide Agent — Eolis Connect</title>
+<style>
+  :root {
+    --navy: #1B3A5C;
+    --blue: #4A8FC4;
+    --bg: #EDF1F7;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --white: #ffffff;
+    --border: #d1d5db;
+    --text: #1f2937;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; }
+
+  .site-header { background: var(--navy); color: var(--white); padding: 18px 32px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .site-header .logo { font-size: 1.6rem; font-weight: 800; }
+  .site-header .subtitle { font-size: 0.85rem; color: #93c5fd; background: rgba(74,143,196,0.25); padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(74,143,196,0.4); }
+
+  .layout { display: flex; max-width: 1280px; margin: 0 auto; padding: 24px 16px; gap: 28px; }
+
+  .toc { width: 240px; flex-shrink: 0; }
+  .toc-inner { position: sticky; top: 80px; background: var(--white); border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 16px; }
+  .toc h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--navy); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--bg); }
+  .toc ul { list-style: none; }
+  .toc ul li { margin: 2px 0; }
+  .toc ul li a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 0.83rem; transition: all 0.15s; }
+  .toc ul li a:hover { background: var(--bg); color: var(--navy); font-weight: 600; }
+  .toc ul li.sub a { padding-left: 18px; font-size: 0.78rem; }
+
+  .content { flex: 1; min-width: 0; }
+
+  .hero { background: linear-gradient(135deg, #1B3A5C 0%, #2d6a9f 100%); border-radius: 12px; padding: 32px; color: var(--white); margin-bottom: 28px; }
+  .hero h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
+  .hero p { color: #93c5fd; font-size: 0.95rem; }
+  .hero-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .hero-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; }
+
+  .section { background: var(--white); border-radius: 12px; padding: 28px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .section h2 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid var(--bg); display: flex; align-items: center; gap: 10px; }
+  .section h2 .sec-num { background: var(--navy); color: var(--white); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+  .section h3 { font-size: 1rem; font-weight: 700; color: var(--navy); margin: 20px 0 10px; }
+  .section h4 { font-size: 0.9rem; font-weight: 700; color: var(--blue); margin: 14px 0 8px; }
+  .section p { margin-bottom: 12px; }
+  .section ul, .section ol { margin: 10px 0 14px 20px; }
+  .section li { margin-bottom: 6px; }
+
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-navy { background: var(--navy); color: var(--white); }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-success { background: #d1fae5; color: #065f46; }
+  .badge-warning { background: #fef3c7; color: #92400e; }
+  .badge-danger { background: #fee2e2; color: #991b1b; }
+  .badge-premium { background: linear-gradient(90deg, #f59e0b, #d97706); color: var(--white); }
+  .badge-internal { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+  .badge-fr { background: #eff6ff; color: #1d4ed8; }
+  .badge-en { background: #f0fdf4; color: #065f46; }
+
+  .alert { border-radius: 8px; padding: 14px 16px; margin: 14px 0; border-left: 4px solid; display: flex; gap: 10px; }
+  .alert-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .alert-body { flex: 1; }
+  .alert-body strong { display: block; margin-bottom: 4px; }
+  .alert-info { background: #eff6ff; border-color: var(--blue); color: #1e40af; }
+  .alert-warning { background: #fffbeb; border-color: var(--warning); color: #92400e; }
+  .alert-danger { background: #fef2f2; border-color: var(--danger); color: #991b1b; }
+  .alert-success { background: #f0fdf4; border-color: var(--success); color: #065f46; }
+
+  .table-wrap { overflow-x: auto; margin: 14px 0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--navy); color: var(--white); padding: 10px 14px; text-align: left; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.03em; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:nth-child(odd) { background: var(--white); }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 0.87rem; vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #eff6ff; }
+
+  .steps { margin: 16px 0; }
+  .step { display: flex; gap: 14px; margin-bottom: 16px; }
+  .step-num { width: 32px; height: 32px; background: var(--blue); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+  .step-body { flex: 1; padding-top: 4px; }
+  .step-body strong { color: var(--navy); }
+
+  .urgency-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .urgency-card { border-radius: 10px; padding: 16px; text-align: center; }
+  .urgency-card.high { background: #fef2f2; border: 2px solid var(--danger); }
+  .urgency-card.medium { background: #fffbeb; border: 2px solid var(--warning); }
+  .urgency-card.low { background: #f0fdf4; border: 2px solid var(--success); }
+  .urgency-card .urg-icon { font-size: 1.8rem; }
+  .urgency-card .urg-title { font-weight: 700; font-size: 0.9rem; margin: 6px 0 4px; }
+  .urgency-card.high .urg-title { color: #991b1b; }
+  .urgency-card.medium .urg-title { color: #92400e; }
+  .urgency-card.low .urg-title { color: #065f46; }
+  .urgency-card .urg-delay { font-size: 0.82rem; color: var(--muted); }
+
+  .chat-demo { border-radius: 10px; background: #f8fafc; border: 1px solid var(--border); padding: 16px; margin: 14px 0; }
+  .chat-demo .msg { margin-bottom: 10px; display: flex; }
+  .chat-demo .msg.agent { justify-content: flex-end; }
+  .chat-demo .msg.client { justify-content: flex-start; }
+  .chat-demo .bubble { max-width: 70%; padding: 8px 14px; border-radius: 12px; font-size: 0.87rem; }
+  .chat-demo .msg.agent .bubble { background: var(--navy); color: var(--white); border-bottom-right-radius: 4px; }
+  .chat-demo .msg.client .bubble { background: #D6E7F5; color: var(--text); border-bottom-left-radius: 4px; }
+  .chat-demo .msg-label { font-size: 0.7rem; color: var(--muted); margin: 2px 0; }
+  .chat-demo .msg.agent .msg-label { text-align: right; }
+
+  .internal-note { background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 14px; margin: 10px 0; }
+  .internal-note .note-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.82rem; font-weight: 600; color: #92400e; }
+
+  .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 8px; font-size: 0.87rem; font-weight: 600; border: none; cursor: default; }
+  .btn-navy { background: var(--navy); color: var(--white); }
+  .btn-success { background: var(--success); color: var(--white); }
+  .btn-gray { background: #e5e7eb; color: var(--muted); }
+
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; margin-bottom: 6px; background: var(--bg); border: 1px solid var(--border); }
+  .nav-item .nav-icon { font-size: 1.2rem; }
+  .nav-item .nav-label { font-weight: 600; color: var(--navy); font-size: 0.9rem; }
+  .nav-item .nav-desc { font-size: 0.8rem; color: var(--muted); }
+
+  code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 0.85em; font-family: 'Courier New', monospace; color: var(--navy); }
+
+  .toc-toggle { display: none; background: var(--navy); color: var(--white); border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; margin-bottom: 16px; }
+
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; padding: 12px; }
+    .toc { width: 100%; }
+    .toc-inner { position: static; }
+    .toc-toggle { display: block; }
+    .toc-content { display: none; }
+    .toc-content.open { display: block; }
+    .site-header { padding: 12px 16px; }
+    .site-header .subtitle { display: none; }
+    .hero { padding: 20px; }
+    .hero h1 { font-size: 1.4rem; }
+    .section { padding: 18px; }
+    .urgency-grid { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    .toc { display: none; }
+    .site-header { position: static; }
+    .section { box-shadow: none; border: 1px solid var(--border); break-inside: avoid; }
+    .layout { padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">⚓ Eolis Connect</div>
+  <div class="subtitle">Guide Agent</div>
+</header>
+
+<div class="layout">
+
+  <nav class="toc">
+    <button class="toc-toggle" onclick="document.querySelector('.toc-content').classList.toggle('open')">☰ Table des matières</button>
+    <div class="toc-inner">
+      <div class="toc-content">
+        <h3>Table des matières</h3>
+        <ul>
+          <li><a href="#role">1. Rôle de l'agent</a></li>
+          <li><a href="#navigation">2. Navigation sidebar</a></li>
+          <li><a href="#dashboard">3. Dashboard</a></li>
+          <li class="sub"><a href="#cartes-dashboard">↳ Les 3 cartes</a></li>
+          <li class="sub"><a href="#file-dossiers">↳ File de dossiers</a></li>
+          <li class="sub"><a href="#regles-acces">↳ Règles d'accès</a></li>
+          <li><a href="#traiter">4. Traiter un dossier</a></li>
+          <li class="sub"><a href="#entete">↳ En-tête</a></li>
+          <li class="sub"><a href="#actions">↳ Actions principales</a></li>
+          <li class="sub"><a href="#infos-logistiques">↳ Infos logistiques</a></li>
+          <li class="sub"><a href="#chat">↳ Chat & Notes internes</a></li>
+          <li><a href="#badges">5. Badges et indicateurs</a></li>
+          <li><a href="#historique">6. Historique</a></li>
+          <li><a href="#auth">7. Authentification</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="content">
+
+    <div class="hero">
+      <h1>Guide Agent — Eolis Connect</h1>
+      <p>Manuel complet pour traiter les dossiers clients et gérer la messagerie interne</p>
+      <div class="hero-badges">
+        <span class="hero-badge">📊 Dashboard dossiers</span>
+        <span class="hero-badge">💬 Messagerie interne</span>
+        <span class="hero-badge">🔒 Notes staff privées</span>
+        <span class="hero-badge">⚡ Dossiers Premium</span>
+      </div>
+    </div>
+
+    <!-- Section 1 -->
+    <section class="section" id="role">
+      <h2><span class="sec-num">1</span> Rôle de l'agent</h2>
+      <p>L'agent est le point de contact entre le client et l'équipe Eolis. Son rôle est de :</p>
+      <ul>
+        <li><strong>Recevoir</strong> les dossiers soumis par les clients</li>
+        <li><strong>Traiter</strong> les demandes en temps et en heure selon les SLA définis</li>
+        <li><strong>Communiquer</strong> avec les clients via la messagerie interne de chaque dossier</li>
+        <li><strong>Clôturer</strong> les dossiers après résolution — un email automatique est envoyé au client</li>
+        <li><strong>Envoyer des notes internes</strong> à l'équipe, invisibles pour le client</li>
+        <li><strong>Gérer</strong> les demandes de documents supplémentaires</li>
+      </ul>
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-body">
+          <strong>SLA — Délais cibles</strong>
+          HIGH : résolution en &lt; 3h &nbsp;|&nbsp; MEDIUM : &lt; 5h &nbsp;|&nbsp; LOW : &lt; 10h
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="section" id="navigation">
+      <h2><span class="sec-num">2</span> Navigation — Sidebar gauche</h2>
+
+      <div class="nav-item">
+        <span class="nav-icon">📊</span>
+        <div>
+          <div class="nav-label">Dashboard</div>
+          <div class="nav-desc">File de tous les dossiers actifs (PENDING + IN_PROGRESS) à traiter</div>
+        </div>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">📁</span>
+        <div>
+          <div class="nav-label">Mes dossiers</div>
+          <div class="nav-desc">Dossiers en cours assignés à vous spécifiquement</div>
+        </div>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">📜</span>
+        <div>
+          <div class="nav-label">Historique</div>
+          <div class="nav-desc">Vos dossiers clôturés avec les notes de satisfaction client</div>
+        </div>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">⚙️</span>
+        <div>
+          <div class="nav-label">Paramètres</div>
+          <div class="nav-desc">Profil, langue, changement de mot de passe</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3 -->
+    <section class="section" id="dashboard">
+      <h2><span class="sec-num">3</span> Dashboard — File de dossiers</h2>
+
+      <h3 id="cartes-dashboard">Les 3 cartes de compteurs</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Carte</th>
+              <th>Ce qu'elle affiche</th>
+              <th>Calcul</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-warning">Nouveau</span></td>
+              <td>Dossiers non encore pris en charge</td>
+              <td>Statut <code>PENDING</code></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">En cours</span></td>
+              <td>Dossiers que vous traitez</td>
+              <td>Statut <code>IN_PROGRESS</code></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-success">Traités aujourd'hui</span></td>
+              <td>Clôturés depuis minuit (heure Douala)</td>
+              <td>Statut <code>TREATED/CLOSED</code> depuis minuit WAT</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="file-dossiers">La file de dossiers</h3>
+      <p>La file affiche tous les dossiers <strong>actifs</strong> (PENDING + IN_PROGRESS) triés par urgence.</p>
+
+      <div class="urgency-grid">
+        <div class="urgency-card high">
+          <div class="urg-icon">🔴</div>
+          <div class="urg-title">HIGH</div>
+          <div class="urg-delay">Résoudre en &lt; 3h</div>
+        </div>
+        <div class="urgency-card medium">
+          <div class="urg-icon">🟡</div>
+          <div class="urg-title">MEDIUM</div>
+          <div class="urg-delay">Résoudre en &lt; 5h</div>
+        </div>
+        <div class="urgency-card low">
+          <div class="urg-icon">🟢</div>
+          <div class="urg-title">LOW</div>
+          <div class="urg-delay">Résoudre en &lt; 10h</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">📋</span>
+        <div class="alert-body">
+          <strong>Ordre de tri</strong>
+          🔴 HIGH en premier → 🟡 MEDIUM → 🟢 LOW. À urgence égale, les dossiers les plus anciens apparaissent en premier.
+        </div>
+      </div>
+
+      <p>Chaque ligne de la file affiche :</p>
+      <ul>
+        <li>Point coloré d'urgence (rouge / orange / vert)</li>
+        <li>Référence du dossier (<code>REF-2026-XXXX</code>)</li>
+        <li>Badge <span class="badge badge-premium">⚡ Premium</span> si le BL a été scanné par l'IA</li>
+        <li>Nom du client + badge langue <span class="badge badge-fr">🇫🇷 FR</span> ou <span class="badge badge-en">🇬🇧 EN</span></li>
+        <li>Catégorie et sous-catégorie</li>
+        <li>Statut (badge coloré)</li>
+        <li>Temps depuis la soumission (ex: "il y a 2h")</li>
+        <li>Bouton <strong>Voir</strong> pour accéder au dossier</li>
+      </ul>
+
+      <h4>Recherche et filtres</h4>
+      <ul>
+        <li><strong>Recherche :</strong> par référence (<code>REF-2026-XXXX</code>) ou nom du client</li>
+        <li><strong>Filtre urgence :</strong> All / High / Medium / Low</li>
+        <li><strong>Auto-refresh :</strong> toutes les 60 secondes (compteur SVG en haut à droite)</li>
+      </ul>
+
+      <h3 id="regles-acces">Règles d'accès aux dossiers</h3>
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Agent simple vs OPS_ADMIN / SYSTEM_ADMIN</strong>
+          Un agent simple <strong>ne peut pas</strong> ouvrir un dossier assigné à un autre agent (bouton grisé). Seuls les OPS_ADMIN et SYSTEM_ADMIN peuvent accéder à tous les dossiers.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4 -->
+    <section class="section" id="traiter">
+      <h2><span class="sec-num">4</span> Traiter un dossier</h2>
+
+      <h3 id="entete">En-tête du dossier</h3>
+      <p>À l'ouverture d'un dossier, l'en-tête affiche :</p>
+      <ul>
+        <li>Référence (<code>REF-2026-XXXX</code>) + badge <span class="badge badge-premium">⚡ Premium</span> si applicable</li>
+        <li>Badge urgence : <span class="badge badge-danger">🔴 HIGH</span> / <span class="badge badge-warning">🟡 MEDIUM</span> / <span class="badge badge-success">🟢 LOW</span></li>
+        <li>Statut actuel du dossier</li>
+        <li>Catégorie et sous-catégorie</li>
+      </ul>
+
+      <h3 id="actions">Actions principales</h3>
+      <div class="action-row">
+        <span class="btn btn-navy">▶ Prendre en charge</span>
+        <span class="btn btn-success">✓ Clôturer le dossier</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Condition</th>
+              <th>Effet</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="btn btn-navy" style="font-size:0.78rem;padding:4px 10px;">▶ Prendre en charge</span></td>
+              <td>Statut <code>PENDING</code></td>
+              <td>Passe en <code>IN_PROGRESS</code>, vous assigne le dossier</td>
+            </tr>
+            <tr>
+              <td><span class="btn btn-success" style="font-size:0.78rem;padding:4px 10px;">✓ Clôturer</span></td>
+              <td>Statut <code>IN_PROGRESS</code></td>
+              <td>Passe en <code>TREATED/CLOSED</code>, envoie un email au client</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="infos-logistiques">Informations logistiques</h3>
+      <p>Les données logistiques sont affichées dans la fiche du dossier :</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Information</th>
+              <th>Tous les dossiers</th>
+              <th>Dossiers ⚡ Premium uniquement</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Navire + N° voyage</td>
+              <td>✅</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>ETS (départ estimé)</td>
+              <td>✅ (si saisi)</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>N° BL</td>
+              <td>✅</td>
+              <td>✅</td>
+            </tr>
+            <tr>
+              <td>ETA (arrivée estimée)</td>
+              <td>—</td>
+              <td>✅ Extrait par IA</td>
+            </tr>
+            <tr>
+              <td>Ports de chargement / déchargement</td>
+              <td>—</td>
+              <td>✅ Extrait par IA</td>
+            </tr>
+            <tr>
+              <td>Lieux de réception / livraison</td>
+              <td>—</td>
+              <td>✅ Extrait par IA</td>
+            </tr>
+            <tr>
+              <td>Référence pickup</td>
+              <td>—</td>
+              <td>✅ Extrait par IA</td>
+            </tr>
+            <tr>
+              <td>Délais terminal (VGM, douane)</td>
+              <td>—</td>
+              <td>✅ Extrait par IA</td>
+            </tr>
+            <tr>
+              <td>Description marchandises, poids, volume</td>
+              <td>—</td>
+              <td>✅ Extrait par IA</td>
+            </tr>
+            <tr>
+              <td>Multi-conteneurs (liste + types)</td>
+              <td>✅ (si multi saisi)</td>
+              <td>✅</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-success">
+        <span class="alert-icon">⚡</span>
+        <div class="alert-body">
+          Le badge <span class="badge badge-premium">⚡ Premium</span> signifie que toutes les données BL ont été extraites automatiquement. Vous avez toutes les informations sans avoir à demander au client.
+        </div>
+      </div>
+
+      <h3 id="chat">Chat — Onglets Client et Note interne</h3>
+
+      <h4>Onglet "Client" — Messagerie visible</h4>
+      <div class="chat-demo">
+        <div class="msg agent">
+          <div>
+            <div class="msg-label">Vous (agent)</div>
+            <div class="bubble">Bonjour, j'ai bien pris en charge votre dossier. Je reviens vers vous sous peu.</div>
+          </div>
+        </div>
+        <div class="msg client">
+          <div>
+            <div class="msg-label">Client</div>
+            <div class="bubble">Merci, j'attends votre retour.</div>
+          </div>
+        </div>
+      </div>
+      <ul>
+        <li>Vos messages (agent) : bulle <span class="badge badge-navy">navy</span> à droite</li>
+        <li>Messages client : bulle <span style="background:#D6E7F5;padding:2px 8px;border-radius:4px;font-size:0.78rem;color:#1e3a5f;">bleu clair #D6E7F5</span> à gauche</li>
+        <li>La zone de texte grandit automatiquement à la frappe et revient à 1 ligne après l'envoi</li>
+        <li>Bouton trombone pour joindre des fichiers au client</li>
+      </ul>
+
+      <h4>Onglet "Note interne" 🔒 — Staff uniquement</h4>
+      <div class="internal-note">
+        <div class="note-header">🔒 Note interne — <span class="badge badge-internal">Staff uniquement</span></div>
+        <p style="font-size:0.87rem;color:#78350f;">Cette note est invisible pour le client. Utilisez-la pour coordonner avec votre équipe.</p>
+        <p style="font-size:0.87rem;color:#78350f;">Mentionnez un collègue avec <code>@prénom</code> pour lui envoyer une notification.</p>
+      </div>
+      <ul>
+        <li>Fond amber — clairement distinct du chat client</li>
+        <li>Badge "Note interne" sur chaque message pour rappel visuel</li>
+        <li>Mention <code>@collègue</code> pour notifier un membre de l'équipe</li>
+        <li>Textarea auto-resize identique au chat client</li>
+      </ul>
+    </section>
+
+    <!-- Section 5 -->
+    <section class="section" id="badges">
+      <h2><span class="sec-num">5</span> Interpréter les badges</h2>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Badge</th>
+              <th>Type</th>
+              <th>Signification</th>
+              <th>Action recommandée</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-danger">🔴 HIGH</span></td>
+              <td>Urgence</td>
+              <td>Dossier critique — délai cible &lt; 3h</td>
+              <td>Traiter en priorité absolue</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-warning">🟡 MEDIUM</span></td>
+              <td>Urgence</td>
+              <td>Dossier standard — délai cible &lt; 5h</td>
+              <td>Traiter après les HIGH</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-success">🟢 LOW</span></td>
+              <td>Urgence</td>
+              <td>Faible priorité — délai cible &lt; 10h</td>
+              <td>Traiter en fin de file</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-warning">⏳ PENDING</span></td>
+              <td>Statut</td>
+              <td>Soumis, pas encore pris en charge</td>
+              <td>Prendre en charge dès que possible</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">🔄 IN_PROGRESS</span></td>
+              <td>Statut</td>
+              <td>En cours de traitement</td>
+              <td>Communiquer avec le client</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-success">✓ TREATED/CLOSED</span></td>
+              <td>Statut</td>
+              <td>Dossier clôturé</td>
+              <td>Aucune action requise</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-premium">⚡ Premium</span></td>
+              <td>Type</td>
+              <td>BL scanné par IA — toutes infos disponibles</td>
+              <td>Consulter les données extraites</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-fr">🇫🇷 FR</span></td>
+              <td>Langue</td>
+              <td>Client francophone</td>
+              <td>Répondre en français</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-en">🇬🇧 EN</span></td>
+              <td>Langue</td>
+              <td>Client anglophone</td>
+              <td>Répondre en anglais</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 6 -->
+    <section class="section" id="historique">
+      <h2><span class="sec-num">6</span> Historique</h2>
+
+      <p>La page <strong>Historique</strong> affiche uniquement vos propres dossiers clôturés (pas ceux des autres agents).</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Information</th>
+              <th>Détail</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Dossiers visibles</td>
+              <td>Uniquement les dossiers que vous avez personnellement clôturés</td>
+            </tr>
+            <tr>
+              <td>Note de satisfaction</td>
+              <td>Affichée par dossier si le client a laissé une évaluation (1–5 étoiles)</td>
+            </tr>
+            <tr>
+              <td>Score moyen</td>
+              <td>Votre note de satisfaction globale affichée en haut de page</td>
+            </tr>
+            <tr>
+              <td>Tri</td>
+              <td>Du plus récent au plus ancien</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">⭐</span>
+        <div class="alert-body">Votre score de satisfaction moyen est visible par les OPS_ADMIN dans les statistiques de performance. Il entre dans le calcul du classement des agents.</div>
+      </div>
+    </section>
+
+    <!-- Section 7 -->
+    <section class="section" id="auth">
+      <h2><span class="sec-num">7</span> Authentification</h2>
+
+      <p>Les agents utilisent une <strong>connexion standard</strong> (identifiant + mot de passe), sans authentification à deux facteurs.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Paramètre</th>
+              <th>Valeur</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Méthode</td>
+              <td>Identifiant + mot de passe</td>
+            </tr>
+            <tr>
+              <td>2FA (double authentification)</td>
+              <td>Non — réservé aux rôles Finance et System Admin</td>
+            </tr>
+            <tr>
+              <td>Durée de session</td>
+              <td>Expire après <strong>7 heures d'inactivité</strong></td>
+            </tr>
+            <tr>
+              <td>Mot de passe oublié</td>
+              <td>Via la page de connexion → "Mot de passe oublié"</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">Si votre session expire en cours de traitement d'un dossier, vos messages non envoyés peuvent être perdus. Pensez à envoyer régulièrement ou à garder votre session active.</div>
+      </div>
+
+      <p style="margin-top:24px;color:var(--muted);font-size:0.83rem;text-align:center;">
+        Document mis à jour le 2026-05-15 — Eolis Connect v2 &nbsp;·&nbsp; Eolis Cameroun
+      </p>
+    </section>
+
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide Finance — Eolis Connect</title>
+<style>
+  :root {
+    --navy: #1B3A5C;
+    --blue: #4A8FC4;
+    --bg: #EDF1F7;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --white: #ffffff;
+    --border: #d1d5db;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --purple: #7c3aed;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; }
+
+  .site-header { background: var(--navy); color: var(--white); padding: 18px 32px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .site-header .logo { font-size: 1.6rem; font-weight: 800; }
+  .site-header .subtitle { font-size: 0.85rem; color: #93c5fd; background: rgba(74,143,196,0.25); padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(74,143,196,0.4); }
+
+  .layout { display: flex; max-width: 1280px; margin: 0 auto; padding: 24px 16px; gap: 28px; }
+
+  .toc { width: 250px; flex-shrink: 0; }
+  .toc-inner { position: sticky; top: 80px; background: var(--white); border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 16px; max-height: calc(100vh - 110px); overflow-y: auto; }
+  .toc h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--navy); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--bg); }
+  .toc ul { list-style: none; }
+  .toc ul li { margin: 2px 0; }
+  .toc ul li a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 0.83rem; transition: all 0.15s; }
+  .toc ul li a:hover { background: var(--bg); color: var(--navy); font-weight: 600; }
+  .toc ul li.sub a { padding-left: 18px; font-size: 0.78rem; }
+
+  .content { flex: 1; min-width: 0; }
+
+  .hero { background: linear-gradient(135deg, #1B3A5C 0%, #1e4d2b 100%); border-radius: 12px; padding: 32px; color: var(--white); margin-bottom: 28px; }
+  .hero h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
+  .hero p { color: #86efac; font-size: 0.95rem; }
+  .hero-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .hero-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; }
+
+  .section { background: var(--white); border-radius: 12px; padding: 28px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .section h2 { font-size: 1.25rem; font-weight: 700; color: var(--navy); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid var(--bg); display: flex; align-items: center; gap: 10px; }
+  .section h2 .sec-num { background: var(--navy); color: var(--white); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+  .section h3 { font-size: 1rem; font-weight: 700; color: var(--navy); margin: 22px 0 10px; padding-top: 8px; }
+  .section h4 { font-size: 0.9rem; font-weight: 700; color: var(--blue); margin: 14px 0 8px; }
+  .section p { margin-bottom: 12px; }
+  .section ul, .section ol { margin: 10px 0 14px 20px; }
+  .section li { margin-bottom: 6px; }
+
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-navy { background: var(--navy); color: var(--white); }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-success { background: #d1fae5; color: #065f46; }
+  .badge-warning { background: #fef3c7; color: #92400e; }
+  .badge-danger { background: #fee2e2; color: #991b1b; }
+  .badge-purple { background: #ede9fe; color: #5b21b6; }
+  .badge-amber { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+  .badge-orange { background: #ffedd5; color: #9a3412; }
+
+  .alert { border-radius: 8px; padding: 14px 16px; margin: 14px 0; border-left: 4px solid; display: flex; gap: 10px; }
+  .alert-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .alert-body { flex: 1; }
+  .alert-body strong { display: block; margin-bottom: 4px; }
+  .alert-info { background: #eff6ff; border-color: var(--blue); color: #1e40af; }
+  .alert-warning { background: #fffbeb; border-color: var(--warning); color: #92400e; }
+  .alert-danger { background: #fef2f2; border-color: var(--danger); color: #991b1b; }
+  .alert-success { background: #f0fdf4; border-color: var(--success); color: #065f46; }
+
+  .table-wrap { overflow-x: auto; margin: 14px 0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--navy); color: var(--white); padding: 10px 14px; text-align: left; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.03em; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:nth-child(odd) { background: var(--white); }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 0.87rem; vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #eff6ff; }
+  tfoot tr td { background: #1B3A5C; color: var(--white); font-weight: 700; }
+
+  .code-box { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 16px; margin: 14px 0; font-family: 'Courier New', monospace; font-size: 0.87rem; line-height: 1.7; overflow-x: auto; }
+  .code-box .comment { color: #64748b; }
+  .code-box .formula-label { color: #93c5fd; font-weight: 700; }
+  .code-box .operator { color: #f472b6; }
+  .code-box .value { color: #86efac; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin: 16px 0; }
+  .kpi-card { border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+  .kpi-card .kpi-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
+  .kpi-card .kpi-value { font-size: 1.2rem; font-weight: 800; }
+  .kpi-card .kpi-formula { font-size: 0.75rem; color: var(--muted); margin-top: 4px; font-family: 'Courier New', monospace; }
+  .kpi-card.revenue { background: #f0fdf4; border-color: var(--success); }
+  .kpi-card.revenue .kpi-value { color: var(--success); }
+  .kpi-card.cost { background: #fef2f2; border-color: var(--danger); }
+  .kpi-card.cost .kpi-value { color: var(--danger); }
+  .kpi-card.profit { background: #eff6ff; border-color: var(--blue); }
+  .kpi-card.profit .kpi-value { color: var(--blue); }
+  .kpi-card.neutral { background: var(--bg); }
+  .kpi-card.neutral .kpi-value { color: var(--navy); }
+
+  .flow-steps { margin: 16px 0; }
+  .flow-step { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 0; }
+  .flow-connector { display: flex; flex-direction: column; align-items: center; }
+  .flow-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-weight: 700; flex-shrink: 0; color: var(--white); }
+  .flow-dot.blue { background: var(--blue); }
+  .flow-dot.green { background: var(--success); }
+  .flow-dot.orange { background: var(--warning); color: var(--navy); }
+  .flow-dot.navy { background: var(--navy); }
+  .flow-line { width: 2px; height: 24px; background: var(--border); margin: 2px 0; }
+  .flow-body { flex: 1; padding: 6px 0 18px; }
+  .flow-body strong { color: var(--navy); font-size: 0.9rem; }
+  .flow-body p { font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
+
+  .security-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .security-rule { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px; }
+  .security-rule .rule-title { font-size: 0.85rem; font-weight: 700; color: #991b1b; margin-bottom: 4px; }
+  .security-rule .rule-desc { font-size: 0.8rem; color: #7f1d1d; }
+
+  .margin-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 700; }
+  .margin-green { background: #d1fae5; color: #065f46; }
+  .margin-orange { background: #fef3c7; color: #92400e; }
+  .margin-purple { background: #ede9fe; color: #5b21b6; }
+  .margin-red { background: #fee2e2; color: #991b1b; }
+
+  code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 0.85em; font-family: 'Courier New', monospace; color: var(--navy); }
+
+  .who-table td:nth-child(2) { text-align: center; }
+  .who-table td:nth-child(3) { text-align: center; }
+  .check { color: var(--success); font-weight: 700; font-size: 1rem; }
+  .cross { color: var(--danger); font-weight: 700; font-size: 1rem; }
+  .arrow { color: var(--warning); font-weight: 700; }
+
+  .toc-toggle { display: none; background: var(--navy); color: var(--white); border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; margin-bottom: 16px; }
+
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; padding: 12px; }
+    .toc { width: 100%; }
+    .toc-inner { position: static; max-height: none; }
+    .toc-toggle { display: block; }
+    .toc-content { display: none; }
+    .toc-content.open { display: block; }
+    .site-header { padding: 12px 16px; }
+    .site-header .subtitle { display: none; }
+    .hero h1 { font-size: 1.4rem; }
+    .section { padding: 18px; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .security-rules { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    .toc { display: none; }
+    .site-header { position: static; }
+    .section { box-shadow: none; border: 1px solid var(--border); break-inside: avoid; }
+    .layout { padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">⚓ Eolis Connect</div>
+  <div class="subtitle">Guide Finance</div>
+</header>
+
+<div class="layout">
+
+  <nav class="toc">
+    <button class="toc-toggle" onclick="document.querySelector('.toc-content').classList.toggle('open')">☰ Table des matières</button>
+    <div class="toc-inner">
+      <div class="toc-content">
+        <h3>Table des matières</h3>
+        <ul>
+          <li><a href="#modele">Modèle économique</a></li>
+          <li><a href="#pages">Pages accessibles</a></li>
+          <li><a href="#dashboard">1. Tableau de bord</a></li>
+          <li class="sub"><a href="#kpi-revenus">↳ 4 KPIs revenus</a></li>
+          <li class="sub"><a href="#kpi-profit">↳ 3 KPIs profit</a></li>
+          <li class="sub"><a href="#alertes">↳ Alertes automatiques</a></li>
+          <li class="sub"><a href="#graphes-db">↳ Graphes</a></li>
+          <li><a href="#validation">2. Validation crédits</a></li>
+          <li class="sub"><a href="#flux-recharge">↳ Flux de recharge</a></li>
+          <li class="sub"><a href="#statuts-demandes">↳ Statuts</a></li>
+          <li class="sub"><a href="#securite">↳ Règles de sécurité</a></li>
+          <li><a href="#charges">3. Charges infrastructure</a></li>
+          <li><a href="#rapport">4. Rapport P&L</a></li>
+          <li><a href="#projections">5. Projections</a></li>
+          <li><a href="#audit">6. Journal d'audit</a></li>
+          <li><a href="#auth2fa">7. Authentification 2FA</a></li>
+          <li><a href="#notifs">8. Notifications</a></li>
+          <li><a href="#recap">Récapitulatif complet</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="content">
+
+    <div class="hero">
+      <h1>Guide Finance — Eolis Connect</h1>
+      <p>Manuel complet pour les rôles FINANCE_AGENT et SYSTEM_ADMIN — gestion financière de la plateforme</p>
+      <div class="hero-badges">
+        <span class="hero-badge">💳 Validation crédits</span>
+        <span class="hero-badge">📊 Rapport P&L</span>
+        <span class="hero-badge">📈 Projections</span>
+        <span class="hero-badge">🔒 2FA obligatoire</span>
+        <span class="hero-badge">👁 Principe 4 yeux</span>
+      </div>
+    </div>
+
+    <!-- Modèle économique -->
+    <section class="section" id="modele">
+      <h2><span class="sec-num">💰</span> Modèle économique d'Eolis Connect</h2>
+
+      <p>Eolis Connect facture ses clients en <strong>crédits prépayés</strong>. La règle est simple :</p>
+
+      <div class="code-box">
+        <span class="formula-label">1 crédit = 1 FCFA</span>
+      </div>
+
+      <p>Les clients achètent des crédits via Orange Money ou MTN Mobile Money, puis les consomment pour les fonctionnalités IA. Le coût réel payé à OpenAI est infime comparé au prix facturé — c'est là que se trouve la marge.</p>
+
+      <h3>Marges par opération</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Opération</th>
+              <th>Ce que paie le client</th>
+              <th>Ce que paie Eolis (OpenAI)</th>
+              <th>Marge Eolis</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Extraction BL (Scan BL)</td>
+              <td>50 crédits (50 FCFA)</td>
+              <td>~0,60 FCFA</td>
+              <td><span class="badge badge-success">~98,8%</span></td>
+            </tr>
+            <tr>
+              <td>Dictée vocale</td>
+              <td>10 crédits/min (10 FCFA/min)</td>
+              <td>~3,60 FCFA/min</td>
+              <td><span class="badge badge-success">~64%</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Taux de change utilisés dans l'application</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Devise</th><th>Taux</th><th>Nature</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1 USD</td>
+              <td>= 600 FCFA</td>
+              <td>Taux opérationnel Eolis (modifiable dans Paramètres système)</td>
+            </tr>
+            <tr>
+              <td>1 EUR</td>
+              <td>= 655,957 FCFA</td>
+              <td>Taux fixe officiel XAF/EUR — fixé par traité depuis 1999 (modifiable si parité change)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Pages accessibles -->
+    <section class="section" id="pages">
+      <h2><span class="sec-num">🗂</span> Pages accessibles</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Page</th><th>URL</th><th>FINANCE_AGENT</th><th>SYSTEM_ADMIN</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Tableau de bord</strong></td>
+              <td><code>/finance/dashboard</code></td>
+              <td><span class="check">✅</span> Lecture + action</td>
+              <td><span class="check">✅</span> Lecture seule</td>
+            </tr>
+            <tr>
+              <td><strong>Validation crédits</strong></td>
+              <td><code>/finance/credits</code></td>
+              <td><span class="check">✅</span> Approuver/refuser</td>
+              <td><span class="check">✅</span> Confirmer grosses demandes</td>
+            </tr>
+            <tr>
+              <td><strong>Revenus & IA</strong></td>
+              <td><code>/finance/revenus</code></td>
+              <td><span class="check">✅</span></td>
+              <td><span class="check">✅</span> Lecture seule</td>
+            </tr>
+            <tr>
+              <td><strong>Charges infra</strong></td>
+              <td><code>/finance/depenses</code></td>
+              <td><span class="check">✅</span> Saisir/supprimer</td>
+              <td><span class="cross">❌</span></td>
+            </tr>
+            <tr>
+              <td><strong>Rapport P&L</strong></td>
+              <td><code>/finance/rapport</code></td>
+              <td><span class="check">✅</span></td>
+              <td><span class="check">✅</span> Lecture + export</td>
+            </tr>
+            <tr>
+              <td><strong>Projections</strong></td>
+              <td><code>/finance/projections</code></td>
+              <td><span class="check">✅</span> Définir objectifs</td>
+              <td><span class="check">✅</span> Lecture seule</td>
+            </tr>
+            <tr>
+              <td><strong>Journal d'audit</strong></td>
+              <td><code>/finance/audit</code></td>
+              <td><span class="cross">❌</span></td>
+              <td><span class="check">✅</span></td>
+            </tr>
+            <tr>
+              <td><strong>Aide</strong></td>
+              <td><code>/finance/aide</code></td>
+              <td><span class="check">✅</span></td>
+              <td><span class="check">✅</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 1 — Dashboard -->
+    <section class="section" id="dashboard">
+      <h2><span class="sec-num">1</span> Tableau de bord financier</h2>
+      <p>C'est la page d'accueil du FINANCE_AGENT. Elle donne une photo instantanée de la santé financière d'Eolis sur la période sélectionnée.</p>
+
+      <h3>Filtre de période</h3>
+      <p>En haut à droite, 5 options : <span class="badge badge-blue">Jour</span> <span class="badge badge-blue">Semaine</span> <span class="badge badge-navy">Mois</span> (défaut) <span class="badge badge-blue">Année</span> <span class="badge badge-blue">Toute la période</span></p>
+
+      <h3 id="kpi-revenus">Les 4 KPIs de revenus et coûts</h3>
+
+      <div class="kpi-grid">
+        <div class="kpi-card revenue">
+          <div class="kpi-label">Revenus recharges</div>
+          <div class="kpi-value">Chiffre d'affaires</div>
+          <div class="kpi-formula">= Σ montants validés approuvés</div>
+        </div>
+        <div class="kpi-card neutral">
+          <div class="kpi-label">Prix client (crédits)</div>
+          <div class="kpi-value">Crédits consommés</div>
+          <div class="kpi-formula">= Σ crédits utilisés (valeur FCFA)</div>
+        </div>
+        <div class="kpi-card cost">
+          <div class="kpi-label">Coûts IA (OpenAI)</div>
+          <div class="kpi-value">Coût réel API</div>
+          <div class="kpi-formula">= Calculé auto à chaque appel API</div>
+        </div>
+        <div class="kpi-card cost">
+          <div class="kpi-label">Charges infra</div>
+          <div class="kpi-value">Hébergement...</div>
+          <div class="kpi-formula">= Σ charges saisies manuellement</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <div class="alert-body">
+          <strong>Revenus ≠ Crédits consommés</strong>
+          Un client peut avoir rechargé sans utiliser ses crédits (revenus &gt; crédits consommés). Les 100 crédits offerts à l'inscription sont consommés sans générer de revenu (coût &lt; 1 FCFA capturé automatiquement dans les Coûts IA).
+        </div>
+      </div>
+
+      <h3 id="kpi-profit">Les 3 KPIs de profit</h3>
+
+      <div class="code-box">
+        <span class="formula-label">Bénéfice sur usages IA</span>
+        <br>= <span class="value">Crédits consommés</span> <span class="operator">−</span> <span class="value">Coûts OpenAI</span>
+        <br><span class="comment">// La marge pure de l'IA — 49,40 FCFA gardés par Eolis sur chaque extraction BL</span>
+        <br><br>
+        <span class="formula-label">Bénéfice brut</span>
+        <br>= <span class="value">Revenus recharges</span> <span class="operator">−</span> <span class="value">Coûts IA (OpenAI)</span>
+        <br><span class="comment">// Avant les charges d'hébergement — mesure la rentabilité du modèle IA seul</span>
+        <br><br>
+        <span class="formula-label">Bénéfice net ⭐ (indicateur principal)</span>
+        <br>= <span class="value">Revenus recharges</span> <span class="operator">−</span> <span class="value">Coûts IA</span> <span class="operator">−</span> <span class="value">Charges infra</span>
+        <br><span class="comment">// Ce qui reste réellement dans la poche d'Eolis après avoir tout payé</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Bénéfice net</th><th>Couleur</th><th>Signification</th></tr></thead>
+          <tbody>
+            <tr><td>Positif</td><td><span class="badge badge-success">🟢 Vert</span></td><td>Eolis est rentable sur la période</td></tr>
+            <tr><td>Négatif</td><td><span class="badge badge-danger">🔴 Rouge</span></td><td>Eolis dépense plus qu'elle ne gagne — à corriger</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="alertes">Alertes automatiques</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Icône</th><th>Alerte</th><th>Condition</th><th>Action recommandée</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>💬</td>
+              <td>Demandes en attente</td>
+              <td>Recharges non traitées</td>
+              <td>Aller dans Validation crédits</td>
+            </tr>
+            <tr>
+              <td>🚨</td>
+              <td>Bénéfice net négatif</td>
+              <td><code>netProfit &lt; 0</code></td>
+              <td>Vérifier charges infra ou augmenter recharges</td>
+            </tr>
+            <tr>
+              <td>⚠️</td>
+              <td>Charges infra élevées</td>
+              <td>Infra &gt; 30% des revenus</td>
+              <td>Revoir les abonnements infrastructure</td>
+            </tr>
+            <tr>
+              <td>✅</td>
+              <td>Excellente marge</td>
+              <td>Marge nette &gt; 50%</td>
+              <td>Bonne santé — continuer</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="graphes-db">Graphes du tableau de bord</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Graphe</th><th>Ce qu'il montre</th><th>Courbes / couleurs</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Évolution revenus & coûts</strong></td>
+              <td>Tendance sur la période</td>
+              <td>Verte = revenus | Rouge = coûts totaux | Bleue pointillée = crédits consommés</td>
+            </tr>
+            <tr>
+              <td><strong>Bénéfice net par mois</strong></td>
+              <td>Rentabilité mensuelle</td>
+              <td>Barres violet (positif) ou rouge (négatif) + ligne jaune = marge %</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 2 — Validation crédits -->
+    <section class="section" id="validation">
+      <h2><span class="sec-num">2</span> Validation crédits</h2>
+      <p>Page la plus critique opérationnellement. Elle gère tout le cycle de vie des recharges clients.</p>
+
+      <h3 id="flux-recharge">Flux complet d'une recharge</h3>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-connector">
+            <div class="flow-dot blue">1</div>
+            <div class="flow-line"></div>
+          </div>
+          <div class="flow-body">
+            <strong>Client fait un virement Orange Money ou MTN</strong>
+            <p>Prend un screenshot SMS de confirmation, soumet dans l'application</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-connector">
+            <div class="flow-dot blue">2</div>
+            <div class="flow-line"></div>
+          </div>
+          <div class="flow-body">
+            <strong>FINANCE_AGENT reçoit une notification</strong>
+            <p>Alerte "💬 Nouvelle demande de recharge" dans les notifications</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-connector">
+            <div class="flow-dot orange">3</div>
+            <div class="flow-line"></div>
+          </div>
+          <div class="flow-body">
+            <strong>FINANCE_AGENT ouvre le justificatif (OBLIGATOIRE)</strong>
+            <p>Le bouton Valider reste désactivé tant que le justificatif n'a pas été ouvert et consulté</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-connector">
+            <div class="flow-dot blue">4</div>
+            <div class="flow-line"></div>
+          </div>
+          <div class="flow-body">
+            <strong>FINANCE_AGENT entre le montant reçu et valide</strong>
+            <p>Le montant approuvé ne peut jamais dépasser le montant déclaré par le client (cap strict)</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-connector">
+            <div class="flow-dot orange">5a</div>
+            <div class="flow-line"></div>
+          </div>
+          <div class="flow-body">
+            <strong>Si montant &lt; 30 000 FCFA → Crédités immédiatement</strong>
+            <p>Le client reçoit ses crédits et une notification automatique</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-connector">
+            <div class="flow-dot navy">5b</div>
+            <div class="flow-line"></div>
+          </div>
+          <div class="flow-body">
+            <strong>Si montant ≥ 30 000 FCFA → Principe 4 yeux</strong>
+            <p>Passe en <span class="badge badge-orange">pending_admin</span> — SYSTEM_ADMIN doit confirmer</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-connector">
+            <div class="flow-dot green">6</div>
+          </div>
+          <div class="flow-body">
+            <strong>Crédits ajoutés + notification client</strong>
+            <p>Le client est notifié automatiquement par l'application</p>
+          </div>
+        </div>
+      </div>
+
+      <h4>Codes USSD pour vérifier un paiement</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Opérateur</th><th>Code USSD</th><th>Usage</th></tr></thead>
+          <tbody>
+            <tr><td>Orange Money</td><td><code>#150#</code></td><td>Consulter historique et solde</td></tr>
+            <tr><td>MTN Mobile Money</td><td><code>*126#</code></td><td>Consulter historique et solde</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="statuts-demandes">Statuts des demandes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Statut</th><th>Couleur</th><th>Signification</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>pending</code></td>
+              <td><span class="badge badge-warning">🟡 Horloge amber</span></td>
+              <td>En attente — personne n'a encore traité</td>
+            </tr>
+            <tr>
+              <td><code>pending_admin</code></td>
+              <td><span class="badge badge-orange">🟠 Bouclier orange</span></td>
+              <td>FINANCE_AGENT a approuvé, SYSTEM_ADMIN doit confirmer</td>
+            </tr>
+            <tr>
+              <td><code>approved</code></td>
+              <td><span class="badge badge-success">🟢 Coche verte</span></td>
+              <td>Crédits ajoutés au compte client</td>
+            </tr>
+            <tr>
+              <td><code>rejected</code></td>
+              <td><span class="badge badge-danger">🔴 Croix rouge</span></td>
+              <td>Demande refusée</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Filtres disponibles</h4>
+      <ul>
+        <li><strong>En attente :</strong> demandes non traitées (action FINANCE_AGENT requise)</li>
+        <li><strong>⚠️ À confirmer :</strong> pour le SYSTEM_ADMIN — affiche les <code>pending_admin</code> ET les grosses demandes <code>pending</code> ≥ 30 000 FCFA</li>
+        <li><strong>Approuvées :</strong> historique des recharges validées</li>
+        <li><strong>Refusées :</strong> historique des refus</li>
+        <li><strong>Toutes :</strong> vue complète</li>
+      </ul>
+
+      <h3 id="securite">Règles de sécurité (non contournables)</h3>
+      <div class="security-rules">
+        <div class="security-rule">
+          <div class="rule-title">🔒 Cap strict 1×</div>
+          <div class="rule-desc">Le montant approuvé ne peut jamais dépasser le montant déclaré par le client</div>
+        </div>
+        <div class="security-rule">
+          <div class="rule-title">👁 Principe 4 yeux</div>
+          <div class="rule-desc">Toute demande ≥ 30 000 FCFA nécessite 2 personnes : FINANCE_AGENT + SYSTEM_ADMIN</div>
+        </div>
+        <div class="security-rule">
+          <div class="rule-title">📄 Justificatif obligatoire</div>
+          <div class="rule-desc">Le bouton Valider est désactivé tant que le justificatif n'a pas été ouvert</div>
+        </div>
+        <div class="security-rule">
+          <div class="rule-title">⚡ Rate limit</div>
+          <div class="rule-desc">Maximum 10 approbations par minute pour éviter les abus</div>
+        </div>
+        <div class="security-rule">
+          <div class="rule-title">📋 Audit immuable</div>
+          <div class="rule-desc">Chaque action est enregistrée avec IP, heure exacte, montant, identité — non modifiable</div>
+        </div>
+        <div class="security-rule">
+          <div class="rule-title">🚫 Anti-double SMS</div>
+          <div class="rule-desc">Si un SMS OTP a été envoyé dans les 30 dernières secondes, aucun nouveau SMS</div>
+        </div>
+      </div>
+
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Pour le SYSTEM_ADMIN — Confirmation des grosses demandes (≥ 30 000 FCFA)</strong>
+          <br>Chemin A : FINANCE_AGENT approuve → <code>pending_admin</code> → SYSTEM_ADMIN confirme dans l'onglet "⚠️ À confirmer"
+          <br>Chemin B : SYSTEM_ADMIN peut approuver/refuser directement sans attendre FINANCE_AGENT
+          <br>Dans les deux cas, le justificatif doit être ouvert avant toute action.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3 — Charges infra -->
+    <section class="section" id="charges">
+      <h2><span class="sec-num">3</span> Charges infrastructure</h2>
+      <p>Page pour enregistrer toutes les factures mensuelles des services utilisés par Eolis Connect.</p>
+
+      <div class="alert alert-danger">
+        <span class="alert-icon">🚨</span>
+        <div class="alert-body">
+          <strong>Pourquoi saisir ces charges ?</strong>
+          Ces charges ne se comptabilisent PAS automatiquement. Sans elles, le bénéfice net affiché sera surestimé. Saisir chaque facture dès réception pour un P&L réaliste.
+        </div>
+      </div>
+
+      <h4>Paramètres de saisie</h4>
+      <ul>
+        <li><strong>Devise d'entrée :</strong> EUR, USD ou FCFA. Les conversions s'affichent automatiquement en temps réel. Défaut : EUR.</li>
+        <li><strong>Période :</strong> format <code>YYYY-MM</code> (ex: <code>2026-05</code>) — correspond au mois de la facture, pas au jour de paiement.</li>
+      </ul>
+
+      <h4>Catégories disponibles</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Catégorie</th><th>Service concerné</th><th>Fréquence typique</th></tr></thead>
+          <tbody>
+            <tr><td><code>vercel</code></td><td>Hébergement frontend Next.js</td><td>Mensuel</td></tr>
+            <tr><td><code>railway</code></td><td>Hébergement API FastAPI</td><td>Mensuel</td></tr>
+            <tr><td><code>neon</code></td><td>Base de données PostgreSQL</td><td>Mensuel</td></tr>
+            <tr><td><code>aws_s3</code></td><td>Stockage fichiers et justificatifs</td><td>Mensuel (usage)</td></tr>
+            <tr><td><code>twilio</code></td><td>Envoi SMS OTP et notifications</td><td>Mensuel (usage)</td></tr>
+            <tr><td><code>cloudflare</code></td><td>DNS, protection DDoS</td><td>Mensuel/annuel</td></tr>
+            <tr><td><code>domain</code></td><td>Registrar — nom de domaine</td><td>Annuel</td></tr>
+            <tr><td><code>openai</code></td><td>OpenAI — abonnement forfait si applicable</td><td>Si abonnement</td></tr>
+            <tr><td><code>maintenance</code></td><td>Interventions manuelles, développements</td><td>Ponctuel</td></tr>
+            <tr><td><code>other</code></td><td>Toute autre charge non listée</td><td>Variable</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 4 — Rapport P&L -->
+    <section class="section" id="rapport">
+      <h2><span class="sec-num">4</span> Rapport P&L (Profits & Pertes)</h2>
+      <p>Montre l'évolution financière <strong>mois par mois</strong>. C'est l'outil de reporting principal.</p>
+
+      <h3>Différence avec le Tableau de bord</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tableau de bord</th><th>Rapport P&L</th></tr></thead>
+          <tbody>
+            <tr><td>Photo instantanée de la période</td><td>Historique mois par mois</td></tr>
+            <tr><td>KPIs synthétiques</td><td>Détail complet par mois</td></tr>
+            <tr><td>Alertes en temps réel</td><td>Tendances et prévisions</td></tr>
+            <tr><td>Graphes de tendance</td><td>Graphes + tableau exportable</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Table "Détail mensuel" — Colonnes</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Colonne</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>Revenus</code></td><td>Encaissements de la période</td></tr>
+            <tr><td><code>Coûts IA</code></td><td>Ce payé à OpenAI</td></tr>
+            <tr><td><code>Infra</code></td><td>Charges infrastructure</td></tr>
+            <tr><td><code>Bénéfice brut</code></td><td>= Revenus − Coûts IA</td></tr>
+            <tr><td><code>Bénéfice net</code></td><td>= Revenus − Coûts IA − Infra</td></tr>
+            <tr><td><code>Marge %</code></td><td>
+              <span class="margin-badge margin-green">≥70% Vert</span> &nbsp;
+              <span class="margin-badge margin-orange">≥30% Orange</span> &nbsp;
+              <span class="margin-badge margin-purple">≥0% Violet</span> &nbsp;
+              <span class="margin-badge margin-red">&lt;0% Rouge</span>
+            </td></tr>
+          </tbody>
+          <tfoot>
+            <tr><td>TOTAL</td><td colspan="1">Ligne récapitulative toute la période</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <h4>Prévision mois suivant</h4>
+      <p>Calculée par <strong>régression linéaire</strong> sur tous les mois disponibles. Indicatif — ne tient pas compte des charges non encore saisies.</p>
+
+      <h4>Export Excel (.xlsx)</h4>
+      <ul>
+        <li>Titre fusionné bleu marine avec période et date d'export</li>
+        <li>En-têtes colorés blanc sur fond bleu</li>
+        <li>Lignes colorées : fond vert clair si bénéfice ≥ 0, rouge clair si négatif</li>
+        <li>Bénéfice net en <strong>gras vert</strong> ou <strong>gras rouge</strong></li>
+        <li>Chiffres avec séparateurs de milliers (<code>50 000,00</code>)</li>
+        <li>Colonnes de largeur fixe — pas besoin d'agrandir</li>
+        <li>L'export respecte les filtres actifs (période + urgence)</li>
+      </ul>
+    </section>
+
+    <!-- Section 5 — Projections -->
+    <section class="section" id="projections">
+      <h2><span class="sec-num">5</span> Projections économiques</h2>
+      <p>Planification financière : définir des objectifs à l'avance et comparer avec la réalité.</p>
+
+      <h4>Définir des objectifs</h4>
+      <ul>
+        <li><strong>Mois précis :</strong> définir un objectif pour un seul mois</li>
+        <li><strong>Intervalle :</strong> définir le même objectif sur plusieurs mois d'un coup. Ex: 50 000 FCFA/mois pour mai–décembre 2026 en une seule action.</li>
+      </ul>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Objectif</th><th>Ce que ça représente</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Objectif revenus (FCFA)</strong></td><td>Montant de recharges à encaisser ce mois</td></tr>
+            <tr><td><strong>Objectif bénéfice net (FCFA)</strong></td><td>Ce qui doit rester après avoir tout payé</td></tr>
+            <tr><td><strong>Objectif nouveaux clients</strong></td><td>Nombre de nouveaux inscrits visés</td></tr>
+            <tr><td><strong>Objectif marge %</strong></td><td>Pourcentage de marge nette cible</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Les 4 graphes de comparaison</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Graphe</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Revenus</td><td>Aire verte (réel) + ligne violet pointillée (objectif)</td></tr>
+            <tr><td>Bénéfice net</td><td>Barres vert/rouge (réel) + ligne violet pointillée (objectif)</td></tr>
+            <tr><td>Nouveaux clients</td><td>Barres violettes (objectif) côte à côte avec barres bleues/orange (réel)</td></tr>
+            <tr><td>Marge %</td><td>Deux lignes : verte (réelle) vs violette pointillée (objectif)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Badges de statut mensuel</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Badge</th><th>Condition</th><th>Signification</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-success">⭐ Dépassé</span></td><td>+5% ou plus</td><td>Objectif largement atteint</td></tr>
+            <tr><td><span class="badge badge-navy">✓ Dans les clous</span></td><td>Entre -5% et +5%</td><td>Objectif atteint</td></tr>
+            <tr><td><span class="badge badge-warning">⚠️ En retard</span></td><td>Entre -20% et -5%</td><td>Léger retard</td></tr>
+            <tr><td><span class="badge badge-danger">🔴 Loin de l'objectif</span></td><td>-20% ou moins</td><td>Retard important</td></tr>
+            <tr><td><span class="badge badge-blue">— Sans objectif</span></td><td>Aucun objectif défini</td><td>Données réelles seulement</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">👁</span>
+        <div class="alert-body">Le SYSTEM_ADMIN peut consulter toutes les projections mais ne peut ni créer, ni modifier, ni supprimer d'objectifs.</div>
+      </div>
+    </section>
+
+    <!-- Section 6 — Audit -->
+    <section class="section" id="audit">
+      <h2><span class="sec-num">6</span> Journal d'audit financier</h2>
+
+      <div class="alert alert-danger">
+        <span class="alert-icon">🔒</span>
+        <div class="alert-body">
+          <strong>Accessible uniquement au SYSTEM_ADMIN</strong>
+          Le FINANCE_AGENT ne peut pas accéder au journal d'audit. Registre immuable des 200 dernières actions — aucune entrée ne peut être modifiée ou supprimée.
+        </div>
+      </div>
+
+      <h4>Types d'actions enregistrées</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Signification</th></tr></thead>
+          <tbody>
+            <tr><td><code>CREDIT_APPROVE</code></td><td>Recharge approuvée directement (&lt; 30 000 FCFA)</td></tr>
+            <tr><td><code>CREDIT_REJECT</code></td><td>Recharge refusée par FINANCE_AGENT</td></tr>
+            <tr><td><code>CREDIT_PENDING_ADMIN</code></td><td>Recharge soumise à confirmation admin (≥ 30 000 FCFA)</td></tr>
+            <tr><td><code>CREDIT_ADMIN_CONFIRM</code></td><td>SYSTEM_ADMIN a confirmé une grosse recharge</td></tr>
+            <tr><td><code>CREDIT_ADMIN_REJECT</code></td><td>SYSTEM_ADMIN a annulé une grosse recharge</td></tr>
+            <tr><td><code>CREDIT_DIRECT_ADMIN_APPROVE</code></td><td>SYSTEM_ADMIN a approuvé directement sans FINANCE_AGENT</td></tr>
+            <tr><td><code>CREDIT_DIRECT_ADMIN_REJECT</code></td><td>SYSTEM_ADMIN a refusé directement</td></tr>
+            <tr><td><code>INFRA_COST_ADD</code></td><td>Charge infrastructure ajoutée</td></tr>
+            <tr><td><code>INFRA_COST_DELETE</code></td><td>Charge infrastructure supprimée</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Informations affichées par entrée</h4>
+      <ul>
+        <li><strong>Qui a agi :</strong> nom complet + <code>@username</code> + rôle</li>
+        <li><strong>Client concerné :</strong> nom + <code>@username</code> (pour les actions CREDIT_*)</li>
+        <li><strong>Adresse IP :</strong> IP depuis laquelle l'action a été effectuée</li>
+        <li><strong>Montant :</strong> en FCFA avec conversion $ et €</li>
+        <li><strong>Date et heure :</strong> horodatage exact UTC</li>
+      </ul>
+    </section>
+
+    <!-- Section 7 — 2FA -->
+    <section class="section" id="auth2fa">
+      <h2><span class="sec-num">7</span> Authentification 2FA</h2>
+      <p>Le FINANCE_AGENT et le SYSTEM_ADMIN ont une <strong>authentification à deux facteurs obligatoire</strong> à chaque connexion.</p>
+
+      <h4>Flux de connexion</h4>
+      <div class="code-box">
+        <span class="formula-label">Étape 1</span> → Saisir identifiant <span class="operator">+</span> mot de passe
+        <br><span class="formula-label">Étape 2</span> → Recevoir un code à <span class="value">6 chiffres</span> par SMS (valable 10 min)
+        <br><span class="formula-label">Étape 3</span> → Saisir le code dans l'application → Accès accordé
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Règle de sécurité</th><th>Valeur</th></tr></thead>
+          <tbody>
+            <tr><td>Durée de validité du code</td><td>10 minutes</td></tr>
+            <tr><td>Tentatives maximum</td><td>5 avant blocage</td></tr>
+            <tr><td>Rate limit</td><td>5 tentatives/minute</td></tr>
+            <tr><td>Anti-double envoi SMS</td><td>Aucun nouveau SMS si un code envoyé dans les 30 dernières secondes</td></tr>
+            <tr><td>En cas de problème</td><td>Contacter SYSTEM_ADMIN pour réinitialiser</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 8 — Notifications -->
+    <section class="section" id="notifs">
+      <h2><span class="sec-num">8</span> Notifications reçues</h2>
+
+      <h4>FINANCE_AGENT reçoit</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Notification</th><th>Déclencheur</th></tr></thead>
+          <tbody>
+            <tr><td>💬 Nouvelle demande de recharge</td><td>Un client soumet une preuve de paiement</td></tr>
+            <tr><td>✓ Approbation confirmée</td><td>Le SYSTEM_ADMIN a validé une grosse recharge que FINANCE_AGENT avait approuvée</td></tr>
+            <tr><td>❌ Approbation annulée</td><td>Le SYSTEM_ADMIN a refusé une grosse recharge avec le motif</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>SYSTEM_ADMIN reçoit</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Notification</th><th>Déclencheur</th></tr></thead>
+          <tbody>
+            <tr><td>⚠️ Confirmation requise</td><td>FINANCE_AGENT a approuvé une demande ≥ 30 000 FCFA</td></tr>
+            <tr><td>💬 Nouvelle demande de recharge</td><td>Un client soumet une preuve (pour information)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Récapitulatif -->
+    <section class="section" id="recap">
+      <h2><span class="sec-num">✅</span> Récapitulatif — Qui peut faire quoi</h2>
+
+      <div class="table-wrap">
+        <table class="who-table">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th style="text-align:center">FINANCE_AGENT</th>
+              <th style="text-align:center">SYSTEM_ADMIN</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Voir le dashboard financier</td>
+              <td><span class="check">✅</span></td>
+              <td><span class="check">✅</span> (lecture)</td>
+            </tr>
+            <tr>
+              <td>Approuver une recharge &lt; 30 000 FCFA</td>
+              <td><span class="check">✅</span></td>
+              <td><span class="cross">❌</span></td>
+            </tr>
+            <tr>
+              <td>Approuver une recharge ≥ 30 000 FCFA</td>
+              <td><span class="arrow">→ pending_admin</span></td>
+              <td><span class="check">✅</span> (direct)</td>
+            </tr>
+            <tr>
+              <td>Confirmer une pending_admin</td>
+              <td><span class="cross">❌</span></td>
+              <td><span class="check">✅</span></td>
+            </tr>
+            <tr>
+              <td>Saisir des charges infra</td>
+              <td><span class="check">✅</span></td>
+              <td><span class="cross">❌</span></td>
+            </tr>
+            <tr>
+              <td>Supprimer des charges infra</td>
+              <td><span class="check">✅</span></td>
+              <td><span class="cross">❌</span></td>
+            </tr>
+            <tr>
+              <td>Voir le rapport P&L</td>
+              <td><span class="check">✅</span></td>
+              <td><span class="check">✅</span> (lecture)</td>
+            </tr>
+            <tr>
+              <td>Exporter Excel P&L</td>
+              <td><span class="check">✅</span></td>
+              <td><span class="check">✅</span></td>
+            </tr>
+            <tr>
+              <td>Définir des objectifs (projections)</td>
+              <td><span class="check">✅</span></td>
+              <td><span class="cross">❌</span></td>
+            </tr>
+            <tr>
+              <td>Voir les projections</td>
+              <td><span class="check">✅</span></td>
+              <td><span class="check">✅</span> (lecture)</td>
+            </tr>
+            <tr>
+              <td>Voir le journal d'audit</td>
+              <td><span class="cross">❌</span></td>
+              <td><span class="check">✅</span></td>
+            </tr>
+            <tr>
+              <td>Modifier les taux de change</td>
+              <td><span class="cross">❌</span></td>
+              <td><span class="check">✅</span></td>
+            </tr>
+            <tr>
+              <td>Recevoir les notifs de recharge</td>
+              <td><span class="check">✅</span></td>
+              <td><span class="check">✅</span> (info)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="margin-top:20px;color:var(--muted);font-size:0.83rem;text-align:center;">
+        Document mis à jour le 2026-05-15 — Eolis Connect v2 &nbsp;·&nbsp; Eolis Cameroun
+      </p>
+    </section>
+
+  </main>
+</div>
+
+</body>
+</html>
