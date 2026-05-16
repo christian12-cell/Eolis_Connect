@@ -144,6 +144,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   const [expandedBadge, setExpandedBadge]   = useState<string | null>(null)
   const [expandedStrip, setExpandedStrip]   = useState<string | null>(null)
   const [scoreTooltip, setScoreTooltip]     = useState<{ agent: any; x: number; y: number } | null>(null)
+  const [awardsGuideOpen, setAwardsGuideOpen] = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -387,6 +388,117 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
             {isFr ? '· critère absent → poids redistribué aux autres' : '· missing criterion → weight redistributed'}
           </span>
         </div>
+      </div>
+
+      {/* ── Guide des distinctions (accordion) ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 card-shadow mb-5 overflow-hidden">
+        <button
+          onClick={() => setAwardsGuideOpen(o => !o)}
+          className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-gray-50 transition-colors"
+        >
+          <span className="text-sm font-bold text-[#1B3A5C] flex items-center gap-2">
+            🏅 {isFr ? 'Guide des distinctions — comment sont attribués les badges ?' : 'Awards guide — how are badges attributed?'}
+          </span>
+          <ChevronDown size={15} className={`text-gray-400 transition-transform duration-200 ${awardsGuideOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {awardsGuideOpen && (
+          <div className="border-t border-gray-100 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[#1B3A5C] text-white text-xs uppercase tracking-wide">
+                  <th className="px-4 py-3 text-left">{isFr ? 'Badge' : 'Badge'}</th>
+                  <th className="px-4 py-3 text-left">{isFr ? 'Nom' : 'Name'}</th>
+                  <th className="px-4 py-3 text-left">{isFr ? 'Ce que ça signifie' : 'What it means'}</th>
+                  <th className="px-4 py-3 text-left">{isFr ? 'Critère d\'attribution' : 'Attribution criterion'}</th>
+                  <th className="px-4 py-3 text-left">{isFr ? 'Lien avec le score composite' : 'Link to composite score'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {([
+                  {
+                    icon: '🏆',
+                    name: 'Volume',
+                    meaning: isFr
+                      ? 'A traité le plus grand nombre de dossiers sur la période'
+                      : 'Handled the most tickets in the period',
+                    criterion: isFr
+                      ? 'Agent avec le plus haut nombre de dossiers clôturés. En cas d\'égalité, les deux agents reçoivent le badge.'
+                      : 'Agent with the highest number of closed tickets. Ties → both receive the badge.',
+                    scoreLink: isFr
+                      ? 'Hors score — quantité ≠ qualité. Reconnaît le travail fourni sans biaiser le classement.'
+                      : 'Outside score — quantity ≠ quality. Rewards effort without biasing the ranking.',
+                    linkColor: 'text-gray-400',
+                  },
+                  {
+                    icon: '⭐',
+                    name: isFr ? 'Satisfaction' : 'Satisfaction',
+                    meaning: isFr
+                      ? 'Les clients de cet agent sont les plus satisfaits en moyenne'
+                      : 'This agent\'s clients are the most satisfied on average',
+                    criterion: isFr
+                      ? 'Agent avec la note moyenne client (/5) la plus élevée. Calculé uniquement sur les dossiers ayant reçu une note.'
+                      : 'Agent with the highest average client rating (/5). Only calculated on rated tickets.',
+                    scoreLink: isFr ? 'Critère score 25% — satisfaction client' : 'Score criterion 25% — client satisfaction',
+                    linkColor: 'text-amber-600',
+                  },
+                  {
+                    icon: '🏁',
+                    name: isFr ? 'Résolution' : 'Resolution',
+                    meaning: isFr
+                      ? 'Clôture ses dossiers plus vite que tous les autres agents'
+                      : 'Closes tickets faster than any other agent',
+                    criterion: isFr
+                      ? 'Agent avec le délai moyen de résolution le plus bas (temps entre création du dossier et sa clôture).'
+                      : 'Agent with the lowest average resolution time (from ticket creation to closure).',
+                    scoreLink: isFr ? 'Critère score 25% — vitesse de résolution' : 'Score criterion 25% — resolution speed',
+                    linkColor: 'text-blue-600',
+                  },
+                  {
+                    icon: '🎯',
+                    name: 'SLA',
+                    meaning: isFr
+                      ? 'Respecte le mieux les délais cibles (HIGH <3h, MEDIUM <5h, LOW <10h)'
+                      : 'Best at meeting SLA targets (HIGH <3h, MEDIUM <5h, LOW <10h)',
+                    criterion: isFr
+                      ? 'Agent avec le taux SLA% global le plus élevé. SLA% = (dossiers résolus dans le délai / total dossiers) × 100. Minimum 1 dossier requis.'
+                      : 'Agent with the highest overall SLA%. SLA% = (tickets resolved on time / total tickets) × 100. Minimum 1 ticket required.',
+                    scoreLink: isFr ? 'Critère score 30% — respect des délais (poids le plus fort)' : 'Score criterion 30% — deadline compliance (highest weight)',
+                    linkColor: 'text-emerald-600',
+                  },
+                  {
+                    icon: '⚡',
+                    name: isFr ? 'Rapidité' : 'Speed',
+                    meaning: isFr
+                      ? 'Répond le plus rapidement quand un nouveau dossier arrive'
+                      : 'Responds fastest when a new ticket arrives',
+                    criterion: isFr
+                      ? 'Agent avec le temps moyen de 1ère réponse le plus bas (entre la création du dossier et son premier message).'
+                      : 'Agent with the lowest average first response time (from ticket creation to first agent message).',
+                    scoreLink: isFr ? 'Critère score 20% — réactivité initiale' : 'Score criterion 20% — initial responsiveness',
+                    linkColor: 'text-purple-600',
+                  },
+                ] as { icon: string; name: string; meaning: string; criterion: string; scoreLink: string; linkColor: string }[]).map((row, i) => (
+                  <tr key={row.icon} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                    <td className="px-4 py-3 text-center text-xl">{row.icon}</td>
+                    <td className="px-4 py-3 font-bold text-gray-900 whitespace-nowrap">{row.name}</td>
+                    <td className="px-4 py-3 text-gray-700 text-xs leading-relaxed max-w-xs">{row.meaning}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs leading-relaxed max-w-sm">{row.criterion}</td>
+                    <td className={`px-4 py-3 text-xs font-medium leading-relaxed max-w-xs ${row.linkColor}`}>{row.scoreLink}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-[#EDF1F7]">
+                  <td colSpan={5} className="px-4 py-2.5 text-xs text-gray-500 italic">
+                    {isFr
+                      ? '* En cas d\'égalité sur le critère d\'un badge, tous les agents ex-æquo reçoivent le badge. Un agent peut cumuler plusieurs badges. Les badges sont attribués parmi tous les agents ayant traité au moins 1 dossier sur la période filtrée.'
+                      : '* In case of a tie on a badge criterion, all tied agents receive the badge. An agent can accumulate multiple badges. Badges are attributed among all agents who handled at least 1 ticket in the filtered period.'}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
 
       {ranked.length === 0 ? (
