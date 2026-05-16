@@ -107,14 +107,23 @@ function computeAgentStats(agentId: string, closedSrc: any[], allTickets: any[])
   const okSla    = slaRows.reduce((s, r) => s + r.ok, 0)
   const slaGlobal = totalSla ? Math.round(okSla / totalSla * 100) : null
 
-  // composite 0-100 : satisfaction (50%) + vitesse vs plafond 24h (50%)
-  // Si une seule composante est disponible, elle compte à 100%
-  const satScore   = avgSat  !== null ? (avgSat / 5) * 100 : null
-  const speedScore = avgTime !== null ? Math.max(0, 100 - (avgTime / SLA_CAP) * 100) : null
-  const composite  = satScore !== null && speedScore !== null
-    ? +((satScore * 0.5 + speedScore * 0.5)).toFixed(2)
-    : satScore   !== null ? +satScore.toFixed(2)
-    : speedScore !== null ? +speedScore.toFixed(2)
+  // composite 0-100 : satisfaction (25%) + vitesse résolution (25%) + SLA % (30%) + 1ère réponse (20%)
+  // Si une composante est absente, son poids est redistribué proportionnellement aux autres
+  const satScore    = avgSat    !== null ? (avgSat / 5) * 100 : null
+  const speedScore  = avgTime   !== null ? Math.max(0, 100 - (avgTime   / SLA_CAP) * 100) : null
+  const slaScore    = slaGlobal !== null ? slaGlobal : null
+  const firstRScore = avgFirstR !== null ? Math.max(0, 100 - (avgFirstR / SLA_CAP) * 100) : null
+
+  const components = ([
+    { score: satScore,    weight: 0.25 },
+    { score: speedScore,  weight: 0.25 },
+    { score: slaScore,    weight: 0.30 },
+    { score: firstRScore, weight: 0.20 },
+  ] as { score: number | null; weight: number }[]).filter(c => c.score !== null) as { score: number; weight: number }[]
+
+  const totalWeight = components.reduce((s, c) => s + c.weight, 0)
+  const composite   = components.length > 0
+    ? +(components.reduce((s, c) => s + c.score * (c.weight / totalWeight), 0)).toFixed(2)
     : null
 
   return { count: treated.length, avgSat, avgTime, avgFirstR, slaGlobal, composite }

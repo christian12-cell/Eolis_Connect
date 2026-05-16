@@ -646,23 +646,24 @@
       <h3 id="score-composite">Score composite (0 → 100)</h3>
 
       <div class="code-box">
-        <span class="label">Satisfaction</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
-        <br><span class="label">Vitesse</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (délai moyen en h <span class="op">/</span> 24h) <span class="op">×</span> 100)
-        <br><br><span class="comment">// Les deux disponibles → 50% + 50%</span>
-        <br><span class="label">Score composite</span> <span class="eq">=</span> (satScore <span class="op">×</span> 0.5) <span class="op">+</span> (speedScore <span class="op">×</span> 0.5)
-        <br><br><span class="comment">// Aucune note client → satisfaction ignorée, 100% vitesse</span>
-        <br><span class="label">Score composite</span> <span class="eq">=</span> speedScore <span class="op">×</span> 1.0
-        <br><br><span class="comment">// Exemple A : 5.0/5 + 3min → satScore=100 | speedScore=99.79 | composite=99.90</span>
-        <br><span class="comment">// Exemple B : 0 avis + 1h  → satScore=ignoré | speedScore=96  | composite=96.00</span>
-        <br><span class="comment">// → Exemple B peut battre un agent avec 4/5 de satisfaction mais 8h de délai</span>
-        <br><span class="comment">// Un score 100/100 exact est quasi-impossible (délai 0 seconde requis)</span>
+        <span class="label">Satisfaction       (25%)</span> <span class="eq">=</span> (note moyenne <span class="op">/</span> 5) <span class="op">×</span> 100
+        <br><span class="label">Vitesse résolution (25%)</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (délai moyen h <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <br><span class="label">SLA %              (30%)</span> <span class="eq">=</span> % dossiers résolus dans les délais cibles
+        <br><span class="label">1ère réponse       (20%)</span> <span class="eq">=</span> max(0, 100 <span class="op">−</span> (délai 1ère réponse h <span class="op">/</span> 24h) <span class="op">×</span> 100)
+        <br><br><span class="comment">// Composante absente → son poids est redistribué aux autres (règle proportionnelle)</span>
+        <br><span class="comment">// Exemple complet : sat=96 | vitesse=98 | SLA=100 | 1ère réponse=95</span>
+        <br><span class="comment">// composite = 96×0.25 + 98×0.25 + 100×0.30 + 95×0.20 = 97.5/100</span>
+        <br><span class="comment">// Exemple sans notes : vitesse=96 | SLA=100 | 1ère réponse=90</span>
+        <br><span class="comment">// poids redistribués : vitesse=25/75 | SLA=30/75 | 1ère réponse=20/75</span>
+        <br><span class="comment">// composite = (96×25 + 100×30 + 90×20) / 75 = 95.5/100</span>
       </div>
 
       <div class="alert alert-info">
         <span class="alert-icon">💡</span>
         <div class="alert-body">
-          <strong>Pourquoi la vitesse est la composante la plus fiable</strong>
-          La satisfaction dépend du bon vouloir du client — certains ne notent jamais même quand tout s'est bien passé. La vitesse, elle, est <em>toujours</em> calculée automatiquement par le système à partir des timestamps de création et de clôture. C'est une donnée certaine et non manipulable. Un classement basé sur la vitesse seule est donc pleinement fiable.
+          <strong>Pourquoi ces 4 critères et pas le volume ?</strong><br>
+          Chaque critère mesure une qualité <em>distincte</em> : satisfaction (résultat perçu), vitesse résolution (efficacité), SLA % (régularité — pas juste la moyenne mais <em>toujours</em> dans les temps), 1ère réponse (réactivité initiale — le client se sent pris en charge).<br><br>
+          Le <strong>Volume</strong> est exclu volontairement : c'est une quantité, pas une qualité. Un agent qui traite 30 dossiers LOW faciles ne devrait pas battre un agent qui gère 8 dossiers HIGH critiques. Le volume reste comme award de reconnaissance, pas dans le score.
         </div>
       </div>
 
