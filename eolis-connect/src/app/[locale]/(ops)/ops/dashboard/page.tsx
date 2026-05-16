@@ -388,7 +388,7 @@ export default function OpsDashboardPage({ params }: { params: Promise<{ locale:
 
     function computeDetail(pts: any[], urgency: string) {
       const uts = pts.filter(t => t.urgency === urgency)
-      if (!uts.length) return { composite: null, avgSat: null, avgTime: null, satScore: null, speedScore: null, slaScore: null, firstRScore: null, count: 0 }
+      if (!uts.length) return { composite: null, avgSat: null, avgTime: null, satScore: null, speedScore: null, slaScore: null, firstRScore: null, avgFirstR: null, count: 0 }
       // Satisfaction
       const scores  = uts.filter(t => t.satisfactionRating?.score).map(t => t.satisfactionRating.score)
       const avgSat  = scores.length ? +(scores.reduce((a: number, b: number) => a + b, 0) / scores.length).toFixed(2) : null
@@ -424,7 +424,7 @@ export default function OpsDashboardPage({ params }: { params: Promise<{ locale:
       const totalW    = components.reduce((s, c) => s + c.weight, 0)
       const composite = components.length > 0
         ? +(components.reduce((s, c) => s + c.score * (c.weight / totalW), 0)).toFixed(1) : null
-      return { composite, avgSat, avgTime, satScore, speedScore, slaScore, firstRScore, count: uts.length }
+      return { composite, avgSat, avgTime, satScore, speedScore, slaScore, firstRScore, avgFirstR, count: uts.length }
     }
 
     return series.map(p => {

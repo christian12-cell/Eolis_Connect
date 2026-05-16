@@ -19,6 +19,9 @@ interface UrgencyDetail {
   avgTime: number | null
   satScore: number | null
   speedScore: number | null
+  slaScore: number | null
+  firstRScore: number | null
+  avgFirstR: number | null
   count: number
 }
 interface PerfPoint {
@@ -61,8 +64,8 @@ export default function OpsDashboardCharts({ volumeData, perfData, statusData, c
     status:      isFr ? 'Répartition des statuts'        : 'Status breakdown',
     perf:        isFr ? 'Performance globale par urgence' : 'Global performance by urgency',
     perfSub:     isFr
-      ? 'Score 0-100 : satisfaction ⭐ + vitesse vs SLA (HIGH<3h · MED<5h · LOW<10h · plafond 24h)'
-      : 'Score 0-100: satisfaction ⭐ + speed vs SLA (HIGH<3h · MED<5h · LOW<10h · cap 24h)',
+      ? 'Score 0-100 : satisfaction(25%)⭐ + vitesse(25%)🏁 + SLA(30%)🎯 + 1ère réponse(20%)⚡'
+      : 'Score 0-100: satisfaction(25%)⭐ + speed(25%)🏁 + SLA(30%)🎯 + first response(20%)⚡',
     perfEmpty:    isFr ? 'Pas encore de données de performance' : 'No performance data yet',
     category:     isFr ? 'Par catégorie'                  : 'By category',
     high:         isFr ? '🔴 Élevée'                      : '🔴 High',
@@ -113,10 +116,24 @@ export default function OpsDashboardCharts({ volumeData, perfData, statusData, c
                   </span>
                 </div>
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-gray-400">⏱ {isFr ? 'Délai moy.' : 'Avg time'}</span>
+                  <span className="text-gray-400">🏁 {isFr ? 'Délai moy.' : 'Avg time'}</span>
                   <span className="text-gray-600">
                     {fmtH(det.avgTime)}
                     {det.speedScore !== null && <span className="text-gray-400 ml-1">→ {det.speedScore}pts</span>}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-gray-400">🎯 SLA %</span>
+                  <span className="text-gray-600">
+                    {det.slaScore !== null ? `${det.slaScore}%` : '—'}
+                    {det.slaScore !== null && <span className="text-gray-400 ml-1">→ {det.slaScore}pts</span>}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-gray-400">⚡ {isFr ? '1ère réponse' : '1st response'}</span>
+                  <span className="text-gray-600">
+                    {fmtH(det.avgFirstR)}
+                    {det.firstRScore !== null && <span className="text-gray-400 ml-1">→ {det.firstRScore}pts</span>}
                   </span>
                 </div>
               </div>
