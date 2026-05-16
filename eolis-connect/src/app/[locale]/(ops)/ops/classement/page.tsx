@@ -285,6 +285,13 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
       withFirstR.filter((a: any) => a.avgFirstR === minFirstR).forEach((a: any) => giveBadge(a.id, isFr ? '⚡ Rapidité' : '⚡ Speed'))
     }
 
+    // 🏁 Fastest resolution (lowest avgTime)
+    const withTime = ranked.filter((a: any) => a.avgTime !== null)
+    if (withTime.length) {
+      const minTime = Math.min(...withTime.map((a: any) => a.avgTime))
+      withTime.filter((a: any) => a.avgTime === minTime).forEach((a: any) => giveBadge(a.id, isFr ? '🏁 Résolution' : '🏁 Resolution'))
+    }
+
     // 🎯 SLA champion
     const withSla = ranked.filter((a: any) => a.slaGlobal !== null)
     if (withSla.length) {
