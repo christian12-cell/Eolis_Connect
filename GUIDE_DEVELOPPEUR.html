@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide Développeur — Eolis Connect</title>
+<style>
+  :root {
+    --navy:#1B3A5C; --blue:#4A8FC4; --bg:#EDF1F7; --white:#fff;
+    --green:#10b981; --orange:#f59e0b; --red:#ef4444; --purple:#7c3aed;
+    --muted:#6b7280; --text:#1f2937;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.7;}
+  a{color:var(--blue);text-decoration:none;}
+  .layout{display:flex;max-width:1300px;margin:0 auto;padding:24px 16px;gap:28px;}
+  .toc{width:260px;flex-shrink:0;}
+  .toc-inner{position:sticky;top:20px;background:var(--white);border-radius:12px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.07);max-height:calc(100vh - 40px);overflow-y:auto;}
+  .toc h3{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--navy);margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--bg);}
+  .toc ul{list-style:none;}
+  .toc ul li{margin:1px 0;}
+  .toc ul li a{font-size:.82rem;color:var(--muted);padding:3px 6px;border-radius:5px;display:block;transition:all .15s;}
+  .toc ul li a:hover{color:var(--navy);background:var(--bg);}
+  .toc ul li.sub a{padding-left:16px;font-size:.78rem;}
+  .toc-section{font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--blue);margin:10px 0 3px 6px;letter-spacing:.06em;}
+  .main{flex:1;min-width:0;}
+  .hero{background:linear-gradient(135deg,#1B3A5C 0%,#0f2540 100%);border-radius:14px;padding:36px;color:#fff;margin-bottom:24px;}
+  .hero h1{font-size:1.9rem;font-weight:800;margin-bottom:6px;}
+  .hero p{color:#93c5fd;font-size:1rem;}
+  .hero-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+  .tag{background:rgba(255,255,255,.12);color:#e0f2fe;font-size:.75rem;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.2);}
+  .section{background:var(--white);border-radius:12px;padding:28px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+  .section h2{font-size:1.2rem;font-weight:800;color:var(--navy);margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--bg);display:flex;align-items:center;gap:10px;}
+  .section h3{font-size:1rem;font-weight:700;color:var(--navy);margin:22px 0 10px;padding-top:6px;}
+  .section h4{font-size:.9rem;font-weight:700;color:var(--blue);margin:14px 0 8px;}
+  .section p{margin-bottom:12px;}
+  .section ul,.section ol{margin:8px 0 14px 20px;}
+  .section li{margin-bottom:6px;}
+  code{background:#f1f5f9;color:#0f172a;padding:2px 6px;border-radius:4px;font-family:'Courier New',monospace;font-size:.85em;}
+  pre{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:20px;margin:14px 0;font-family:'Courier New',monospace;font-size:.84rem;line-height:1.8;overflow-x:auto;white-space:pre;}
+  pre .c{color:#64748b;} pre .k{color:#93c5fd;} pre .s{color:#86efac;} pre .f{color:#fde68a;} pre .n{color:#f9a8d4;} pre .v{color:#a5b4fc;} pre .cm{color:#6ee7b7;}
+  .alert{border-radius:8px;padding:14px 16px;margin:14px 0;border-left:4px solid;display:flex;gap:10px;align-items:flex-start;}
+  .alert-info{background:#eff6ff;border-color:var(--blue);}
+  .alert-warn{background:#fffbeb;border-color:var(--orange);}
+  .alert-danger{background:#fef2f2;border-color:var(--red);}
+  .alert-success{background:#f0fdf4;border-color:var(--green);}
+  .alert-icon{font-size:1.1rem;margin-top:1px;flex-shrink:0;}
+  .alert-body{font-size:.88rem;line-height:1.6;}
+  .alert-body strong{display:block;margin-bottom:3px;font-size:.9rem;}
+  table{width:100%;border-collapse:collapse;font-size:.87rem;}
+  thead tr{background:var(--navy);color:#fff;}
+  thead th{padding:10px 12px;text-align:left;font-weight:600;}
+  tbody tr:nth-child(even){background:#f8fafc;}
+  tbody td{padding:9px 12px;border-bottom:1px solid #e2e8f0;vertical-align:top;}
+  .table-wrap{overflow-x:auto;margin:14px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:.75rem;font-weight:700;}
+  .b-navy{background:#dbeafe;color:#1e3a5f;}
+  .b-green{background:#d1fae5;color:#065f46;}
+  .b-orange{background:#fef3c7;color:#92400e;}
+  .b-red{background:#fee2e2;color:#991b1b;}
+  .b-purple{background:#ede9fe;color:#4c1d95;}
+  .b-blue{background:#dbeafe;color:#1e40af;}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0;}
+  .flow-step{background:#f1f5f9;border:2px solid #e2e8f0;border-radius:8px;padding:8px 14px;font-size:.84rem;font-weight:600;color:var(--navy);}
+  .flow-arrow{color:var(--blue);font-weight:700;font-size:1.1rem;}
+  .file-tree{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:20px;font-family:'Courier New',monospace;font-size:.83rem;line-height:2;margin:14px 0;}
+  .ft-dir{color:#93c5fd;} .ft-file{color:#e2e8f0;} .ft-comment{color:#64748b;}
+  .error-card{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin:12px 0;}
+  .error-title{font-weight:700;color:var(--red);font-size:.95rem;margin-bottom:6px;font-family:'Courier New',monospace;}
+  .error-fix{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-top:8px;}
+  .error-fix-title{font-weight:700;color:#065f46;font-size:.83rem;margin-bottom:6px;}
+  .git-cmd{background:#1e293b;color:#e2e8f0;border-radius:8px;padding:12px 16px;margin:8px 0;font-family:'Courier New',monospace;font-size:.85rem;display:flex;align-items:flex-start;gap:10px;}
+  .git-prompt{color:#6ee7b7;flex-shrink:0;}
+  .git-desc{color:#94a3b8;font-size:.78rem;margin-top:4px;font-family:system-ui;}
+  .layer-card{border-radius:10px;padding:16px;margin:10px 0;border:2px solid;}
+  .lc-front{background:#eff6ff;border-color:#bfdbfe;}
+  .lc-back{background:#f0fdf4;border-color:#bbf7d0;}
+  .lc-db{background:#fdf4ff;border-color:#e9d5ff;}
+  .lc-title{font-weight:700;font-size:.95rem;margin-bottom:6px;}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;}
+  .kv-item{background:#f8fafc;border-radius:6px;padding:8px 12px;font-size:.83rem;}
+  .kv-key{font-weight:700;color:var(--navy);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;}
+  @media(max-width:768px){.layout{flex-direction:column;}.toc{width:100%;}.toc-inner{position:static;max-height:200px;}.hero h1{font-size:1.4rem;}}
+  @media print{.toc{display:none;}.layout{display:block;padding:0;}.hero{border-radius:0;}.section{box-shadow:none;border:1px solid #e2e8f0;}}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<!-- TABLE DES MATIÈRES -->
+<aside class="toc">
+<div class="toc-inner">
+  <h3>📚 Sommaire</h3>
+  <div class="toc-section">Architecture</div>
+  <ul>
+    <li><a href="#arch">Vue d'ensemble</a></li>
+    <li><a href="#roles">Les rôles & interfaces</a></li>
+    <li><a href="#flux">Flux d'une requête</a></li>
+  </ul>
+  <div class="toc-section">Frontend</div>
+  <ul>
+    <li><a href="#nextjs">Next.js — c'est quoi</a></li>
+    <li><a href="#fichiers-front">Structure des fichiers</a></li>
+    <li><a href="#composants">Composants & pages</a></li>
+    <li><a href="#state">État & données locales</a></li>
+    <li><a href="#api-client">Appels API</a></li>
+    <li><a href="#pwa">PWA & offline</a></li>
+    <li><a href="#i18n">Internationalisation</a></li>
+  </ul>
+  <div class="toc-section">Backend</div>
+  <ul>
+    <li><a href="#fastapi">FastAPI — c'est quoi</a></li>
+    <li><a href="#fichiers-back">Structure des fichiers</a></li>
+    <li><a href="#modeles">Modèles SQLAlchemy</a></li>
+    <li><a href="#schemas">Schemas Pydantic</a></li>
+    <li><a href="#routers">Routers — endpoints</a></li>
+    <li><a href="#auth-jwt">Auth & JWT</a></li>
+    <li><a href="#migrations">Migrations DB</a></li>
+  </ul>
+  <div class="toc-section">Base de données</div>
+  <ul>
+    <li><a href="#db-intro">PostgreSQL / Neon</a></li>
+    <li><a href="#tables">Toutes les tables</a></li>
+    <li><a href="#relations">Relations entre tables</a></li>
+  </ul>
+  <div class="toc-section">Variables & Config</div>
+  <ul>
+    <li><a href="#env">Variables d'environnement</a></li>
+    <li><a href="#services">Services externes</a></li>
+  </ul>
+  <div class="toc-section">Déploiement</div>
+  <ul>
+    <li><a href="#deploy">Vercel & Railway</a></li>
+    <li><a href="#local">Lancer en local</a></li>
+  </ul>
+  <div class="toc-section">Erreurs & Debug</div>
+  <ul>
+    <li><a href="#erreurs-front">Erreurs frontend</a></li>
+    <li><a href="#erreurs-back">Erreurs backend</a></li>
+    <li><a href="#erreurs-db">Erreurs base de données</a></li>
+    <li><a href="#debug">Comment débugger</a></li>
+  </ul>
+  <div class="toc-section">Git & GitHub</div>
+  <ul>
+    <li><a href="#git-base">Commandes de base</a></li>
+    <li><a href="#git-workflow">Workflow quotidien</a></li>
+    <li><a href="#git-urgence">Urgences git</a></li>
+  </ul>
+  <div class="toc-section">Cheat Sheets</div>
+  <ul>
+    <li><a href="#cheat-front">Frontend</a></li>
+    <li><a href="#cheat-back">Backend</a></li>
+    <li><a href="#cheat-db">SQL utile</a></li>
+  </ul>
+</div>
+</aside>
+
+<!-- CONTENU PRINCIPAL -->
+<main class="main">
+
+<div class="hero">
+  <h1>⚙️ Guide Développeur — Eolis Connect</h1>
+  <p>Architecture complète, comment chaque ligne de code fonctionne, erreurs courantes et comment les corriger, commandes Git.</p>
+  <div class="hero-tags">
+    <span class="tag">Next.js 16</span>
+    <span class="tag">FastAPI Python</span>
+    <span class="tag">PostgreSQL / Neon</span>
+    <span class="tag">JWT Auth</span>
+    <span class="tag">Tailwind CSS</span>
+    <span class="tag">PWA / Offline</span>
+    <span class="tag">OpenAI / Whisper</span>
+    <span class="tag">Vercel + Railway</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="arch">
+  <h2>🏗️ Vue d'ensemble de l'architecture</h2>
+
+  <p>Eolis Connect est une application <strong>client-serveur</strong> classique découpée en 3 couches :</p>
+
+  <div class="layer-card lc-front">
+    <div class="lc-title">🖥️ Frontend — Next.js (Vercel)</div>
+    <p style="font-size:.88rem;margin:0">Ce que l'utilisateur voit et avec quoi il interagit. Tourne dans le navigateur (Chrome, Safari, etc.) sur le téléphone ou l'ordinateur. Code : TypeScript + React.</p>
+  </div>
+  <div class="layer-card lc-back">
+    <div class="lc-title">⚙️ Backend — FastAPI (Railway)</div>
+    <p style="font-size:.88rem;margin:0">Le cerveau. Reçoit les requêtes du frontend, applique les règles métier, lit/écrit dans la base de données. Code : Python.</p>
+  </div>
+  <div class="layer-card lc-db">
+    <div class="lc-title">🗄️ Base de données — PostgreSQL (Neon)</div>
+    <p style="font-size:.88rem;margin:0">Le disque dur. Stocke toutes les données de façon permanente : utilisateurs, tickets, messages, crédits, etc. Langage : SQL.</p>
+  </div>
+
+  <h3>Comment les 3 couches communiquent</h3>
+  <div class="flow">
+    <div class="flow-step">📱 Client (navigateur)</div>
+    <div class="flow-arrow">→ HTTPS →</div>
+    <div class="flow-step">⚙️ API FastAPI<br><small style="color:#64748b">:8000</small></div>
+    <div class="flow-arrow">→ SQL →</div>
+    <div class="flow-step">🗄️ PostgreSQL<br><small style="color:#64748b">Neon Cloud</small></div>
+  </div>
+  <p>Chaque fois que l'appli fait quelque chose (créer un ticket, envoyer un message…), voici ce qui se passe :</p>
+  <ol>
+    <li>Le frontend appelle l'API backend via <strong>HTTP</strong> (ex: <code>POST /api/tickets</code>)</li>
+    <li>Le backend vérifie l'identité (JWT token), valide les données, puis écrit/lit en base</li>
+    <li>La base renvoie les données → le backend les formate en JSON → le frontend les affiche</li>
+  </ol>
+
+  <h3>Adresses en production</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Service</th><th>URL</th><th>Hébergé sur</th></tr></thead>
+      <tbody>
+        <tr><td>Frontend</td><td><code>https://eolis-connect.vercel.app</code> (exemple)</td><td>Vercel</td></tr>
+        <tr><td>Backend API</td><td><code>https://eolis-api.railway.app</code> (exemple)</td><td>Railway</td></tr>
+        <tr><td>Base de données</td><td>URL interne Neon (jamais exposée)</td><td>Neon Cloud (EU-West-2)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="roles">
+  <h2>👥 Les rôles et leurs interfaces</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Rôle</th><th>Qui c'est</th><th>Interface</th><th>Dossier code</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge b-blue">CLIENT</span></td><td>Clients Eolis Cameroun</td><td>PWA mobile (téléphone)</td><td><code>(client)/</code></td></tr>
+        <tr><td><span class="badge b-green">AGENT</span></td><td>Agents support</td><td>Web desktop</td><td><code>(agent)/</code></td></tr>
+        <tr><td><span class="badge b-orange">OPS_ADMIN</span></td><td>Responsables opérationnels</td><td>Web desktop</td><td><code>(ops)/</code></td></tr>
+        <tr><td><span class="badge b-purple">FINANCE_AGENT</span></td><td>Gestionnaire financier</td><td>Web desktop</td><td><code>(finance)/</code></td></tr>
+        <tr><td><span class="badge b-red">SYSTEM_ADMIN</span></td><td>Admin système (toi)</td><td>Web desktop</td><td><code>(admin)/</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Le rôle est stocké dans la base de données (<code>users.role</code>) et dans le JWT token. Chaque endpoint API vérifie le rôle avant de répondre.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="flux">
+  <h2>🔄 Flux d'une requête — Exemple : créer un ticket</h2>
+  <p>Voici exactement ce qui se passe quand un client clique "Envoyer ma demande" :</p>
+  <div class="flow" style="flex-direction:column;align-items:flex-start;gap:4px;">
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">1. Clic bouton</div><span style="color:#64748b;font-size:.84rem">→ la fonction <code>submit()</code> dans <code>nouvelle-demande/page.tsx</code> se déclenche</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">2. Appel API</div><span style="color:#64748b;font-size:.84rem">→ <code>apiFetch('/api/tickets', {method:'POST', body: JSON.stringify(body)})</code></span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">3. HTTP POST</div><span style="color:#64748b;font-size:.84rem">→ requête HTTPS envoyée vers Railway, avec le JWT token dans le header <code>Authorization: Bearer xxx</code></span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">4. Backend reçoit</div><span style="color:#64748b;font-size:.84rem">→ FastAPI décode le JWT, vérifie que c'est un CLIENT, valide les données avec Pydantic</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">5. Écriture DB</div><span style="color:#64748b;font-size:.84rem">→ SQLAlchemy crée un objet <code>Ticket</code> et fait <code>db.add(ticket); db.commit()</code></span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">6. Réponse JSON</div><span style="color:#64748b;font-size:.84rem">→ backend renvoie <code>{"id":"uuid","ref":"REF-2026-0001",...}</code></span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-left:20px;"><div class="flow-arrow">↓</div></div>
+    <div style="display:flex;align-items:center;gap:10px;"><div class="flow-step">7. Frontend affiche</div><span style="color:#64748b;font-size:.84rem">→ <code>setSuccess({ref: data.ref, id: data.id})</code> → écran de confirmation</span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="nextjs">
+  <h2>⚛️ Next.js — C'est quoi exactement ?</h2>
+
+  <p><strong>Next.js</strong> est un framework basé sur <strong>React</strong>. React c'est la librairie de base (composants, état), Next.js ajoute le routing, l'optimisation, le build. Pense à React comme un moteur de voiture, et Next.js comme la voiture complète.</p>
+
+  <h3>Ce qu'il faut comprendre sur notre version (Next.js 16)</h3>
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div class="alert-body">
+      <strong>Règle critique : <code>'use client'</code> en haut de CHAQUE fichier</strong>
+      Dans Next.js moderne, les composants peuvent tourner côté serveur (pas de localStorage, pas de browser APIs). Comme on utilise localStorage pour l'auth, tous nos fichiers doivent être client-side. Sans <code>'use client'</code> → crash au démarrage.
+    </div>
+  </div>
+
+  <h4>App Router — Le routing par dossiers</h4>
+  <p>Dans Next.js 16, l'URL correspond au chemin des dossiers :</p>
+  <div class="file-tree">
+<span class="ft-dir">src/app/[locale]/</span>
+<span class="ft-comment">    ↑ [locale] = "fr" ou "en" dans l'URL</span>
+
+  <span class="ft-dir">(client)/mes-demandes/page.tsx</span>   <span class="ft-comment">→ /fr/mes-demandes</span>
+  <span class="ft-dir">(client)/mes-demandes/[id]/page.tsx</span> <span class="ft-comment">→ /fr/mes-demandes/abc-123</span>
+  <span class="ft-dir">(agent)/agent/dashboard/page.tsx</span>   <span class="ft-comment">→ /fr/agent/dashboard</span>
+  <span class="ft-dir">(admin)/admin/utilisateurs/page.tsx</span> <span class="ft-comment">→ /fr/admin/utilisateurs</span>
+  </div>
+  <p>Les dossiers entre parenthèses <code>(client)</code> <code>(agent)</code> sont des <strong>groupes de route</strong> — ils organisent le code sans apparaître dans l'URL.</p>
+
+  <h4>params = Promise — Règle importante Next.js 16</h4>
+  <p>Dans les anciennes versions, <code>params.locale</code> était direct. En Next.js 16, c'est une Promise. Si tu oublies le <code>.then()</code> → la page ne connaît jamais le locale et n'affiche rien :</p>
+  <pre><span class="c">// ❌ Ancienne façon (cassée en Next.js 16)</span>
+<span class="k">export default function</span> <span class="f">Page</span>({ params }) {
+  <span class="k">const</span> locale = params.locale  <span class="c">// undefined !</span>
+}
+
+<span class="c">// ✅ Bonne façon</span>
+<span class="k">export default function</span> <span class="f">Page</span>({ params }: { params: Promise&lt;{ locale: string }&gt; }) {
+  <span class="k">const</span> [locale, setLocale] = <span class="f">useState</span>(<span class="s">'fr'</span>)
+  <span class="f">useEffect</span>(() => { params.<span class="f">then</span>(p => <span class="f">setLocale</span>(p.locale)) }, [params])
+}</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="fichiers-front">
+  <h2>📁 Structure complète des fichiers frontend</h2>
+  <div class="file-tree">
+<span class="ft-dir">eolis-connect/src/</span>
+│
+├── <span class="ft-dir">app/[locale]/</span>
+│   ├── <span class="ft-dir">(auth)/</span>          <span class="ft-comment">Pages publiques (pas besoin d'être connecté)</span>
+│   │   ├── login/page.tsx
+│   │   ├── register/page.tsx
+│   │   └── forgot-password/page.tsx
+│   │
+│   ├── <span class="ft-dir">(client)/</span>         <span class="ft-comment">PWA mobile — rôle CLIENT uniquement</span>
+│   │   ├── accueil/page.tsx
+│   │   ├── mes-demandes/page.tsx
+│   │   ├── mes-demandes/[id]/page.tsx    <span class="ft-comment">← LE plus gros fichier</span>
+│   │   ├── nouvelle-demande/page.tsx     <span class="ft-comment">← Formulaire création dossier</span>
+│   │   ├── notifications/page.tsx
+│   │   ├── parametres/page.tsx
+│   │   └── recharger/page.tsx
+│   │
+│   ├── <span class="ft-dir">(agent)/agent/</span>    <span class="ft-comment">Interface web — rôle AGENT</span>
+│   │   ├── dashboard/page.tsx
+│   │   ├── dossiers/[id]/page.tsx
+│   │   ├── dossiers/[id]/AgentTicketActions.tsx
+│   │   ├── historique/page.tsx
+│   │   └── notifications/page.tsx
+│   │
+│   ├── <span class="ft-dir">(ops)/ops/</span>        <span class="ft-comment">Interface web — rôle OPS_ADMIN</span>
+│   │   ├── dashboard/page.tsx
+│   │   ├── performances/page.tsx
+│   │   └── classement/page.tsx
+│   │
+│   ├── <span class="ft-dir">(finance)/finance/</span> <span class="ft-comment">Interface web — rôle FINANCE_AGENT</span>
+│   │   ├── dashboard/page.tsx
+│   │   ├── credits/page.tsx
+│   │   ├── revenus/page.tsx
+│   │   ├── depenses/page.tsx
+│   │   ├── rapport/page.tsx
+│   │   └── projections/page.tsx
+│   │
+│   └── <span class="ft-dir">(admin)/admin/</span>    <span class="ft-comment">Interface web — rôle SYSTEM_ADMIN</span>
+│       ├── dashboard/page.tsx
+│       ├── utilisateurs/page.tsx
+│       ├── credits/page.tsx
+│       ├── logs/page.tsx
+│       └── systeme/page.tsx
+│
+├── <span class="ft-dir">components/</span>
+│   ├── layout/MobileLayout.tsx       <span class="ft-comment">Wrapper pages clients (fond navy, bottom nav)</span>
+│   ├── layout/DashboardLayout.tsx    <span class="ft-comment">Wrapper pages staff (sidebar + topbar)</span>
+│   ├── layout/BottomNav.tsx          <span class="ft-comment">Barre de navigation bas (5 icônes, mobile)</span>
+│   ├── layout/Sidebar.tsx            <span class="ft-comment">Sidebar adaptée selon le rôle</span>
+│   ├── scanner/ScannerModal.tsx      <span class="ft-comment">Caméra → PDF (scan documents)</span>
+│   └── ui/badge.tsx                  <span class="ft-comment">StatusBadge, UrgencyBadge</span>
+│
+└── <span class="ft-dir">lib/</span>
+    ├── api-client.ts    <span class="ft-comment">getUser(), apiFetch(), saveSession() — tout l'auth</span>
+    └── utils.ts         <span class="ft-comment">formatDate(), getUrgency(), timeAgo()</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="composants">
+  <h2>🧩 Composants React — Concepts clés</h2>
+
+  <h3>Un composant = une fonction qui retourne du HTML</h3>
+  <pre><span class="c">// Composant simple</span>
+<span class="k">function</span> <span class="f">StatusBadge</span>({ status }: { status: string }) {
+  <span class="k">const</span> colors = {
+    <span class="s">PENDING</span>:     <span class="s">'bg-yellow-100 text-yellow-800'</span>,
+    <span class="s">IN_PROGRESS</span>: <span class="s">'bg-blue-100 text-blue-800'</span>,
+    <span class="s">CLOSED</span>:      <span class="s">'bg-green-100 text-green-800'</span>,
+  }
+  <span class="k">return</span> (
+    &lt;span className={colors[status]}&gt;{status}&lt;/span&gt;
+  )
+}
+
+<span class="c">// Utilisation :</span>
+&lt;StatusBadge status="PENDING" /&gt;</pre>
+
+  <h3>Règle critique : sous-composants EN DEHORS du composant parent</h3>
+  <div class="alert alert-danger">
+    <span class="alert-icon">🔴</span>
+    <div class="alert-body">
+      <strong>Bug perte de focus sur les inputs !</strong>
+      Si tu définis un composant (ex: <code>function InputField()</code>) INSIDE le composant parent, React recrée ce composant à chaque re-render → l'input perd le focus à chaque frappe. TOUJOURS définir les sous-composants AVANT le <code>export default function</code>.
+    </div>
+  </div>
+  <pre><span class="c">// ❌ MAUVAIS — LogisticsFields défini INSIDE NouvelleDemandePage</span>
+<span class="k">export default function</span> <span class="f">NouvelleDemandePage</span>() {
+  <span class="k">function</span> <span class="f">LogisticsFields</span>() { ... }  <span class="c">// ← remonte à chaque render !</span>
+  <span class="k">return</span> &lt;LogisticsFields /&gt;
+}
+
+<span class="c">// ✅ BON — LogisticsFields défini AVANT</span>
+<span class="k">function</span> <span class="f">LogisticsFields</span>() { ... }  <span class="c">// ← stable, jamais recréé</span>
+
+<span class="k">export default function</span> <span class="f">NouvelleDemandePage</span>() {
+  <span class="k">return</span> &lt;LogisticsFields /&gt;
+}</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="state">
+  <h2>🧠 État & données locales — useState, useEffect, useRef</h2>
+
+  <h3>useState — stocker une valeur qui change</h3>
+  <pre><span class="c">// Déclarer un état</span>
+<span class="k">const</span> [text, setText] = <span class="f">useState</span>(<span class="s">''</span>)
+<span class="c">//    ↑ valeur  ↑ fonction pour changer   ↑ valeur initiale</span>
+
+<span class="c">// Changer la valeur</span>
+<span class="f">setText</span>(<span class="s">'nouveau texte'</span>)
+
+<span class="c">// Changer basé sur l'ancienne valeur</span>
+<span class="f">setMessages</span>(prev => [...prev, newMessage])  <span class="c">// ajouter à un tableau</span></pre>
+
+  <h3>useEffect — code qui tourne à un moment précis</h3>
+  <pre><span class="c">// Tourne une seule fois au chargement</span>
+<span class="f">useEffect</span>(() => {
+  <span class="k">const</span> user = <span class="f">getUser</span>()
+  <span class="f">setUser</span>(user)
+}, [])  <span class="c">← tableau vide = une seule fois</span>
+
+<span class="c">// Tourne à chaque fois que 'text' change</span>
+<span class="f">useEffect</span>(() => {
+  <span class="k">const</span> el = textareaRef.current
+  <span class="k">if</span> (!el) <span class="k">return</span>
+  el.style.height = <span class="s">'auto'</span>
+  el.style.height = `${el.scrollHeight}px`  <span class="c">// auto-resize</span>
+}, [text])  <span class="c">← rerun quand text change</span></pre>
+
+  <h3>useRef — garder une référence sans re-render</h3>
+  <pre><span class="c">// Référence vers un élément DOM</span>
+<span class="k">const</span> textareaRef = <span class="f">useRef</span>&lt;HTMLTextAreaElement&gt;(<span class="k">null</span>)
+&lt;textarea ref={textareaRef} /&gt;
+<span class="c">// Accès : textareaRef.current.style.height = '40px'</span>
+
+<span class="c">// Garder une valeur sans déclencher de re-render</span>
+<span class="k">const</span> filterRef = <span class="f">useRef</span>(<span class="s">'pending'</span>)
+filterRef.current = <span class="s">'approved'</span>  <span class="c">// pas de re-render</span></pre>
+
+  <h3>localStorage vs sessionStorage</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Storage</th><th>Durée</th><th>Utilisé pour</th></tr></thead>
+    <tbody>
+      <tr><td><code>localStorage</code></td><td>Permanent (jusqu'à clear)</td><td>JWT token, crédits cache, langue préférée</td></tr>
+      <tr><td><code>sessionStorage</code></td><td>Onglet fermé = effacé</td><td>Marqueur de session actif (sécurité)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>IndexedDB (offline)</h3>
+  <p>Pour stocker des données plus grosses offline (tickets en attente, BL, fichiers) on utilise IndexedDB via notre wrapper <code>offlineDb</code> :</p>
+  <pre><span class="k">import</span> { offlineDb } <span class="k">from</span> <span class="s">'../lib/offline-db'</span>
+
+<span class="c">// Stocker un ticket hors ligne</span>
+<span class="k">await</span> offlineDb.<span class="f">add</span>({ type: <span class="s">'CREATE_TICKET'</span>, payload: body, files: [] })
+
+<span class="c">// Lire du cache</span>
+<span class="k">const</span> cached = <span class="k">await</span> offlineDb.<span class="f">get</span>(<span class="s">'bl_list'</span>)
+
+<span class="c">// Écrire dans le cache</span>
+<span class="k">await</span> offlineDb.<span class="f">set</span>(<span class="s">'bl_list'</span>, bls)</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="api-client">
+  <h2>🌐 Appels API — lib/api-client.ts</h2>
+
+  <p>Toutes les requêtes HTTP passent par 3 fonctions centralisées :</p>
+
+  <h3>apiFetch — requêtes JSON</h3>
+  <pre><span class="c">// GET simple</span>
+<span class="k">const</span> res = <span class="k">await</span> <span class="f">apiFetch</span>(<span class="s">'/api/tickets'</span>)
+<span class="k">const</span> data = <span class="k">await</span> res.<span class="f">json</span>()
+
+<span class="c">// POST avec body</span>
+<span class="k">const</span> res = <span class="k">await</span> <span class="f">apiFetch</span>(<span class="s">'/api/tickets'</span>, {
+  method: <span class="s">'POST'</span>,
+  body: JSON.<span class="f">stringify</span>({ category: <span class="s">'Livraison'</span>, ... })
+})
+
+<span class="c">// PATCH pour modifier</span>
+<span class="k">await</span> <span class="f">apiFetch</span>(`/api/tickets/${id}`, { method: <span class="s">'PATCH'</span>, body: JSON.<span class="f">stringify</span>({status:<span class="s">'CLOSED'</span>}) })</pre>
+
+  <p><code>apiFetch</code> ajoute automatiquement le header <code>Authorization: Bearer TOKEN</code> et <code>Content-Type: application/json</code>. Si la réponse est 401 (token expiré) → déconnexion automatique.</p>
+
+  <h3>apiUpload — envoi de fichiers</h3>
+  <pre><span class="k">const</span> fd = <span class="k">new</span> <span class="f">FormData</span>()
+fd.<span class="f">append</span>(<span class="s">'files'</span>, fichier)
+<span class="k">await</span> <span class="f">apiUpload</span>(`/api/tickets/${id}/attachments`, fd)
+<span class="c">// Pas de Content-Type manuellement — FormData le gère seul</span></pre>
+
+  <h3>getUser / saveSession / clearSession</h3>
+  <pre><span class="c">// Lire l'utilisateur connecté</span>
+<span class="k">const</span> user = <span class="f">getUser</span>()
+<span class="c">// Retourne null si pas connecté ou session expirée</span>
+
+<span class="c">// Après login réussi</span>
+<span class="f">saveSession</span>(token, userData)
+<span class="c">// Stocke dans localStorage + pose sessionStorage marker</span>
+
+<span class="c">// Déconnexion</span>
+<span class="f">clearSession</span>()
+<span class="c">// Efface tout + redirige vers login</span></pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="pwa">
+  <h2>📱 PWA & Mode Offline</h2>
+  <p>L'appli fonctionne comme une application native installable sur le téléphone. Le <strong>Service Worker</strong> (<code>public/sw.js</code>) gère le cache et l'offline.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Composant PWA</th><th>Fichier</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td>Service Worker</td><td><code>public/sw.js</code></td><td>Cache les pages, intercepte les requêtes, gère l'offline</td></tr>
+      <tr><td>Manifest</td><td><code>public/manifest.json</code></td><td>Nom de l'appli, icônes, couleur de thème pour l'installation</td></tr>
+      <tr><td>Offline DB</td><td><code>src/lib/offline-db.ts</code></td><td>IndexedDB wrapper pour stocker tickets/BL hors ligne</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Logique offline dans nouvelle-demande</h3>
+  <pre><span class="c">// Avant d'envoyer, vérifier la connexion</span>
+<span class="k">if</span> (!navigator.onLine) {
+  <span class="c">// Sauvegarder en IndexedDB</span>
+  <span class="k">await</span> offlineDb.<span class="f">add</span>({ type: <span class="s">'CREATE_TICKET'</span>, payload: body, files: storedFiles })
+  <span class="f">setPendingOffline</span>(<span class="k">true</span>)  <span class="c">// afficher l'écran "sauvegardé"</span>
+  <span class="k">return</span>
+}
+<span class="c">// Sinon envoyer normalement</span>
+<span class="k">const</span> res = <span class="k">await</span> <span class="f">apiFetch</span>(<span class="s">'/api/tickets'</span>, ...)</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="i18n">
+  <h2>🌍 Internationalisation (FR / EN)</h2>
+  <p>Chaque page a un objet de traductions inline :</p>
+  <pre><span class="k">const</span> isFr = locale === <span class="s">'fr'</span>
+
+<span class="k">const</span> t = isFr ? {
+  title: <span class="s">'Mes demandes'</span>,
+  noTickets: <span class="s">'Aucun dossier'</span>,
+  pending: <span class="s">'En attente'</span>,
+} : {
+  title: <span class="s">'My requests'</span>,
+  noTickets: <span class="s">'No requests found'</span>,
+  pending: <span class="s">'Pending'</span>,
+}
+
+<span class="c">// Dans le JSX</span>
+&lt;h1&gt;{t.title}&lt;/h1&gt;</pre>
+  <p>L'URL contient le locale : <code>/fr/mes-demandes</code> ou <code>/en/mes-demandes</code>. La préférence langue est sauvegardée dans le profil utilisateur en DB.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="fastapi">
+  <h2>🐍 FastAPI — C'est quoi exactement ?</h2>
+
+  <p><strong>FastAPI</strong> est un framework Python pour créer des APIs. Il reçoit des requêtes HTTP, les traite, et renvoie des réponses JSON.</p>
+
+  <h3>Structure d'un endpoint (route)</h3>
+  <pre><span class="k">from</span> fastapi <span class="k">import</span> APIRouter, Depends, HTTPException
+<span class="k">from</span> ..deps <span class="k">import</span> get_current_user, require_roles
+
+router = APIRouter()
+
+<span class="v">@router.post</span>(<span class="s">"/tickets"</span>)               <span class="c">← méthode HTTP + chemin URL</span>
+<span class="k">def</span> <span class="f">create_ticket</span>(
+    body: TicketCreate,               <span class="c">← données reçues (validées par Pydantic)</span>
+    db: Session = Depends(get_db),    <span class="c">← connexion DB injectée automatiquement</span>
+    current_user = Depends(require_roles([<span class="s">"CLIENT"</span>]))  <span class="c">← vérifie le rôle</span>
+):
+    ticket = Ticket(
+        client_id = current_user.id,
+        category  = body.category,
+        ...
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    <span class="k">return</span> ticket             <span class="c">← automatiquement converti en JSON</span></pre>
+
+  <h3>Comment les routes sont déclarées dans main.py</h3>
+  <pre><span class="c"># Dans main.py — chaque router est importé et monté</span>
+app.<span class="f">include_router</span>(tickets.router, prefix=<span class="s">"/api"</span>)
+<span class="c"># → POST /api/tickets, GET /api/tickets, etc.</span>
+
+app.<span class="f">include_router</span>(ws.router)
+<span class="c"># → WebSocket /ws/ticket/{id} (pas de /api prefix)</span></pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="fichiers-back">
+  <h2>📁 Structure complète des fichiers backend</h2>
+  <div class="file-tree">
+<span class="ft-dir">eolis-api/app/</span>
+├── <span class="ft-file">main.py</span>           <span class="ft-comment">Point d'entrée. Configure CORS, middlewares, migrations startup</span>
+├── <span class="ft-file">models.py</span>         <span class="ft-comment">Toutes les tables (classes Python = tables SQL)</span>
+├── <span class="ft-file">schemas.py</span>        <span class="ft-comment">Validation des données entrantes/sortantes (Pydantic)</span>
+├── <span class="ft-file">config.py</span>         <span class="ft-comment">Variables d'environnement (DB_URL, JWT_SECRET, etc.)</span>
+├── <span class="ft-file">database.py</span>       <span class="ft-comment">Connexion PostgreSQL, Session SQLAlchemy</span>
+├── <span class="ft-file">deps.py</span>           <span class="ft-comment">get_current_user(), require_roles() — sécurité</span>
+├── <span class="ft-file">security.py</span>       <span class="ft-comment">Hachage mot de passe, création/vérification JWT</span>
+├── <span class="ft-file">limiter.py</span>        <span class="ft-comment">Rate limiting (max X requêtes/minute)</span>
+├── <span class="ft-file">email_service.py</span>  <span class="ft-comment">Envoi emails automatiques (Zoho SMTP)</span>
+├── <span class="ft-file">sms_service.py</span>    <span class="ft-comment">Envoi SMS (Twilio) — actuellement non fonctionnel</span>
+└── <span class="ft-dir">routers/</span>
+    ├── <span class="ft-file">auth.py</span>          <span class="ft-comment">Login, register, mot de passe oublié</span>
+    ├── <span class="ft-file">otp.py</span>           <span class="ft-comment">2FA — envoi et vérification code SMS</span>
+    ├── <span class="ft-file">tickets.py</span>       <span class="ft-comment">CRUD dossiers</span>
+    ├── <span class="ft-file">messages.py</span>      <span class="ft-comment">Messagerie par dossier (chat + notes internes)</span>
+    ├── <span class="ft-file">notifications.py</span> <span class="ft-comment">Notifications in-app</span>
+    ├── <span class="ft-file">users.py</span>         <span class="ft-comment">Profils, gestion admin des comptes</span>
+    ├── <span class="ft-file">attachments.py</span>   <span class="ft-comment">Upload/download fichiers</span>
+    ├── <span class="ft-file">bl.py</span>            <span class="ft-comment">Extraction BL via GPT-4o-mini</span>
+    ├── <span class="ft-file">whisper.py</span>       <span class="ft-comment">Transcription voix via Whisper</span>
+    ├── <span class="ft-file">credits.py</span>       <span class="ft-comment">Crédits clients, recharges, validation</span>
+    ├── <span class="ft-file">finance.py</span>       <span class="ft-comment">P&L, charges infra, projections</span>
+    ├── <span class="ft-file">ai_usage.py</span>      <span class="ft-comment">Tracking coûts OpenAI par usage</span>
+    ├── <span class="ft-file">sessions.py</span>      <span class="ft-comment">Sessions actives (admin)</span>
+    ├── <span class="ft-file">admin_logs.py</span>    <span class="ft-comment">Logs d'audit (SYSTEM_ADMIN)</span>
+    ├── <span class="ft-file">admin_config.py</span>  <span class="ft-comment">Paramètres système (taux de change, etc.)</span>
+    ├── <span class="ft-file">faq.py</span>           <span class="ft-comment">Contenu FAQ</span>
+    ├── <span class="ft-file">ratings.py</span>       <span class="ft-comment">Notes de satisfaction</span>
+    └── <span class="ft-file">ws.py</span>            <span class="ft-comment">WebSocket temps réel pour le chat</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="modeles">
+  <h2>🗃️ Modèles SQLAlchemy — Chaque classe = une table</h2>
+  <p>Dans <code>models.py</code>, chaque classe Python représente une table en base de données :</p>
+  <pre><span class="k">class</span> <span class="f">Ticket</span>(Base):
+    __tablename__ = <span class="s">"tickets"</span>         <span class="c">← nom de la table en DB</span>
+
+    id          = Column(String, primary_key=<span class="k">True</span>, default=<span class="k">lambda</span>: str(uuid4()))
+    ref         = Column(String, unique=<span class="k">True</span>)      <span class="c">← REF-2026-0001</span>
+    client_id   = Column(String, ForeignKey(<span class="s">"users.id"</span>))  <span class="c">← clé étrangère</span>
+    agent_id    = Column(String, ForeignKey(<span class="s">"users.id"</span>), nullable=<span class="k">True</span>)
+    category    = Column(String)
+    description = Column(Text)          <span class="c">← Text pour texte long, String pour court</span>
+    urgency     = Column(String)        <span class="c">← HIGH / MEDIUM / LOW</span>
+    status      = Column(String, default=<span class="s">"PENDING"</span>)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+    closed_at   = Column(DateTime, nullable=<span class="k">True</span>)
+
+    <span class="c">← Relations (pour joindre les tables automatiquement)</span>
+    client = relationship(<span class="s">"User"</span>, foreign_keys=[client_id])
+    agent  = relationship(<span class="s">"User"</span>, foreign_keys=[agent_id])</pre>
+
+  <h4>Types de colonnes importants</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Type Python</th><th>Type SQL</th><th>Quand l'utiliser</th></tr></thead>
+    <tbody>
+      <tr><td><code>String</code></td><td>VARCHAR(255)</td><td>Texte court (nom, email, statut)</td></tr>
+      <tr><td><code>Text</code></td><td>TEXT</td><td>Texte long (description, vessel_data JSON) ⚠️ obligatoire pour > 255 chars</td></tr>
+      <tr><td><code>Boolean</code></td><td>BOOLEAN</td><td>Oui/Non (phone_verified, etc.)</td></tr>
+      <tr><td><code>DateTime</code></td><td>TIMESTAMP</td><td>Dates (created_at, closed_at)</td></tr>
+      <tr><td><code>Float</code></td><td>DOUBLE PRECISION</td><td>Montants, coûts, scores</td></tr>
+      <tr><td><code>Integer</code></td><td>INTEGER</td><td>Compteurs, quantités</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="schemas">
+  <h2>✅ Schemas Pydantic — Validation des données</h2>
+  <p>Les schemas sont les "contrats" entre le frontend et le backend. Pydantic valide automatiquement les données reçues et génère les réponses.</p>
+  <pre><span class="k">class</span> <span class="f">TicketCreate</span>(BaseModel):     <span class="c">← Schema pour créer un ticket (données REÇUES)</span>
+    category:       str
+    subcategory:    Optional[str] = <span class="k">None</span>
+    ship_name:      Optional[str] = <span class="k">None</span>
+    description:    str
+    urgency:        str = <span class="s">"MEDIUM"</span>   <span class="c">← valeur par défaut</span>
+
+    model_config = ConfigDict(
+        populate_by_name=<span class="k">True</span>,
+        alias_generator=to_camel    <span class="c">← ship_name → shipName (camelCase pour le frontend)</span>
+    )
+
+<span class="k">class</span> <span class="f">TicketOut</span>(BaseModel):         <span class="c">← Schema pour la réponse (données RENVOYÉES)</span>
+    id:         str
+    ref:        str
+    category:   str
+    status:     str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=<span class="k">True</span>)  <span class="c">← lire depuis l'objet SQLAlchemy</span></pre>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">ℹ️</span>
+    <div class="alert-body">
+      <strong>camelCase vs snake_case</strong>
+      Python utilise <code>snake_case</code> (ship_name), JavaScript utilise <code>camelCase</code> (shipName). L'<code>alias_generator=to_camel</code> fait la conversion automatiquement. C'est pourquoi quand tu vois <code>ticket.shipName</code> côté frontend, c'est <code>ticket.ship_name</code> côté backend.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="auth-jwt">
+  <h2>🔐 Authentification JWT — Comment ça marche</h2>
+
+  <p>Un <strong>JWT (JSON Web Token)</strong> est une chaîne de caractères qui prouve l'identité d'un utilisateur. C'est comme un badge d'accès numérique.</p>
+
+  <div class="flow">
+    <div class="flow-step">1. Login<br><small>email + password</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">2. Backend vérifie<br><small>hash password</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">3. Génère JWT<br><small>signé + expiré</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">4. localStorage<br><small>eolis_token</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">5. Chaque requête<br><small>Bearer token</small></div>
+  </div>
+
+  <h3>Ce qu'un JWT contient</h3>
+  <pre><span class="c">// Contenu du token (décodable — pas secret !)</span>
+{
+  <span class="s">"sub"</span>: <span class="s">"uuid-de-l-utilisateur"</span>,  <span class="c">← user ID</span>
+  <span class="s">"role"</span>: <span class="s">"CLIENT"</span>,               <span class="c">← rôle</span>
+  <span class="s">"exp"</span>: 1748000000               <span class="c">← timestamp d'expiration (Unix)</span>
+}
+<span class="c">// La SIGNATURE est secrète — seul le backend peut la vérifier</span></pre>
+
+  <h3>Durée de validité par rôle</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Rôle</th><th>Durée JWT</th><th>Pourquoi</th></tr></thead>
+    <tbody>
+      <tr><td>CLIENT</td><td>4 heures</td><td>Sécurité mobile — session courte</td></tr>
+      <tr><td>AGENT, OPS_ADMIN</td><td>7 heures</td><td>Journée de travail complète</td></tr>
+      <tr><td>FINANCE_AGENT, SYSTEM_ADMIN</td><td>7 heures + 2FA</td><td>Accès sensible → double vérification</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Sécurité dans deps.py</h3>
+  <pre><span class="k">def</span> <span class="f">require_roles</span>(roles: list[str]):
+    <span class="k">def</span> <span class="f">dependency</span>(current_user = Depends(get_current_user)):
+        <span class="k">if</span> current_user.role <span class="k">not in</span> roles:
+            <span class="k">raise</span> HTTPException(status_code=403, detail=<span class="s">"forbidden"</span>)
+        <span class="k">return</span> current_user
+    <span class="k">return</span> dependency
+
+<span class="c"># Utilisation dans un endpoint</span>
+<span class="v">@router.post</span>(<span class="s">"/tickets"</span>)
+<span class="k">def</span> <span class="f">create</span>(user = Depends(<span class="f">require_roles</span>([<span class="s">"CLIENT"</span>]))):
+    <span class="c"># Seuls les CLIENTs peuvent créer des tickets</span></pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="migrations">
+  <h2>🔄 Migrations Base de données — Comment ajouter une colonne</h2>
+
+  <p>On n'utilise pas Alembic (outil de migration classique). À la place, des <code>ALTER TABLE</code> sont exécutés automatiquement au démarrage du serveur dans <code>main.py</code> :</p>
+
+  <pre><span class="c"># Dans startup() — main.py</span>
+<span class="k">with</span> engine.<span class="f">connect</span>() <span class="k">as</span> conn:
+    conn.<span class="f">execute</span>(text(<span class="s">"""
+        ALTER TABLE tickets ADD COLUMN IF NOT EXISTS vessel_data TEXT
+    """</span>))
+    conn.<span class="f">execute</span>(text(<span class="s">"""
+        CREATE TABLE IF NOT EXISTS financial_projections (
+            id VARCHAR(36) PRIMARY KEY,
+            period VARCHAR(7) NOT NULL UNIQUE,
+            ...
+        )
+    """</span>))
+    conn.<span class="f">commit</span>()</pre>
+
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div class="alert-body">
+      <strong>Ajouter une nouvelle colonne — procédure</strong>
+      1. Ajouter la colonne dans le modèle <code>models.py</code><br>
+      2. Ajouter le <code>ALTER TABLE ... ADD COLUMN IF NOT EXISTS</code> dans <code>main.py startup()</code><br>
+      3. Redémarrer le backend — la colonne est créée automatiquement<br>
+      <strong>Ne jamais faire d'ALTER TABLE directement en prod sans l'ajouter dans startup() !</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="db-intro">
+  <h2>🗄️ Base de données PostgreSQL / Neon</h2>
+
+  <p>PostgreSQL est une base de données relationnelle. On utilise <strong>Neon</strong> qui l'héberge dans le cloud (région EU-West-2 pour la latence depuis le Cameroun).</p>
+
+  <h3>Comment SQLAlchemy traduit Python → SQL</h3>
+  <pre><span class="c"># Python (SQLAlchemy)</span>
+ticket = db.<span class="f">query</span>(Ticket).<span class="f">filter</span>(Ticket.status == <span class="s">"PENDING"</span>).<span class="f">all</span>()
+
+<span class="c">-- SQL généré automatiquement</span>
+<span class="k">SELECT</span> * <span class="k">FROM</span> tickets <span class="k">WHERE</span> status = <span class="s">'PENDING'</span>;
+
+<span class="c"># Créer</span>
+db.<span class="f">add</span>(ticket); db.<span class="f">commit</span>()  <span class="c">→  INSERT INTO tickets ...</span>
+
+<span class="c"># Modifier</span>
+ticket.status = <span class="s">"CLOSED"</span>; db.<span class="f">commit</span>()  <span class="c">→  UPDATE tickets SET status='CLOSED' ...</span>
+
+<span class="c"># Supprimer</span>
+db.<span class="f">delete</span>(ticket); db.<span class="f">commit</span>()  <span class="c">→  DELETE FROM tickets WHERE id=...</span></pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="tables">
+  <h2>📊 Toutes les tables — Ce qu'elles contiennent</h2>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Table</th><th>Colonnes principales</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>users</code></td><td>id, first_name, last_name, email, phone, role, status, password_hash, language</td><td>Tous les comptes (clients + staff)</td></tr>
+      <tr><td><code>tickets</code></td><td>id, ref, client_id, agent_id, category, subcategory, equipment_type, ship_name, voyage_number, code, vessel_data, description, urgency, status, bl_document_id, created_at, closed_at</td><td>Dossiers de demande</td></tr>
+      <tr><td><code>messages</code></td><td>id, ticket_id, sender_id, sender_type, content, document_description, created_at</td><td>Chat par ticket (AGENT, CLIENT, INTERNAL_NOTE, FINAL_RESPONSE...)</td></tr>
+      <tr><td><code>attachments</code></td><td>id, ticket_id, filename, file_path, mime_type, size, source</td><td>Fichiers joints aux tickets</td></tr>
+      <tr><td><code>notifications</code></td><td>id, user_id, ticket_id, type, title, message, read, created_at</td><td>Alertes in-app par utilisateur</td></tr>
+      <tr><td><code>bl_documents</code></td><td>id, client_id, filename, booking_no, vessel, voyage, eta, port_of_loading, port_of_discharge, description_of_goods, raw_extracted, created_at</td><td>BL scannés par GPT</td></tr>
+      <tr><td><code>credit_balances</code></td><td>id, client_id (UNIQUE), credits_total, credits_used, updated_at</td><td>Solde crédits par client</td></tr>
+      <tr><td><code>credit_requests</code></td><td>id, client_id, amount_declared, photo_url, status, amount_validated, validated_by, admin_confirmed_by, rejection_reason, created_at</td><td>Demandes de recharge</td></tr>
+      <tr><td><code>ai_usage</code></td><td>id, client_id, ticket_id, bl_document_id, model, input_tokens, output_tokens, cost_usd, cost_fcfa, type, credits_cost, created_at</td><td>Coûts OpenAI par opération</td></tr>
+      <tr><td><code>infrastructure_costs</code></td><td>id, category, label, amount_fcfa, amount_usd, period, invoice_url, added_by, created_at</td><td>Charges infra mensuelles</td></tr>
+      <tr><td><code>financial_projections</code></td><td>id, period, target_revenue, target_clients, target_margin_pct, target_net_profit, notes, created_by, created_at</td><td>Objectifs financiers mensuels</td></tr>
+      <tr><td><code>financial_audit_logs</code></td><td>id, user_id, action, entity_id, amount_fcfa, details, ip_address, created_at</td><td>Journal immuable actions financières</td></tr>
+      <tr><td><code>system_config</code></td><td>key, value, updated_at</td><td>Paramètres système (taux de change, etc.)</td></tr>
+      <tr><td><code>otp_codes</code></td><td>id, user_id, code, expires_at, used, created_at</td><td>Codes 2FA temporaires</td></tr>
+      <tr><td><code>ratings</code></td><td>id, ticket_id, client_id, score, comment, created_at</td><td>Notes de satisfaction</td></tr>
+      <tr><td><code>admin_logs</code></td><td>id, user_id, action, entity, entity_id, details, created_at</td><td>Logs d'audit général</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="relations">
+  <h2>🔗 Relations entre les tables</h2>
+  <pre><span class="c">-- Un ticket appartient à UN client et peut avoir UN agent</span>
+tickets.client_id  → users.id
+tickets.agent_id   → users.id
+
+<span class="c">-- Les messages appartiennent à UN ticket</span>
+messages.ticket_id → tickets.id
+
+<span class="c">-- Les pièces jointes appartiennent à UN ticket</span>
+attachments.ticket_id → tickets.id
+
+<span class="c">-- Un ticket peut être lié à UN document BL (Premium)</span>
+tickets.bl_document_id → bl_documents.id
+
+<span class="c">-- Les crédits sont liés à UN client (relation 1-1)</span>
+credit_balances.client_id → users.id (UNIQUE)
+
+<span class="c">-- Les coûts IA sont liés à UN client et optionnellement UN ticket ou BL</span>
+ai_usage.client_id     → users.id
+ai_usage.ticket_id     → tickets.id (nullable)
+ai_usage.bl_document_id → bl_documents.id (nullable)</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="env">
+  <h2>⚙️ Variables d'environnement — Tous les secrets</h2>
+
+  <div class="alert alert-danger">
+    <span class="alert-icon">🔴</span>
+    <div class="alert-body"><strong>Ces variables ne doivent JAMAIS être commitées dans Git !</strong> Elles sont dans des fichiers <code>.env</code> ignorés par <code>.gitignore</code>, ou configurées directement dans Vercel/Railway.</div>
+  </div>
+
+  <h3>Backend — Railway (fichier .env ou variables Railway)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Variable</th><th>Valeur exemple</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>DATABASE_URL</code></td><td><code>postgresql://user:pass@neon.tech/eolis</code></td><td>Connexion PostgreSQL Neon</td></tr>
+      <tr><td><code>JWT_SECRET</code></td><td><code>une-chaine-longue-aleatoire</code></td><td>Signer les tokens JWT</td></tr>
+      <tr><td><code>OPENAI_API_KEY</code></td><td><code>sk-proj-xxx</code></td><td>GPT-4o-mini (BL) + Whisper (voix)</td></tr>
+      <tr><td><code>OPENAI_MODEL</code></td><td><code>gpt-4o-mini</code></td><td>Modèle à utiliser</td></tr>
+      <tr><td><code>MAIL_USER</code></td><td><code>noreply@containeriq.app</code></td><td>Email expéditeur (Zoho)</td></tr>
+      <tr><td><code>MAIL_PASS</code></td><td><code>xxxxxxxx</code></td><td>Mot de passe Zoho SMTP</td></tr>
+      <tr><td><code>TWILIO_ACCOUNT_SID</code></td><td><code>ACxxxxxxxx</code></td><td>SMS Twilio</td></tr>
+      <tr><td><code>TWILIO_AUTH_TOKEN</code></td><td><code>xxxxxxxx</code></td><td>SMS Twilio</td></tr>
+      <tr><td><code>TWILIO_PHONE</code></td><td><code>+1xxxxxxxxxx</code></td><td>Numéro expéditeur SMS</td></tr>
+      <tr><td><code>ALLOWED_ORIGINS</code></td><td><code>https://eolis.vercel.app,http://localhost:3000</code></td><td>CORS — domaines autorisés</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Frontend — Vercel (.env.local)</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Variable</th><th>Exemple</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>NEXT_PUBLIC_API_URL</code></td><td><code>https://eolis-api.railway.app</code></td><td>URL de l'API backend</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Où sont lues ces variables côté backend — config.py</h3>
+  <pre><span class="k">from</span> pydantic_settings <span class="k">import</span> BaseSettings
+
+<span class="k">class</span> <span class="f">Settings</span>(BaseSettings):
+    DATABASE_URL:    str
+    JWT_SECRET:      str
+    OPENAI_API_KEY:  str = <span class="s">""</span>
+    OPENAI_MODEL:    str = <span class="s">"gpt-4o-mini"</span>
+    ALLOWED_ORIGINS: str = <span class="s">"http://localhost:3000"</span>
+    ...
+
+settings = <span class="f">Settings</span>()  <span class="c">← lit automatiquement le fichier .env</span>
+
+<span class="c"># Utilisation</span>
+<span class="k">from</span> .config <span class="k">import</span> settings
+engine = <span class="f">create_engine</span>(settings.DATABASE_URL)</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="services">
+  <h2>🔌 Services externes</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Service</th><th>Rôle</th><th>Coût</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Vercel</strong></td><td>Hébergement frontend Next.js</td><td>~0–20$/mois</td><td><span class="badge b-green">Actif</span></td></tr>
+      <tr><td><strong>Railway</strong></td><td>Hébergement backend FastAPI</td><td>~5–20$/mois</td><td><span class="badge b-green">Actif</span></td></tr>
+      <tr><td><strong>Neon</strong></td><td>PostgreSQL cloud</td><td>~0–19$/mois</td><td><span class="badge b-green">Actif</span></td></tr>
+      <tr><td><strong>OpenAI</strong></td><td>GPT-4o-mini (BL) + Whisper (voix)</td><td>Pay-per-use</td><td><span class="badge b-green">Actif</span></td></tr>
+      <tr><td><strong>Zoho Mail</strong></td><td>Emails automatiques SMTP</td><td>Gratuit (plan existant)</td><td><span class="badge b-green">Actif</span></td></tr>
+      <tr><td><strong>Twilio</strong></td><td>SMS (OTP 2FA + notifications)</td><td>Pay-per-SMS</td><td><span class="badge b-red">Non fonctionnel</span></td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="deploy">
+  <h2>🚀 Déploiement — Vercel & Railway</h2>
+
+  <h3>Frontend — Vercel (automatique)</h3>
+  <p>Vercel est connecté au repo GitHub. À chaque <code>git push</code> sur la branche <code>main</code> → Vercel rebuilde et redéploie automatiquement en 1–2 minutes. Pas besoin de faire quoi que ce soit.</p>
+
+  <h3>Backend — Railway (automatique aussi)</h3>
+  <p>Railway est aussi connecté au repo. Chaque push sur <code>main</code> → Railway rebuild et redémarre le backend. Le redémarrage exécute les migrations <code>startup()</code> automatiquement.</p>
+
+  <h3>En cas de problème de déploiement</h3>
+  <ul>
+    <li>Vercel : aller sur <code>vercel.com</code> → ton projet → onglet "Deployments" → voir les logs du build</li>
+    <li>Railway : aller sur <code>railway.app</code> → ton service → onglet "Deployments" → voir les logs</li>
+    <li>Les erreurs TypeScript bloquent le build Vercel → toujours vérifier avec <code>npx tsc --noEmit</code> avant de push</li>
+  </ul>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="local">
+  <h2>💻 Lancer en local</h2>
+  <pre><span class="c"># Terminal 1 — Frontend</span>
+cd <span class="s">"C:\Users\Denmeko Dieu-Veille\Downloads\EolisProject\eolis-connect"</span>
+npm run dev
+<span class="c"># → http://localhost:3000</span>
+
+<span class="c"># Terminal 2 — Backend</span>
+cd <span class="s">"C:\Users\Denmeko Dieu-Veille\Downloads\EolisProject\eolis-api"</span>
+uvicorn app.main:app --reload --port 8000
+<span class="c"># → http://localhost:8000</span>
+<span class="c"># → http://localhost:8000/docs  ← interface Swagger pour tester les endpoints</span></pre>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">💡</span>
+    <div class="alert-body">
+      <strong>Swagger UI — ton meilleur ami pour débugger le backend</strong>
+      Va sur <code>http://localhost:8000/docs</code> quand le backend tourne. Tu peux tester chaque endpoint directement, voir les schemas, les réponses. Ça évite d'avoir à passer par le frontend pour tester une route.
+    </div>
+  </div>
+
+  <h3>Vérification TypeScript (après une modification frontend)</h3>
+  <pre>cd <span class="s">"C:\Users\Denmeko Dieu-Veille\Downloads\EolisProject\eolis-connect"</span>
+npx tsc --noEmit --skipLibCheck
+<span class="c"># aucune sortie = aucune erreur ✅
+# sortie avec des lignes = erreurs à corriger avant de push</span></pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="erreurs-front">
+  <h2>🔴 Erreurs Frontend courantes — Causes & solutions</h2>
+
+  <div class="error-card">
+    <div class="error-title">TypeError: Cannot read properties of undefined (reading 'firstName')</div>
+    <p style="font-size:.87rem;color:#6b7280;">L'objet existe en DB mais arrive null côté frontend à cause d'un timing.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Utiliser l'optional chaining : <code>ticket?.client?.firstName ?? ''</code> au lieu de <code>ticket.client.firstName</code>
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">Input loses focus on every keystroke</div>
+    <p style="font-size:.87rem;color:#6b7280;">Un composant est défini INSIDE le composant parent.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Déplacer la définition du sous-composant EN DEHORS du <code>export default function</code>. Voir section "Composants React".
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">hydration mismatch / Text content does not match</div>
+    <p style="font-size:.87rem;color:#6b7280;">Le HTML généré côté serveur est différent du HTML côté client (ex: date affichée différemment).</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Utiliser <code>useEffect</code> pour initialiser les valeurs dépendantes du client (localStorage, Date.now()), pas directement dans le render.
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">Error: params.locale is undefined</div>
+    <p style="font-size:.87rem;color:#6b7280;">params non traité comme une Promise (Next.js 16).</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      <code>useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])</code>
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">TypeScript Error: Property 'X' does not exist on type 'Y'</div>
+    <p style="font-size:.87rem;color:#6b7280;">Tu utilises un champ qui n'est pas déclaré dans l'interface.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Ajouter le champ dans l'interface TypeScript. Ex: si <code>form.eta</code> ne compile pas → ajouter <code>eta: string</code> dans <code>interface FormState</code>.
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">fetch failed / Network Error</div>
+    <p style="font-size:.87rem;color:#6b7280;">Le backend est en panne ou l'URL de l'API est mauvaise.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      1. Vérifier que le backend tourne (<code>http://localhost:8000</code> en local)<br>
+      2. Vérifier <code>NEXT_PUBLIC_API_URL</code> dans les variables Vercel<br>
+      3. Vérifier CORS dans <code>ALLOWED_ORIGINS</code>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="erreurs-back">
+  <h2>🔴 Erreurs Backend courantes</h2>
+
+  <div class="error-card">
+    <div class="error-title">422 Unprocessable Entity</div>
+    <p style="font-size:.87rem;color:#6b7280;">Le frontend envoie des données qui ne correspondent pas au schema Pydantic.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Ouvrir le réseau dans les DevTools (F12 → Network) → cliquer sur la requête failed → voir le corps de la réponse. Le message d'erreur Pydantic dit exactement quel champ pose problème et pourquoi.
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">500 Internal Server Error — value too long for type character varying(100)</div>
+    <p style="font-size:.87rem;color:#6b7280;">Un champ VARCHAR trop court pour la valeur envoyée.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Dans <code>models.py</code>, changer <code>Column(String)</code> → <code>Column(Text)</code> pour ce champ. Puis ajouter dans <code>startup()</code> : <code>ALTER TABLE X ALTER COLUMN Y TYPE TEXT</code>
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">401 Unauthorized</div>
+    <p style="font-size:.87rem;color:#6b7280;">Token JWT expiré ou absent.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Normal — le frontend gère ça automatiquement (déconnexion + redirect login). Si ça arrive en boucle, vérifier que <code>JWT_SECRET</code> n'a pas changé côté Railway.
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">sms_otp() takes 2 positional arguments but 3 were given</div>
+    <p style="font-size:.87rem;color:#6b7280;">Tu appelles une fonction avec trop d'arguments.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Regarder la signature de la fonction dans <code>sms_service.py</code> et compter les paramètres. Supprimer l'argument en trop.
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">CORS error — blocked by CORS policy</div>
+    <p style="font-size:.87rem;color:#6b7280;">L'URL du frontend n'est pas dans la liste des origines autorisées.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Dans Railway, ajouter l'URL Vercel dans la variable <code>ALLOWED_ORIGINS</code> : <code>https://ton-app.vercel.app,http://localhost:3000</code>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="erreurs-db">
+  <h2>🔴 Erreurs Base de données</h2>
+
+  <div class="error-card">
+    <div class="error-title">column X of relation Y does not exist</div>
+    <p style="font-size:.87rem;color:#6b7280;">Le code utilise une colonne qui n'existe pas encore en DB.</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Ajouter la migration dans <code>startup()</code> de <code>main.py</code> et redémarrer le backend.
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">duplicate key value violates unique constraint</div>
+    <p style="font-size:.87rem;color:#6b7280;">Tu essaies d'insérer une valeur déjà existante dans une colonne UNIQUE (email, username, etc.).</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Côté code : vérifier d'abord si la valeur existe avant d'insérer (<code>db.query(User).filter(User.email == email).first()</code>). Côté data : nettoyer les doublons en DB si nécessaire.
+    </div>
+  </div>
+
+  <div class="error-card">
+    <div class="error-title">relation X does not exist</div>
+    <p style="font-size:.87rem;color:#6b7280;">La table n'a pas été créée (le CREATE TABLE IF NOT EXISTS n'a pas tourné).</p>
+    <div class="error-fix">
+      <div class="error-fix-title">✅ Solution</div>
+      Vérifier que le <code>CREATE TABLE IF NOT EXISTS</code> est bien dans <code>startup()</code> et que le backend a bien redémarré.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="debug">
+  <h2>🔍 Comment débugger efficacement</h2>
+
+  <h3>1. Identifier où est le problème</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Symptôme</th><th>Probable source</th><th>Où chercher</th></tr></thead>
+    <tbody>
+      <tr><td>La page est blanche</td><td>Erreur JavaScript au démarrage</td><td>F12 → Console (onglet rouge)</td></tr>
+      <tr><td>Les données n'apparaissent pas</td><td>Appel API qui échoue</td><td>F12 → Network → chercher les requêtes en rouge</td></tr>
+      <tr><td>Erreur 4xx/5xx</td><td>Backend qui rejette la requête</td><td>Logs Railway + F12 Network → response body</td></tr>
+      <tr><td>TypeScript refuse de compiler</td><td>Type incorrect dans le code</td><td>Terminal → <code>npx tsc --noEmit</code></td></tr>
+      <tr><td>Données wronges affichées</td><td>Mauvaise clé (camelCase vs snake_case)</td><td>F12 → Network → regarder la réponse JSON brute</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>2. Console.log — ton meilleur ami</h3>
+  <pre><span class="c">// Frontend</span>
+console.<span class="f">log</span>(<span class="s">'data reçue:'</span>, data)
+
+<span class="c"># Backend Python</span>
+print(<span class="s">f"ticket reçu: {body}"</span>)</pre>
+
+  <h3>3. DevTools Network — voir toutes les requêtes</h3>
+  <p>F12 → onglet "Network" → actualiser la page → chaque ligne est une requête HTTP. Les rouges = erreurs. Clique dessus → onglet "Response" → voir exactement ce que le backend a répondu.</p>
+
+  <h3>4. Swagger UI — tester le backend sans le frontend</h3>
+  <p><code>http://localhost:8000/docs</code> — interface graphique qui liste tous les endpoints. Clique "Authorize" en haut, colle ton token JWT, puis teste chaque route directement.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="git-base">
+  <h2>🐙 Git & GitHub — Commandes de base</h2>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">ℹ️</span>
+    <div class="alert-body"><strong>Git = système de versions local. GitHub = copie en ligne.</strong> Git garde l'historique de toutes tes modifications sur ton ordinateur. GitHub est le serveur distant où tu pousses cette copie pour la sauvegarder et la partager.</div>
+  </div>
+
+  <h3>Commandes quotidiennes</h3>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git status</code><div class="git-desc">Voir quels fichiers ont été modifiés, ajoutés, ou supprimés depuis le dernier commit.</div></div></div>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git diff</code><div class="git-desc">Voir exactement quelles lignes ont changé dans les fichiers modifiés (les + en vert = ajoutées, les - en rouge = supprimées).</div></div></div>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git add nom-du-fichier.tsx</code><div class="git-desc">Ajouter un fichier spécifique au prochain commit. Préfère ça à "git add ." pour éviter de commit des fichiers secrets accidentellement.</div></div></div>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git add .</code><div class="git-desc">Ajouter TOUS les fichiers modifiés. Pratique mais à utiliser avec précaution (vérifier d'abord avec git status).</div></div></div>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git commit -m "feat: description courte de ce que tu as fait"</code><div class="git-desc">Sauvegarder les changements avec un message. Le message commence par: feat: (nouvelle feature), fix: (correction bug), docs: (documentation), refactor: (réorganisation).</div></div></div>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git push</code><div class="git-desc">Envoyer ton commit vers GitHub. Déclenche automatiquement le redéploiement sur Vercel et Railway.</div></div></div>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git pull</code><div class="git-desc">Récupérer les dernières modifications depuis GitHub (utile si tu travailles sur plusieurs machines).</div></div></div>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git log --oneline -20</code><div class="git-desc">Voir les 20 derniers commits avec leur ID court et message. Utile pour retrouver un état précédent.</div></div></div>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git log --oneline -20</code><div class="git-desc">Voir les 20 derniers commits. Chaque ligne = un commit avec son ID court (7 caractères) et son message.</div></div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="git-workflow">
+  <h2>🔄 Workflow quotidien Git</h2>
+
+  <p>Voici exactement dans quel ordre faire les choses quand tu modifies du code :</p>
+
+  <pre><span class="c"># 1. Vérifier l'état avant de commencer</span>
+git status
+
+<span class="c"># 2. Faire tes modifications dans les fichiers...</span>
+
+<span class="c"># 3. Vérifier TypeScript (si tu as touché au frontend)</span>
+cd eolis-connect
+npx tsc --noEmit --skipLibCheck
+<span class="c"># → aucune sortie = bon ✅</span>
+
+<span class="c"># 4. Voir ce qui a changé</span>
+git diff
+
+<span class="c"># 5. Ajouter les fichiers modifiés</span>
+git add src/app/[locale]/\(client\)/nouvelle-demande/page.tsx
+
+<span class="c"># 6. Commit avec un message clair</span>
+git commit -m "feat: ajout BL manual fields dans formulaire"
+
+<span class="c"># 7. Push → redéploiement automatique</span>
+git push</pre>
+
+  <h3>Nommage des commits</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Préfixe</th><th>Quand l'utiliser</th><th>Exemple</th></tr></thead>
+    <tbody>
+      <tr><td><code>feat:</code></td><td>Nouvelle fonctionnalité</td><td><code>feat: popup friction Premium</code></td></tr>
+      <tr><td><code>fix:</code></td><td>Correction d'un bug</td><td><code>fix: textarea perd le focus</code></td></tr>
+      <tr><td><code>docs:</code></td><td>Documentation uniquement</td><td><code>docs: mise à jour CHANGELOG</code></td></tr>
+      <tr><td><code>refactor:</code></td><td>Réorganisation sans changement fonctionnel</td><td><code>refactor: extraire composant BLCard</code></td></tr>
+      <tr><td><code>style:</code></td><td>CSS/design uniquement</td><td><code>style: ajout padding section logistique</code></td></tr>
+      <tr><td><code>perf:</code></td><td>Amélioration performance</td><td><code>perf: mémoïser calcul score composite</code></td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="git-urgence">
+  <h2>🚨 Urgences Git — Annuler, récupérer, corriger</h2>
+
+  <h3>Annuler des modifications non commitées</h3>
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git checkout -- nom-du-fichier.tsx</code><div class="git-desc">⚠️ Annule toutes les modifications d'un fichier et revient à la dernière version commitée. IRRÉVERSIBLE.</div></div></div>
+
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git stash</code><div class="git-desc">Mettre de côté toutes les modifications en cours (sans les perdre) pour travailler sur autre chose. Récupérer avec "git stash pop".</div></div></div>
+
+  <h3>Corriger le dernier commit (AVANT de push)</h3>
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git add fichier-oublié.tsx &amp;&amp; git commit --amend --no-edit</code><div class="git-desc">Ajouter un fichier oublié au dernier commit sans changer le message. SEULEMENT si tu n'as pas encore push.</div></div></div>
+
+  <h3>Voir l'état d'un commit passé (lecture seule)</h3>
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git show abc1234</code><div class="git-desc">Voir exactement ce que contenait le commit abc1234 (remplacer par l'ID du commit). Utile pour retrouver une ancienne version d'un fichier.</div></div></div>
+
+  <h3>Revenir à un commit précédent (cas extrême)</h3>
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git revert abc1234</code><div class="git-desc">Créer un NOUVEAU commit qui annule les changements du commit abc1234. Méthode safe — ne réécrit pas l'historique. À préférer à git reset.</div></div></div>
+
+  <div class="alert alert-danger">
+    <span class="alert-icon">🔴</span>
+    <div class="alert-body">
+      <strong>Ne jamais faire <code>git reset --hard</code> ni <code>git push --force</code> sur main</strong>
+      Ces commandes réécrivent l'historique et peuvent détruire du travail irrémédiablement. Si tu es bloqué, utilise <code>git revert</code> à la place.
+    </div>
+  </div>
+
+  <h3>Voir les branches</h3>
+  <div class="git-cmd"><span class="git-prompt">$</span><div><code>git branch</code><div class="git-desc">Voir toutes les branches locales. L'étoile (*) indique la branche active. Notre projet utilise uniquement "main".</div></div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="cheat-front">
+  <h2>📋 Cheat Sheet Frontend</h2>
+  <pre><span class="c">// Pattern pour une page complète</span>
+<span class="s">'use client'</span>
+<span class="k">import</span> { useState, useEffect } <span class="k">from</span> <span class="s">'react'</span>
+<span class="k">import</span> { getUser, apiFetch } <span class="k">from</span> <span class="s">'@/lib/api-client'</span>
+
+<span class="k">export default function</span> <span class="f">MaPage</span>({ params }: { params: Promise&lt;{ locale: string }&gt; }) {
+  <span class="k">const</span> [locale, setLocale] = <span class="f">useState</span>(<span class="s">'fr'</span>)
+  <span class="k">const</span> [user, setUser]     = <span class="f">useState</span>&lt;<span class="k">any</span>&gt;(<span class="k">null</span>)
+  <span class="k">const</span> [data, setData]     = <span class="f">useState</span>&lt;<span class="k">any</span>[]&gt;([])
+  <span class="k">const</span> [loading, setLoading] = <span class="f">useState</span>(<span class="k">true</span>)
+
+  <span class="c">// 1. Récupérer le locale</span>
+  <span class="f">useEffect</span>(() => { params.<span class="f">then</span>(p => <span class="f">setLocale</span>(p.locale)) }, [params])
+
+  <span class="c">// 2. Vérifier l'auth</span>
+  <span class="f">useEffect</span>(() => {
+    <span class="k">const</span> u = <span class="f">getUser</span>()
+    <span class="k">if</span> (!u) { router.<span class="f">replace</span>(`/${locale}/login`); <span class="k">return</span> }
+    <span class="f">setUser</span>(u)
+  }, [locale])
+
+  <span class="c">// 3. Charger les données quand user est prêt</span>
+  <span class="f">useEffect</span>(() => {
+    <span class="k">if</span> (!user) <span class="k">return</span>
+    <span class="f">apiFetch</span>(<span class="s">'/api/mon-endpoint'</span>)
+      .<span class="f">then</span>(r => r.<span class="f">json</span>())
+      .<span class="f">then</span>(d => { <span class="f">setData</span>(d); <span class="f">setLoading</span>(<span class="k">false</span>) })
+      .<span class="f">catch</span>(() => <span class="f">setLoading</span>(<span class="k">false</span>))
+  }, [user])
+
+  <span class="k">if</span> (!user || loading) <span class="k">return</span> <span class="k">null</span>
+
+  <span class="k">return</span> &lt;div&gt;...&lt;/div&gt;
+}</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="cheat-back">
+  <h2>📋 Cheat Sheet Backend</h2>
+  <pre><span class="c"># Pattern pour un endpoint complet</span>
+<span class="k">from</span> fastapi <span class="k">import</span> APIRouter, Depends, HTTPException, status
+<span class="k">from</span> sqlalchemy.orm <span class="k">import</span> Session
+<span class="k">from</span> ..database <span class="k">import</span> get_db
+<span class="k">from</span> ..deps <span class="k">import</span> require_roles
+<span class="k">from</span> ..models <span class="k">import</span> Ticket
+<span class="k">from</span> ..schemas <span class="k">import</span> TicketOut
+
+router = APIRouter(prefix=<span class="s">"/tickets"</span>, tags=[<span class="s">"tickets"</span>])
+
+<span class="v">@router.get</span>(<span class="s">"/{ticket_id}"</span>, response_model=TicketOut)
+<span class="k">def</span> <span class="f">get_ticket</span>(
+    ticket_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(<span class="f">require_roles</span>([<span class="s">"CLIENT"</span>, <span class="s">"AGENT"</span>]))
+):
+    ticket = db.<span class="f">query</span>(Ticket).<span class="f">filter</span>(Ticket.id == ticket_id).<span class="f">first</span>()
+    <span class="k">if not</span> ticket:
+        <span class="k">raise</span> <span class="f">HTTPException</span>(status_code=404, detail=<span class="s">"not_found"</span>)
+    <span class="k">return</span> ticket</pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="cheat-db">
+  <h2>📋 Cheat Sheet SQL utile</h2>
+  <pre><span class="c">-- Voir tous les utilisateurs</span>
+<span class="k">SELECT</span> id, username, role, status <span class="k">FROM</span> users <span class="k">ORDER BY</span> created_at <span class="k">DESC</span>;
+
+<span class="c">-- Voir les tickets en cours</span>
+<span class="k">SELECT</span> ref, category, urgency, status, created_at <span class="k">FROM</span> tickets
+<span class="k">WHERE</span> status <span class="k">IN</span> (<span class="s">'PENDING'</span>, <span class="s">'IN_PROGRESS'</span>)
+<span class="k">ORDER BY</span> created_at;
+
+<span class="c">-- Voir le solde crédits d'un client</span>
+<span class="k">SELECT</span> u.username, cb.credits_total, cb.credits_used,
+       (cb.credits_total - cb.credits_used) <span class="k">AS</span> remaining
+<span class="k">FROM</span> credit_balances cb
+<span class="k">JOIN</span> users u <span class="k">ON</span> u.id = cb.client_id;
+
+<span class="c">-- Voir les coûts IA du mois</span>
+<span class="k">SELECT</span> type, SUM(cost_fcfa) <span class="k">AS</span> total_fcfa, COUNT(*) <span class="k">AS</span> nb_ops
+<span class="k">FROM</span> ai_usage
+<span class="k">WHERE</span> created_at >= DATE_TRUNC(<span class="s">'month'</span>, NOW())
+<span class="k">GROUP BY</span> type;
+
+<span class="c">-- Ajouter une colonne manuellement (si startup ne tourne pas)</span>
+<span class="k">ALTER TABLE</span> tickets <span class="k">ADD COLUMN IF NOT EXISTS</span> ma_colonne TEXT;
+
+<span class="c">-- Voir la taille des tables</span>
+<span class="k">SELECT</span> relname, pg_size_pretty(pg_total_relation_size(relid))
+<span class="k">FROM</span> pg_catalog.pg_statio_user_tables <span class="k">ORDER BY</span> pg_total_relation_size(relid) <span class="k">DESC</span>;</pre>
+</div>
+
+</main>
+</div>
+
+</body>
+</html>
