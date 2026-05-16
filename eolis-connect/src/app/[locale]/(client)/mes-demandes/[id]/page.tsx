@@ -309,10 +309,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' })
         .then(() => {
           window.dispatchEvent(new Event('eolis:notifications_read'))
-          // Ferme les notifs push affichées pour ce dossier
           if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
             navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATIONS', ticketId })
           }
+          // Efface le badge iOS de l'icône app
+          if ('clearAppBadge' in navigator) (navigator as any).clearAppBadge().catch(() => {})
         })
         .catch(() => {})
       Promise.all([
@@ -455,10 +456,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
       apiFetch(`/api/tickets/${ticketId}/messages/mark-read`, { method: 'POST' })
         .then(() => {
           window.dispatchEvent(new Event('eolis:notifications_read'))
-          // Ferme les notifs push affichées pour ce dossier
           if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
             navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATIONS', ticketId })
           }
+          // Efface le badge iOS de l'icône app
+          if ('clearAppBadge' in navigator) (navigator as any).clearAppBadge().catch(() => {})
         })
         .catch(() => {})
     } catch {}

@@ -26,20 +26,15 @@ self.addEventListener('push', e => {
   const ticketId = data.ticketId || null
   const url      = data.url || '/'
 
+  // Le backend attend déjà 3s et vérifie si le message est lu avant d'envoyer.
+  // Si le push arrive ici c'est qu'il est légitime — on l'affiche directement.
   e.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      // Si le user est déjà sur la conversation en question → pas de notif
-      if (ticketId) {
-        const alreadyThere = list.some(c => c.visibilityState === 'visible' && c.url.includes(ticketId))
-        if (alreadyThere) return
-      }
-      return self.registration.showNotification(data.title || 'Eolis Connect', {
-        body:    data.body || '',
-        icon:    '/logo.png',
-        badge:   '/logo.png',
-        data:    { url, ticketId },
-        vibrate: [200, 100, 200],
-      })
+    self.registration.showNotification(data.title || 'Eolis Connect', {
+      body:    data.body || '',
+      icon:    '/logo.png',
+      badge:   '/logo.png',
+      data:    { url, ticketId },
+      vibrate: [200, 100, 200],
     })
   )
 })

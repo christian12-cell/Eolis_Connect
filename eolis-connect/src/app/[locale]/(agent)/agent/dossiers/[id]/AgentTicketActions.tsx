@@ -234,6 +234,7 @@ export default function AgentTicketActions({
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATIONS', ticketId })
         }
+        if ('clearAppBadge' in navigator) (navigator as any).clearAppBadge().catch(() => {})
       })
       .catch(() => {})
   }, [ticketId])
@@ -247,6 +248,7 @@ export default function AgentTicketActions({
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATIONS', ticketId })
         }
+        if ('clearAppBadge' in navigator) (navigator as any).clearAppBadge().catch(() => {})
       })
       .catch(() => {})
       Promise.all([
