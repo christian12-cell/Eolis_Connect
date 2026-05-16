@@ -138,6 +138,7 @@ export default function OpsDashboardPage({ params }: { params: Promise<{ locale:
   const [yearFilter, setYearFilter]   = useState<number[]>([])
   const [monthFilter, setMonthFilter] = useState<number[]>([])
   const [dayFilter, setDayFilter]     = useState<number[]>([])
+  const [equitePerf, setEquitePerf]   = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -428,9 +429,22 @@ export default function OpsDashboardPage({ params }: { params: Promise<{ locale:
     }
 
     return series.map(p => {
-      const highD   = computeDetail(p.tickets, 'HIGH')
-      const mediumD = computeDetail(p.tickets, 'MEDIUM')
-      const lowD    = computeDetail(p.tickets, 'LOW')
+      // Mode équité : normalise chaque urgence au même nombre de tickets (le minimum non-zéro du lot)
+      function equiteTickets(urgency: string): any[] {
+        const uts = p.tickets.filter((t: any) => t.urgency === urgency)
+        if (!equitePerf) return uts
+        const counts = ['HIGH','MEDIUM','LOW']
+          .map(u => p.tickets.filter((t: any) => t.urgency === u).length)
+          .filter(n => n > 0)
+        if (!counts.length) return uts
+        const n = Math.min(...counts)
+        return [...uts]
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, n)
+      }
+      const highD   = computeDetail(equiteTickets('HIGH'),   'HIGH')
+      const mediumD = computeDetail(equiteTickets('MEDIUM'), 'MEDIUM')
+      const lowD    = computeDetail(equiteTickets('LOW'),    'LOW')
       return {
         date:         p.label,
         HIGH:         highD.composite,
@@ -605,6 +619,19 @@ export default function OpsDashboardPage({ params }: { params: Promise<{ locale:
             <X size={14} /> {L.clearAll}
           </button>
         )}
+        <button
+          onClick={() => setEquitePerf(e => !e)}
+          title={equitePerf
+            ? (isFr ? 'Désactiver le mode équité (Performance)' : 'Disable fairness mode (Performance)')
+            : (isFr ? 'Mode équité : même base de tickets par urgence pour comparer équitablement HIGH / MEDIUM / LOW' : 'Fairness mode: same ticket count per urgency to compare HIGH / MEDIUM / LOW fairly')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border transition-all ${
+            equitePerf
+              ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
+          }`}
+        >
+          ⚖️ {isFr ? 'Équité' : 'Fairness'}
+        </button>
       </div>
 
       {/* Charts */}

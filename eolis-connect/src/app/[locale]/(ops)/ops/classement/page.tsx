@@ -145,6 +145,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   const [expandedStrip, setExpandedStrip]   = useState<string | null>(null)
   const [scoreTooltip, setScoreTooltip]     = useState<{ agent: any; x: number; y: number } | null>(null)
   const [awardsGuideOpen, setAwardsGuideOpen] = useState(false)
+  const [equite, setEquite] = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -214,10 +215,44 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
     ? prevClosed.filter(t => urgencyFilter.includes(t.urgency))
     : prevClosed
 
+  // ── Mode équité : normalise chaque agent au même nombre de dossiers ───────
+  // N = le minimum de dossiers traités parmi tous les agents du filtre actuel
+  // Pour chaque agent on prend ses N dossiers les plus récents
+  const equiteN = (() => {
+    if (!equite) return null
+    const counts = new Map<string, number>()
+    for (const t of filteredClosed) {
+      if (t.agentId) counts.set(t.agentId, (counts.get(t.agentId) ?? 0) + 1)
+    }
+    if (!counts.size) return null
+    return Math.min(...Array.from(counts.values()))
+  })()
+
+  function applyEquite(src: any[]): any[] {
+    if (!equiteN) return src
+    const perAgent = new Map<string, any[]>()
+    for (const t of src) {
+      if (!t.agentId) continue
+      if (!perAgent.has(t.agentId)) perAgent.set(t.agentId, [])
+      perAgent.get(t.agentId)!.push(t)
+    }
+    const result: any[] = []
+    for (const [, ts] of perAgent) {
+      const sorted = [...ts].sort((a, b) =>
+        new Date(b.closedAt ?? b.updatedAt).getTime() - new Date(a.closedAt ?? a.updatedAt).getTime()
+      )
+      result.push(...sorted.slice(0, equiteN))
+    }
+    return result
+  }
+
+  const equiteClosed     = applyEquite(filteredClosed)
+  const equitePrevClosed = applyEquite(filteredPrevClosed)
+
   // ── Build ranked list ─────────────────────────────────────────────────────
   const ranked = agents
     .map(a => {
-      const stats = computeAgentStats(a.id, filteredClosed, tickets)
+      const stats = computeAgentStats(a.id, equiteClosed, tickets)
       return stats ? { ...a, ...stats } : null
     })
     .filter(Boolean)
@@ -245,7 +280,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   // Previous period ranks
   const prevRanked = agents
     .map(a => {
-      const stats = computeAgentStats(a.id, filteredPrevClosed, tickets)
+      const stats = computeAgentStats(a.id, equitePrevClosed, tickets)
       return stats ? { id: a.id, ...stats } : null
     })
     .filter(Boolean)
@@ -324,7 +359,10 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
     evol:     isFr ? 'Évol.' : 'Trend',
     badgesL:  isFr ? 'Distinctions' : 'Awards',
     detail:   isFr ? 'Performances →' : 'Performance →',
-    noTreated: isFr ? 'Aucun dossier traité' : 'No treated tickets',
+    noTreated:    isFr ? 'Aucun dossier traité' : 'No treated tickets',
+    equiteLabel:  isFr ? 'Équité' : 'Fairness',
+    equiteActive: isFr ? `Mode équité — N=${equiteN} dossiers les plus récents par agent` : `Fairness mode — N=${equiteN} most recent tickets per agent`,
+    equiteOff:    isFr ? 'Activer le mode équité (même base de dossiers par agent)' : 'Enable fairness mode (same ticket base per agent)',
   }
 
   return (
@@ -366,7 +404,29 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
             <X size={14} /> {L.clearAll}
           </button>
         )}
+        <button
+          onClick={() => setEquite(e => !e)}
+          title={equite ? L.equiteActive : L.equiteOff}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border transition-all ${
+            equite
+              ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-400 hover:text-violet-600'
+          }`}
+        >
+          ⚖️ {L.equiteLabel}
+          {equite && equiteN !== null && (
+            <span className="ml-1 bg-white/25 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              N={equiteN}
+            </span>
+          )}
+        </button>
       </div>
+      {equite && equiteN !== null && (
+        <div className="mb-4 px-4 py-2.5 rounded-xl bg-violet-50 border border-violet-200 text-xs text-violet-700 flex items-center gap-2">
+          <span>⚖️</span>
+          <span>{L.equiteActive}</span>
+        </div>
+      )}
 
       {/* ── Encart formule du score ── */}
       <div className="bg-[#EDF1F7] border border-[#1B3A5C]/10 rounded-2xl px-4 py-3 mb-5 flex flex-wrap items-center gap-3">
