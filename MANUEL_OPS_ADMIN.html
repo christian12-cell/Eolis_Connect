@@ -216,6 +216,7 @@
           <li><a href="#navigation">2. Navigation</a></li>
           <li><a href="#overview">3. Page Overview</a></li>
           <li class="sub"><a href="#kpis6">↳ 6 cartes KPI</a></li>
+          <li class="sub"><a href="#classification-urgence">↳ Classification automatique urgence</a></li>
           <li class="sub"><a href="#sla3">↳ 3 cartes SLA</a></li>
           <li class="sub"><a href="#filtres-ov">↳ Filtres Year/Month/Day</a></li>
           <li class="sub"><a href="#graphes-ov">↳ 4 Graphes</a></li>
@@ -348,6 +349,34 @@
           <div class="kpi-icon">⏱</div>
           <div class="kpi-label">Avg resolution</div>
           <div class="kpi-desc">Temps moyen entre création et clôture, en heures. Affiché "—" si aucun dossier traité.</div>
+        </div>
+      </div>
+
+      <h3 id="classification-urgence">Classification automatique de l'urgence</h3>
+      <p>Le système attribue l'urgence automatiquement à la soumission, selon la catégorie et sous-catégorie choisies par le client :</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th>Urgence assignée</th></tr></thead>
+          <tbody>
+            <tr><td>Livraison</td><td>Conteneur bloqué</td><td><span class="badge badge-danger">🔴 HIGH</span></td></tr>
+            <tr><td>Livraison</td><td>Retard de livraison</td><td><span class="badge badge-danger">🔴 HIGH</span></td></tr>
+            <tr><td>Livraison</td><td>Problème à la réception</td><td><span class="badge badge-danger">🔴 HIGH</span></td></tr>
+            <tr><td>Facturation</td><td>Retard de paiement</td><td><span class="badge badge-warning">🟡 MEDIUM</span></td></tr>
+            <tr><td>Facturation</td><td>Paiement incomplet</td><td><span class="badge badge-warning">🟡 MEDIUM</span></td></tr>
+            <tr><td>Facturation</td><td>Remboursement</td><td><span class="badge badge-success">🟢 LOW</span></td></tr>
+            <tr><td>Dossier</td><td>Dossier incomplet</td><td><span class="badge badge-warning">🟡 MEDIUM</span></td></tr>
+            <tr><td>Dossier</td><td>Document manquant</td><td><span class="badge badge-warning">🟡 MEDIUM</span></td></tr>
+            <tr><td>Dossier</td><td>Validation de dossier</td><td><span class="badge badge-success">🟢 LOW</span></td></tr>
+            <tr><td>Information</td><td>Demande d'information</td><td><span class="badge badge-success">🟢 LOW</span></td></tr>
+            <tr><td>Information</td><td>Procédure</td><td><span class="badge badge-success">🟢 LOW</span></td></tr>
+            <tr><td><em>Autre (texte libre)</em></td><td><em>Tout texte libre</em></td><td><span class="badge badge-success">🟢 LOW</span> <em>(fallback)</em></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Cas "Autre"</strong> — Quand le client choisit <em>Autre</em> et tape un texte libre, le système ne peut pas faire la correspondance → il assigne automatiquement <strong>🟢 LOW</strong>. Un OPS Admin peut modifier l'urgence manuellement depuis le dossier si nécessaire.
         </div>
       </div>
 

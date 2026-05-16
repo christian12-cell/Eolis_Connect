@@ -307,6 +307,34 @@
         </div>
       </div>
 
+      <h4>Comment l'urgence est-elle assignée ?</h4>
+      <p>Le système détermine l'urgence automatiquement selon la catégorie et sous-catégorie choisies par le client lors de sa demande :</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Catégorie</th><th>Sous-catégorie</th><th>Urgence</th></tr></thead>
+          <tbody>
+            <tr><td>Livraison</td><td>Conteneur bloqué</td><td><span class="badge badge-danger">🔴 HIGH</span></td></tr>
+            <tr><td>Livraison</td><td>Retard de livraison</td><td><span class="badge badge-danger">🔴 HIGH</span></td></tr>
+            <tr><td>Livraison</td><td>Problème à la réception</td><td><span class="badge badge-danger">🔴 HIGH</span></td></tr>
+            <tr><td>Facturation</td><td>Retard de paiement</td><td><span class="badge badge-warning">🟡 MEDIUM</span></td></tr>
+            <tr><td>Facturation</td><td>Paiement incomplet</td><td><span class="badge badge-warning">🟡 MEDIUM</span></td></tr>
+            <tr><td>Facturation</td><td>Remboursement</td><td><span class="badge badge-success">🟢 LOW</span></td></tr>
+            <tr><td>Dossier</td><td>Dossier incomplet</td><td><span class="badge badge-warning">🟡 MEDIUM</span></td></tr>
+            <tr><td>Dossier</td><td>Document manquant</td><td><span class="badge badge-warning">🟡 MEDIUM</span></td></tr>
+            <tr><td>Dossier</td><td>Validation de dossier</td><td><span class="badge badge-success">🟢 LOW</span></td></tr>
+            <tr><td>Information</td><td>Demande d'information</td><td><span class="badge badge-success">🟢 LOW</span></td></tr>
+            <tr><td>Information</td><td>Procédure</td><td><span class="badge badge-success">🟢 LOW</span></td></tr>
+            <tr><td><em>Autre (texte libre)</em></td><td><em>Tout texte libre</em></td><td><span class="badge badge-success">🟢 LOW</span> <em>(par défaut)</em></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Cas "Autre"</strong> — Quand le client choisit <em>Autre</em> et saisit un texte libre, le système ne peut pas faire la correspondance → il assigne automatiquement <strong>🟢 LOW</strong>. Si tu juges que la demande mérite une urgence plus haute, tu peux la modifier manuellement dans l'onglet <em>Détails</em> du dossier.
+        </div>
+      </div>
+
       <div class="alert alert-info">
         <span class="alert-icon">📋</span>
         <div class="alert-body">
