@@ -1699,12 +1699,26 @@ Score = satisfaction (25%) + vitesse résolution (25%) + SLA % (30%) + 1ère ré
   </div>
 
   <h3>Score composite de l'équipe (ligne Team Average)</h3>
-  <p>La ligne Team Average de la page Performance affiche la moyenne des scores composites individuels :</p>
-  <pre><span class="k">const</span> composites = allAgentStats.map(a => a.stats.composite).filter(c => c !== <span class="v">null</span>)
-<span class="k">const</span> teamComposite = composites.length
-  ? +(composites.reduce((a, b) => a + b, 0) / composites.length).toFixed(2)
-  : <span class="v">null</span></pre>
-  <p>C'est un benchmark utile : un agent en dessous de la moyenne équipe sait qu'il a une marge de progression.</p>
+  <p>La ligne Team Average affiche la moyenne des scores composites individuels. Elle est calculée une seule fois au niveau du composant (pas dans le JSX) pour être accessible à la fois dans le tableau et dans la coloration des lignes :</p>
+  <pre><span class="k">const</span> teamComposite = (() => {
+  <span class="k">const</span> composites = allAgentStats.map(a => a.stats.composite).filter(c => c !== <span class="v">null</span>) <span class="k">as</span> number[]
+  <span class="k">return</span> composites.length
+    ? +(composites.reduce((a, b) => a + b, 0) / composites.length).toFixed(2)
+    : <span class="v">null</span>
+})()</pre>
+
+  <h3>Coloration du score — vert / rouge</h3>
+  <p>Dans chaque ligne agent, le score composite est coloré par rapport à la moyenne équipe :</p>
+  <pre><span class="c">// Score de l'agent comparé à teamComposite</span>
+<span class="k">const</span> scoreColor = teamComposite !== <span class="v">null</span> && s.composite &lt; teamComposite
+  ? <span class="s">'text-red-500'</span>    <span class="c">// en dessous de la moyenne → rouge</span>
+  : <span class="s">'text-emerald-600'</span> <span class="c">// au-dessus ou égal → vert</span></pre>
+  <p>La ligne Team Average elle-même garde la couleur navy neutre — elle est la référence, elle ne se compare pas à elle-même.</p>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">💡</span>
+    <div class="alert-body"><strong>Pourquoi calculer teamComposite hors du JSX</strong> Si on le calculait directement dans la ligne Team Average (via un IIFE dans le JSX), la variable n'existerait pas encore au moment de rendre les lignes agents — qui sont affichées avant. En le déclarant au niveau du composant, il est disponible partout.</div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
