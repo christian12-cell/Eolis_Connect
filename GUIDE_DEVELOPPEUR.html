@@ -116,6 +116,7 @@
     <li><a href="#schemas">Schemas Pydantic</a></li>
     <li><a href="#routers">Routers — endpoints</a></li>
     <li><a href="#auth-jwt">Auth & JWT</a></li>
+    <li><a href="#websocket">WebSocket — chat temps réel</a></li>
     <li><a href="#migrations">Migrations DB</a></li>
   </ul>
   <div class="toc-section">Base de données</div>
@@ -763,6 +764,199 @@ app.<span class="f">include_router</span>(ws.router)
 <span class="v">@router.post</span>(<span class="s">"/tickets"</span>)
 <span class="k">def</span> <span class="f">create</span>(user = Depends(<span class="f">require_roles</span>([<span class="s">"CLIENT"</span>]))):
     <span class="c"># Seuls les CLIENTs peuvent créer des tickets</span></pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="websocket">
+  <h2>⚡ WebSocket — Chat en temps réel</h2>
+
+  <p>Le chat des dossiers utilise le protocole <strong>WebSocket</strong>. C'est la technologie qui permet l'affichage instantané des messages sans recharger la page — la même magie derrière WhatsApp Web, Slack ou Discord.</p>
+
+  <h3>HTTP classique vs WebSocket</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th></th><th>HTTP classique</th><th>WebSocket</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Connexion</strong></td><td>Ouverte puis fermée à chaque requête</td><td>Persistante — reste ouverte tant que la page est ouverte</td></tr>
+      <tr><td><strong>Direction</strong></td><td>Client demande → serveur répond</td><td>Les deux côtés peuvent envoyer à tout moment</td></tr>
+      <tr><td><strong>Pour les messages</strong></td><td>Il faudrait re-demander toutes les X secondes (polling)</td><td>Le serveur pousse l'event dès qu'un message arrive</td></tr>
+      <tr><td><strong>URL</strong></td><td><code>https://</code></td><td><code>wss://</code> (WebSocket Secure)</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">💡</span>
+    <div class="alert-body"><strong>WS = WebSocket</strong> Dans tout le code, la variable <code>ws</code> désigne la connexion WebSocket active. Comme <code>db</code> désigne la connexion base de données.</div>
+  </div>
+
+  <h3>Les fichiers qui gèrent le WebSocket</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Fichier</th><th>Côté</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>app/ws_manager.py</code></td><td>Backend</td><td>Cerveau central — stocke toutes les connexions actives, sait qui est dans quelle salle</td></tr>
+      <tr><td><code>app/routers/ws.py</code></td><td>Backend</td><td>Endpoint <code>/ws/ticket/{id}</code> — authentifie et accepte les connexions</td></tr>
+      <tr><td><code>app/routers/messages.py</code></td><td>Backend</td><td>Quand un message est sauvegardé (HTTP POST), notifie via WS tous les connectés</td></tr>
+      <tr><td><code>src/lib/useTicketWS.ts</code></td><td>Frontend</td><td>Hook React — ouvre la connexion WS, écoute les events, reconnexion automatique</td></tr>
+      <tr><td><code>mes-demandes/[id]/page.tsx</code></td><td>Frontend</td><td>Utilise <code>useTicketWS</code> côté client</td></tr>
+      <tr><td><code>agent/dossiers/[id]/AgentTicketActions.tsx</code></td><td>Frontend</td><td>Utilise <code>useTicketWS</code> côté agent</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Le ws_manager.py — la salle de réunion</h3>
+  <p>Le manager maintient un dictionnaire : <strong>ticket_id → liste de connexions WebSocket</strong>. Chaque ticket est une "salle". Quand tu ouvres le dossier <code>#42</code>, ton WebSocket est ajouté dans <code>_rooms["42"]</code>.</p>
+  <pre><span class="k">class</span> <span class="f">TicketWSManager</span>:
+    <span class="k">def</span> <span class="f">__init__</span>(self):
+        <span class="c"># ticket_id → [ws_client, ws_agent, ...]</span>
+        self._rooms: dict[str, list[WebSocket]] = defaultdict(list)
+
+        <span class="c"># user_id → set(ticket_ids) — présence active</span>
+        self._presence: dict[str, set[str]] = defaultdict(set)
+
+    <span class="k">async def</span> <span class="f">connect</span>(self, ticket_id, ws, user_id=<span class="v">None</span>):
+        <span class="k">await</span> ws.accept()               <span class="c"># "Ok, je t'accepte dans la salle"</span>
+        self._rooms[ticket_id].append(ws)  <span class="c"># je t'ajoute à la liste</span>
+        <span class="k">if</span> user_id:
+            self._presence[user_id].add(ticket_id)  <span class="c"># je note ta présence</span>
+
+    <span class="k">def</span> <span class="f">disconnect</span>(self, ticket_id, ws, user_id=<span class="v">None</span>):
+        <span class="c"># Retire ce ws de la salle (filtre tous sauf lui)</span>
+        self._rooms[ticket_id] = [c <span class="k">for</span> c <span class="k">in</span> self._rooms[ticket_id] <span class="k">if</span> c <span class="k">is not</span> ws]
+        <span class="k">if</span> user_id:
+            self._presence[user_id].discard(ticket_id)
+
+    <span class="k">def</span> <span class="f">is_user_on_ticket</span>(self, user_id, ticket_id) -> bool:
+        <span class="c"># True si l'utilisateur regarde ce ticket en ce moment</span>
+        <span class="k">return</span> ticket_id <span class="k">in</span> self._presence.get(user_id, set())
+
+    <span class="k">async def</span> <span class="f">broadcast</span>(self, ticket_id, event: dict):
+        dead = []
+        <span class="k">for</span> ws <span class="k">in</span> self._rooms.get(ticket_id, []):
+            <span class="k">try</span>:
+                <span class="k">await</span> ws.send_json(event)  <span class="c"># envoie à TOUS dans cette salle</span>
+            <span class="k">except</span>:
+                dead.append(ws)  <span class="c"># connexion morte → à supprimer</span>
+        <span class="k">for</span> ws <span class="k">in</span> dead:
+            self.disconnect(ticket_id, ws)</pre>
+
+  <div class="alert alert-success">
+    <span class="alert-icon">🔒</span>
+    <div class="alert-body"><strong>Pourquoi les messages ne se mélangent pas entre dossiers</strong> <code>broadcast("42", ...)</code> ne cherche que dans <code>_rooms["42"]</code>. Si tu es dans le dossier <code>#99</code>, ton WebSocket est dans <code>_rooms["99"]</code> — il ne reçoit jamais les events du <code>#42</code>. L'isolation est garantie par la structure du dictionnaire.</div>
+  </div>
+
+  <h3>La porte d'entrée — routers/ws.py</h3>
+  <p>L'endpoint <code>/ws/ticket/{ticket_id}</code> est différent des endpoints HTTP normaux : il ne "répond" pas et se ferme. Il reste ouvert indéfiniment grâce au <code>while True</code>.</p>
+  <pre><span class="v">@router.websocket</span>(<span class="s">"/ws/ticket/{ticket_id}"</span>)
+<span class="k">async def</span> <span class="f">ticket_ws</span>(websocket, ticket_id, token=Query(...)):
+
+    <span class="c"># 1. Vérifie le JWT (es-tu connecté ?)</span>
+    payload = decode_token(token)
+    user_id = payload.get(<span class="s">"sub"</span>)
+    <span class="k">if not</span> user_id:
+        <span class="k">await</span> websocket.close(code=4001)  <span class="c"># non authentifié → refus</span>
+        <span class="k">return</span>
+
+    <span class="c"># 2. Vérifie que le ticket t'appartient (CLIENT uniquement)</span>
+    <span class="k">if</span> user.role == <span class="s">"CLIENT"</span> <span class="k">and</span> ticket.client_id != user.id:
+        <span class="k">await</span> websocket.close(code=4003)  <span class="c"># 4003 = interdit</span>
+        <span class="k">return</span>
+
+    <span class="c"># 3. Ouvre la connexion — enregistre dans le manager</span>
+    <span class="k">await</span> ws_manager.connect(ticket_id, websocket, user_id)
+
+    <span class="k">try</span>:
+        <span class="k">while True</span>:                              <span class="c"># boucle infinie = connexion persistante</span>
+            msg = <span class="k">await</span> websocket.receive_text()
+            <span class="k">if</span> msg == <span class="s">"ping"</span>:
+                <span class="k">await</span> websocket.send_text(<span class="s">"pong"</span>)  <span class="c"># keepalive</span>
+    <span class="k">except</span> WebSocketDisconnect:
+        ws_manager.disconnect(ticket_id, websocket, user_id)  <span class="c"># nettoyage</span></pre>
+
+  <h3>Le hook React — useTicketWS.ts</h3>
+  <p>Côté frontend, tout le code WebSocket est encapsulé dans un <strong>hook React custom</strong> réutilisable. Les pages client et agent l'appellent juste avec le ticket ID et deux callbacks.</p>
+  <pre><span class="k">function</span> <span class="f">wsUrl</span>(ticketId, token) {
+    <span class="c">// Remplace https:// par wss:// et http:// par ws://</span>
+    <span class="k">const</span> base = API.replace(<span class="s">/^https?/</span>, m => m === <span class="s">'https'</span> ? <span class="s">'wss'</span> : <span class="s">'ws'</span>)
+    <span class="k">return</span> <span class="s">`${base}/ws/ticket/${ticketId}?token=${token}`</span>
+    <span class="c">// → "wss://api.eolis.com/ws/ticket/42?token=eyJhbG..."</span>
+}
+
+<span class="k">export function</span> <span class="f">useTicketWS</span>(ticketId, { onMessagesUpdated, onTicketUpdated }) {
+    <span class="k">const</span> wsRef   = useRef(<span class="v">null</span>)  <span class="c">// référence à la connexion active</span>
+    <span class="k">const</span> deadRef = useRef(<span class="v">false</span>) <span class="c">// true quand on quitte la page → stoppe la reconnexion</span>
+
+    <span class="k">function</span> <span class="f">connect</span>() {
+        <span class="k">if</span> (deadRef.current) <span class="k">return</span>  <span class="c">// page fermée → ne pas reconnecter</span>
+        <span class="k">const</span> ws = <span class="k">new</span> WebSocket(wsUrl(ticketId, getToken()))
+        wsRef.current = ws
+
+        ws.onopen = () => {
+            <span class="c">// Ping toutes les 25s — Railway coupe les connexions inactives après ~30s</span>
+            setInterval(() => ws.send(<span class="s">'ping'</span>), 25_000)
+        }
+
+        ws.onmessage = (e) => {
+            <span class="k">if</span> (e.data === <span class="s">'pong'</span>) <span class="k">return</span>  <span class="c">// réponse au ping → ignorer</span>
+            <span class="k">const</span> data = JSON.parse(e.data)
+            <span class="k">if</span> (data.type === <span class="s">'messages_updated'</span>) onMessagesUpdated()  <span class="c">// re-fetch messages</span>
+            <span class="k">if</span> (data.type === <span class="s">'ticket_updated'</span>)   onTicketUpdated()    <span class="c">// re-fetch ticket</span>
+        }
+
+        ws.onclose = () => {
+            <span class="c">// Connexion perdue → on réessaie dans 3 secondes</span>
+            <span class="k">if</span> (!deadRef.current) setTimeout(connect, 3000)
+        }
+
+        ws.onerror = () => ws.close()  <span class="c">// erreur → ferme proprement → onclose → reconnexion</span>
+    }
+
+    <span class="c">// useEffect cleanup : quand l'utilisateur quitte la page</span>
+    <span class="k">return</span> () => {
+        deadRef.current = <span class="v">true</span>   <span class="c">// stoppe les futures reconnexions</span>
+        wsRef.current?.close()    <span class="c">// ferme la connexion active</span>
+    }
+}</pre>
+
+  <h3>Flow complet d'un message de A à Z</h3>
+  <div class="flow">
+    <div class="flow-step">1. Client tape "Bonjour"<br><small>clique Envoyer</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">2. POST /api/tickets/42/messages<br><small>HTTP classique</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">3. Backend sauvegarde<br><small>PostgreSQL</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">4. broadcast("42", {type: "messages_updated"})<br><small>WS → tous dans _rooms["42"]</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">5. onmessage déclenche<br><small>onMessagesUpdated()</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">6. fetchAll()<br><small>GET messages → re-render</small></div>
+  </div>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">🎯</span>
+    <div class="alert-body"><strong>Le WS ne transporte pas le contenu du message</strong> Il envoie juste un signal léger <code>{"type": "messages_updated"}</code>. Le frontend re-fetch ensuite les messages via REST. Avantage : la logique de sérialisation reste dans un seul endroit (les schemas Pydantic REST).</div>
+  </div>
+
+  <h3>La présence — éviter les notifications inutiles</h3>
+  <p>Le manager stocke aussi <code>_presence: dict[user_id → set(ticket_ids)]</code>. Cela sert au système de notifications push : si l'utilisateur a un WebSocket actif sur le ticket, on n'envoie pas de notification sur son téléphone — il est déjà en train de lire.</p>
+  <pre><span class="c"># Dans push_service.py — avant d'envoyer la notification push :</span>
+<span class="k">from</span> .ws_manager <span class="k">import</span> ws_manager
+
+<span class="k">if</span> ws_manager.is_user_on_ticket(user_id, ticket_id):
+    <span class="k">return</span>  <span class="c"># L'utilisateur regarde déjà le dossier → pas de notif push</span></pre>
+
+  <h3>Pourquoi le ping/pong</h3>
+  <p>Railway (et la plupart des hébergeurs cloud) ferment automatiquement les connexions TCP inactives après ~30 secondes. Sans ping, la connexion WS mourrait silencieusement et l'utilisateur ne verrait plus les nouveaux messages.</p>
+  <pre><span class="c">// Frontend — ping toutes les 25s</span>
+setInterval(() => {
+    <span class="k">if</span> (ws.readyState === WebSocket.OPEN) ws.send(<span class="s">'ping'</span>)
+}, 25_000)
+
+<span class="c"># Backend — réponse immédiate</span>
+<span class="k">if</span> msg == <span class="s">"ping"</span>: <span class="k">await</span> websocket.send_text(<span class="s">"pong"</span>)</pre>
+
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div class="alert-body"><strong>Reconnexion automatique</strong> Si le serveur redémarre (déploiement Railway) ou que le réseau coupe, <code>ws.onclose</code> est déclenché → <code>setTimeout(connect, 3000)</code> réessaie 3s plus tard. L'utilisateur ne perd pas la connexion définitivement.</div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
