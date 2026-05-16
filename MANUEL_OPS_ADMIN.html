@@ -230,7 +230,8 @@
           <li class="sub"><a href="#score-composite">↳ Score composite</a></li>
           <li class="sub"><a href="#filtre-urgence-classement">↳ Filtre urgence — pourquoi crucial</a></li>
           <li class="sub"><a href="#ui-score">↳ Encart formule + tooltip</a></li>
-          <li class="sub"><a href="#awards">↳ Awards</a></li>
+          <li class="sub"><a href="#awards">↳ 5 badges — tableau détaillé</a></li>
+          <li class="sub"><a href="#overview-vs-classement">↳ Overview vs Classement — différence</a></li>
           <li class="sub"><a href="#podium">↳ Podium & tableau</a></li>
           <li><a href="#glossaire">8. Glossaire</a></li>
           <hr class="toc-divider">
@@ -736,39 +737,64 @@
         <div class="sort-step"><div class="sort-num">3</div><div class="sort-body"><strong>Délai moyen</strong> (croissant — le plus rapide gagne)</div></div>
       </div>
 
-      <h3 id="awards">Bloc Awards (distinctions) — indépendants du score</h3>
+      <h3 id="awards">Les 5 badges de distinction — indépendants du score</h3>
 
       <div class="alert alert-info">
         <span class="alert-icon">ℹ️</span>
         <div class="alert-body">
-          <strong>Les awards ne déterminent PAS le classement</strong> — ils sont calculés séparément après. Le score composite (satisfaction + vitesse + SLA + 1ère réponse) décide qui est 1er, 2ème, 3ème. Les awards récompensent qui excelle sur un critère précis parmi les 3 premiers.<br><br>
-          Un agent peut être <strong>1er sans aucun award</strong> (bon partout, meilleur nulle part en particulier). Un agent <strong>3ème peut avoir 3 awards</strong> s'il domine tous les critères individuels.<br><br>
-          <strong>Différence ⚡ Rapidité vs vitesse du score :</strong> dans le score, la vitesse = temps entre création et clôture du dossier. Dans l'award ⚡ Rapidité = temps entre création et <em>première réponse</em> de l'agent — deux mesures différentes.
+          <strong>Les badges ne déterminent PAS le classement</strong> — calculés séparément après. Le score composite décide qui est 1er, 2ème, 3ème. Les badges récompensent qui excelle sur un critère précis.<br><br>
+          Un agent peut être <strong>1er sans aucun badge</strong> (bon partout, meilleur nulle part en particulier). Un agent <strong>3ème peut cumuler 4 badges</strong>. En cas d'égalité sur un critère, tous les agents ex-æquo reçoivent le badge.<br><br>
+          <strong>Sur l'interface</strong> : un bouton <strong>"🏅 Guide des distinctions"</strong> est accessible directement sur la page Classement — il déploie ce tableau pour l'opérateur.
         </div>
       </div>
-      <div class="awards-grid">
-        <div class="award-card">
-          <div class="award-icon">🏆</div>
-          <div class="award-label">Volume</div>
-          <div class="award-desc">Plus grand nombre de dossiers traités</div>
-        </div>
-        <div class="award-card">
-          <div class="award-icon">⭐</div>
-          <div class="award-label">Satisfaction</div>
-          <div class="award-desc">Meilleure note moyenne client</div>
-        </div>
-        <div class="award-card">
-          <div class="award-icon">⚡</div>
-          <div class="award-label">Rapidité</div>
-          <div class="award-desc">Meilleur temps de 1ère réponse</div>
-        </div>
-        <div class="award-card">
-          <div class="award-icon">🎯</div>
-          <div class="award-label">SLA</div>
-          <div class="award-desc">Meilleur taux de respect des délais</div>
-        </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Badge</th><th>Nom</th><th>Ce que ça signifie</th><th>Critère d'attribution</th><th>Lien avec le score</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align:center;font-size:1.3rem;">🏆</td>
+              <td><strong>Volume</strong></td>
+              <td>A traité le plus grand nombre de dossiers sur la période</td>
+              <td>Agent avec le plus haut nombre de dossiers clôturés. Égalité → les deux reçoivent le badge.</td>
+              <td><span class="badge" style="background:#f1f5f9;color:#64748b;">Hors score — quantité ≠ qualité</span></td>
+            </tr>
+            <tr>
+              <td style="text-align:center;font-size:1.3rem;">⭐</td>
+              <td><strong>Satisfaction</strong></td>
+              <td>Les clients de cet agent sont les plus satisfaits en moyenne</td>
+              <td>Agent avec la note moyenne client (/5) la plus élevée. Calculé uniquement sur les dossiers ayant reçu une note.</td>
+              <td><span class="badge badge-warning">Score 25% — satisfaction</span></td>
+            </tr>
+            <tr>
+              <td style="text-align:center;font-size:1.3rem;">🏁</td>
+              <td><strong>Résolution</strong></td>
+              <td>Clôture ses dossiers plus vite que tous les autres agents</td>
+              <td>Agent avec le délai moyen de résolution le plus bas (temps entre création et clôture du dossier).</td>
+              <td><span class="badge badge-info">Score 25% — vitesse résolution</span></td>
+            </tr>
+            <tr>
+              <td style="text-align:center;font-size:1.3rem;">🎯</td>
+              <td><strong>SLA</strong></td>
+              <td>Respecte le mieux les délais cibles (HIGH &lt;3h, MEDIUM &lt;5h, LOW &lt;10h)</td>
+              <td>Agent avec le taux SLA% global le plus élevé. SLA% = (dossiers dans le délai / total) × 100. Minimum 1 dossier requis.</td>
+              <td><span class="badge badge-success">Score 30% — respect délais (poids le plus fort)</span></td>
+            </tr>
+            <tr>
+              <td style="text-align:center;font-size:1.3rem;">⚡</td>
+              <td><strong>Rapidité</strong></td>
+              <td>Répond le plus rapidement quand un nouveau dossier arrive</td>
+              <td>Agent avec le temps moyen de 1ère réponse le plus bas (entre création du dossier et son premier message envoyé).</td>
+              <td><span class="badge" style="background:#ede9fe;color:#4c1d95;">Score 20% — 1ère réponse</span></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr><td colspan="5" style="font-size:.8rem;color:#6b7280;font-style:italic;padding:10px 12px;">* Les badges sont attribués parmi tous les agents ayant traité au moins 1 dossier sur la période filtrée, pas uniquement le top 3.</td></tr>
+          </tfoot>
+        </table>
       </div>
-      <p>Un agent peut cumuler plusieurs badges. Awards attribués uniquement aux 3 premiers du podium.</p>
 
       <h3 id="podium">Podium — Top 3</h3>
       <div class="podium">
@@ -789,24 +815,45 @@
         </div>
       </div>
 
+      <h3 id="overview-vs-classement">⚠️ Performance globale (Overview) vs Score Classement — différence</h3>
+      <div class="alert alert-warn">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-body">
+          <strong>Les deux graphes utilisent la même philosophie mais pas exactement la même formule.</strong><br><br>
+          <strong>Graphe Overview (Performance par urgence)</strong> : sat(25%) + vitesse(25%) + SLA(30%) — <em>sans</em> la 1ère réponse. Raison : ce graphe calcule le score sur des groupes de tickets par journée, sans charger les messages → pas de données de 1ère réponse disponibles.<br><br>
+          <strong>Classement individuel</strong> : sat(25%) + vitesse(25%) + SLA(30%) + 1ère réponse(20%) — les 4 critères complets car les messages sont chargés par agent.<br><br>
+          Dans les deux cas, si une composante est absente (aucune note, aucun message…) son poids est redistribué proportionnellement aux autres.
+        </div>
+      </div>
+
       <h4>Classement complet (accordion)</h4>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Colonne</th><th>Description</th></tr></thead>
           <tbody>
-            <tr><td>Rang</td><td>Position dans le classement</td></tr>
+            <tr><td>Rang</td><td>Position dans le classement (🥇🥈🥉 pour les 3 premiers)</td></tr>
             <tr><td>Agent</td><td>Nom de l'agent</td></tr>
-            <tr><td>Score</td><td>Score composite /100 (2 décimales)</td></tr>
-            <tr><td>Traités</td><td>Nombre de dossiers clôturés</td></tr>
-            <tr><td>Satisfaction</td><td>Note moyenne /5</td></tr>
-            <tr><td>Délai moy.</td><td>Temps moyen entre création et clôture</td></tr>
-            <tr><td>1ère réponse</td><td>Temps moyen avant le premier message</td></tr>
-            <tr><td>SLA %</td><td>% dossiers résolus dans les délais cibles</td></tr>
-            <tr><td>Trend (Évol.)</td><td>↑ monté | ↓ descendu | — stable vs période précédente équivalente</td></tr>
-            <tr><td>Awards</td><td>Badges obtenus — cliquer pour détail</td></tr>
-            <tr><td>Performances →</td><td>Lien vers la fiche individuelle dans Performance</td></tr>
+            <tr><td>Score</td><td>Score composite /100 — <strong>survoler le score affiche le tooltip de décomposition</strong> (sat, vitesse, SLA, 1ère réponse chacun en /100 avec son poids)</td></tr>
+            <tr><td>Traités</td><td>Nombre de dossiers clôturés sur la période</td></tr>
+            <tr><td>Satisfaction</td><td>Note moyenne /5 (vert si ≥ moyenne équipe, rouge si inférieur)</td></tr>
+            <tr><td>Délai moy.</td><td>Temps moyen entre création et clôture (vitesse résolution)</td></tr>
+            <tr><td>1ère réponse</td><td>Temps moyen entre création du dossier et premier message de l'agent</td></tr>
+            <tr><td>SLA %</td><td>% dossiers résolus dans les délais cibles (vert ≥80%, orange 60-79%, rouge &lt;60%)</td></tr>
+            <tr><td>Trend (Évol.)</td><td>↑ monté | ↓ descendu | — stable vs période précédente équivalente avec même filtre urgence</td></tr>
+            <tr><td>Awards</td><td>Badges obtenus — cliquer pour afficher le détail des badges</td></tr>
+            <tr><td>Performances →</td><td>Lien vers la fiche individuelle dans la page Performance</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="alert alert-success">
+        <span class="alert-icon">💡</span>
+        <div class="alert-body">
+          <strong>Deux aides visuelles sur la page Classement :</strong><br>
+          1. <strong>Encart formule</strong> (sous les filtres) — toujours visible, rappelle les 4 critères et leurs poids avec codes couleur.<br>
+          2. <strong>🏅 Guide des distinctions</strong> (accordion dépliable) — tableau complet de tous les badges avec signification, critère d'attribution et lien avec le score.<br>
+          3. <strong>Tooltip au survol du score</strong> — passer la souris sur un score /100 affiche la décomposition par critère de cet agent spécifiquement.
+        </div>
       </div>
     </section>
 
