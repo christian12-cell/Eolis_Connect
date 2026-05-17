@@ -332,3 +332,69 @@ def send_password_reset(to_email: str, first_name: str, reset_url: str, lang: st
     _send(to_email, subject, _template(content, lang))
 
 
+def send_maintenance_start(to_email: str, first_name: str, message: str, estimated_return: str | None, lang: str = "fr"):
+    en = lang == "en"
+    subject = "Eolis Connect — Scheduled maintenance" if en else "Eolis Connect — Maintenance programmée"
+    t_greeting  = "Hello" if en else "Bonjour"
+    t_intro     = "The <strong>Eolis Connect</strong> platform is currently undergoing scheduled maintenance." if en else "La plateforme <strong>Eolis Connect</strong> est actuellement en maintenance programmée."
+    t_eta_label = "Estimated return" if en else "Retour estimé"
+    t_data      = "Your account and all your data remain <strong>completely secure</strong>. No information will be lost." if en else "Votre compte et toutes vos données restent <strong>entièrement sécurisés</strong>. Aucune information ne sera perdue."
+    t_notif     = "We will notify you as soon as the platform is back online." if en else "Nous vous informerons dès que la plateforme sera de nouveau disponible."
+    eta_block = f"""
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF9C3;border:1px solid #fde047;border-radius:12px;margin:16px 0;">
+        <tr><td style="padding:14px 20px;">
+          <p style="margin:0;font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;">{t_eta_label}</p>
+          <p style="margin:4px 0 0;font-size:14px;color:#78350f;">{estimated_return}</p>
+        </td></tr>
+      </table>""" if estimated_return else ""
+    content = f"""
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_greeting} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_intro}</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFF7ED;border:1px solid #fed7aa;border-radius:12px;margin:0 0 16px;">
+        <tr><td style="padding:20px 24px;">
+          <p style="margin:0;font-size:14px;color:#9a3412;line-height:1.6;">{message}</p>
+        </td></tr>
+      </table>
+      {eta_block}
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#ECFDF5;border:1px solid #6ee7b7;border-radius:12px;margin:16px 0;">
+        <tr><td style="padding:14px 20px;">
+          <p style="margin:0;font-size:13px;color:#065f46;">🔒 {t_data}</p>
+        </td></tr>
+      </table>
+      <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;">{t_notif}</p>
+    """
+    _send(to_email, subject, _template(content, lang))
+
+
+def send_maintenance_end(to_email: str, first_name: str, return_message: str | None, lang: str = "fr"):
+    en = lang == "en"
+    subject    = "Eolis Connect — Platform restored" if en else "Eolis Connect — Plateforme rétablie"
+    t_greeting = "Hello" if en else "Bonjour"
+    t_intro    = "The <strong>Eolis Connect</strong> platform is now back online. You can access your account normally." if en else "La plateforme <strong>Eolis Connect</strong> est de nouveau en ligne. Vous pouvez accéder à votre compte normalement."
+    t_data     = "Your account and all your data are intact." if en else "Votre compte et toutes vos données sont intacts."
+    base       = settings.ALLOWED_ORIGINS.split(",")[0].strip()
+    login_url  = f"{base}/{'en' if en else 'fr'}/login"
+    t_btn      = "Access my account →" if en else "Accéder à mon compte →"
+    msg_block = f"""
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFF6FF;border:1px solid #bfdbfe;border-radius:12px;margin:16px 0;">
+        <tr><td style="padding:20px 24px;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">{'What changed' if en else 'Ce qui a changé'}</p>
+          <p style="margin:0;font-size:14px;color:#1e3a5f;line-height:1.6;">{return_message}</p>
+        </td></tr>
+      </table>""" if return_message else ""
+    content = f"""
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_greeting} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_intro}</p>
+      {msg_block}
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#ECFDF5;border:1px solid #6ee7b7;border-radius:12px;margin:0 0 20px;">
+        <tr><td style="padding:14px 20px;">
+          <p style="margin:0;font-size:13px;color:#065f46;">✅ {t_data}</p>
+        </td></tr>
+      </table>
+      <table cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        <tr><td style="background:#1B3A5C;border-radius:10px;padding:0;">
+          <a href="{login_url}" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">{t_btn}</a>
+        </td></tr>
+      </table>
+    """
+    _send(to_email, subject, _template(content, lang))

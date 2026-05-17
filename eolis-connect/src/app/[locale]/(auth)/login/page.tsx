@@ -28,6 +28,14 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [otpCode, setOtpCode]     = useState('')
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
+
+  useEffect(() => {
+    fetch(apiUrl('/api/maintenance/status'))
+      .then(r => r.json())
+      .then(d => { if (d.active) router.replace(`/${locale}/maintenance`) })
+      .catch(() => {})
+  }, [locale])
+
   useEffect(() => {
     setIsOffline(!navigator.onLine)
     const on  = () => setIsOffline(false)

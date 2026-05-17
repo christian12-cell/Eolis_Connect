@@ -114,6 +114,23 @@ def sms_document_requested(client_phone: str, client_first_name: str, ticket_ref
     send_sms(client_phone, body)
 
 
+def sms_maintenance_start(to: str, first_name: str, estimated_return: str | None):
+    eta = f"\nRetour prevu : {estimated_return}" if estimated_return else ""
+    body = (
+        f"Eolis Connect : Maintenance en cours, {first_name}.{eta}\n"
+        f"Vos donnees sont securisees. Nous vous informons du retour."
+    )
+    send_sms(to, body)
+
+
+def sms_maintenance_end(to: str, first_name: str):
+    body = (
+        f"Eolis Connect : La plateforme est de retour en ligne, {first_name} !\n"
+        f"Votre compte et vos donnees sont intacts. Bonne connexion."
+    )
+    send_sms(to, body)
+
+
 def sms_account_deleted(to: str, first_name: str):
     body = (
         f"Eolis Connect : Bonjour {first_name}, votre compte a ete supprime par l'administration. "

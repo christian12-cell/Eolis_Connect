@@ -367,3 +367,14 @@ class CreditRequest(Base):
     client: Mapped["User"] = relationship("User", foreign_keys=[client_id])
     validator: Mapped["User | None"] = relationship("User", foreign_keys=[validated_by])
     admin_confirmer: Mapped["User | None"] = relationship("User", foreign_keys=[admin_confirmed_by])
+
+
+class MaintenanceSetting(Base):
+    """Singleton row controlling maintenance mode."""
+    __tablename__ = "maintenance_settings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_id)
+    active: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    estimated_return: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

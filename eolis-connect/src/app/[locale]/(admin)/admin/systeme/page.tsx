@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { apiFetch, getUser } from '@/lib/api-client'
-import { Globe, Clock, Check, MessageSquare, Send, AlertTriangle, Trash2, RefreshCw, DollarSign } from 'lucide-react'
+import { Globe, Clock, Check, MessageSquare, Send, AlertTriangle, Trash2, RefreshCw, DollarSign, Wrench, WifiOff, Wifi, Mail, Bell, Phone } from 'lucide-react'
+import { apiUrl } from '@/lib/api-client'
 
 const TIMEZONES = [
   { value: 'Africa/Douala', label: 'Douala / Yaoundé (WAT, UTC+1)' },
@@ -46,6 +47,17 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
   const [eurSaving, setEurSaving]   = useState(false)
   const [eurSaved, setEurSaved]     = useState(false)
 
+  // Maintenance state
+  const [maintenance, setMaintenance] = useState<{ active: boolean; message: string | null; estimatedReturn: string | null } | null>(null)
+  const [maintenanceMsg, setMaintenanceMsg]   = useState('')
+  const [maintenanceEta, setMaintenanceEta]   = useState('')
+  const [returnMsg, setReturnMsg]             = useState('')
+  const [mSendEmail, setMSendEmail]           = useState(true)
+  const [mSendPush, setMSendPush]             = useState(true)
+  const [mSendSms, setMSendSms]               = useState(false)
+  const [mSending, setMSending]               = useState(false)
+  const [mResult, setMResult]                 = useState<'ok' | 'err' | null>(null)
+
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
   useEffect(() => {
@@ -61,6 +73,11 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
       if (cfg.fcfa_rate) setFcfaRate(cfg.fcfa_rate)
       if (cfg.eur_rate)  setEurRate(cfg.eur_rate)
     }).catch(() => {})
+    // Load maintenance status
+    fetch(apiUrl('/api/maintenance/status'))
+      .then(r => r.json())
+      .then(d => setMaintenance(d))
+      .catch(() => {})
   }, [locale])
 
   useEffect(() => {
@@ -118,6 +135,53 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
       setTimeout(() => setEurSaved(false), 2500)
     } catch {}
     setEurSaving(false)
+  }
+
+  async function activateMaintenance(e: React.FormEvent) {
+    e.preventDefault()
+    if (!maintenanceMsg.trim()) return
+    setMSending(true); setMResult(null)
+    try {
+      const res = await apiFetch('/api/maintenance/activate', {
+        method: 'POST',
+        body: JSON.stringify({
+          message: maintenanceMsg,
+          estimated_return: maintenanceEta || null,
+          send_email: mSendEmail,
+          send_push: mSendPush,
+          send_sms: mSendSms,
+        }),
+      })
+      if (res.ok) {
+        setMaintenance({ active: true, message: maintenanceMsg, estimatedReturn: maintenanceEta || null })
+        setMResult('ok')
+      } else { setMResult('err') }
+    } catch { setMResult('err') }
+    setMSending(false)
+    setTimeout(() => setMResult(null), 4000)
+  }
+
+  async function deactivateMaintenance(e: React.FormEvent) {
+    e.preventDefault()
+    setMSending(true); setMResult(null)
+    try {
+      const res = await apiFetch('/api/maintenance/deactivate', {
+        method: 'POST',
+        body: JSON.stringify({
+          return_message: returnMsg.trim() || null,
+          send_email: mSendEmail,
+          send_push: mSendPush,
+          send_sms: mSendSms,
+        }),
+      })
+      if (res.ok) {
+        setMaintenance({ active: false, message: null, estimatedReturn: null })
+        setReturnMsg('')
+        setMResult('ok')
+      } else { setMResult('err') }
+    } catch { setMResult('err') }
+    setMSending(false)
+    setTimeout(() => setMResult(null), 4000)
   }
 
   async function sendTestSms(e: React.FormEvent) {
@@ -371,6 +435,107 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
             {isFr ? 'Réinitialiser la base de données' : 'Reset the database'}
           </button>
         </form>
+      </section>
+
+      {/* Maintenance */}
+      <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 max-w-4xl">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${maintenance?.active ? 'bg-amber-50' : 'bg-emerald-50'}`}>
+              <Wrench size={18} className={maintenance?.active ? 'text-amber-600' : 'text-emerald-600'} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-900">{isFr ? 'Mode maintenance' : 'Maintenance mode'}</h2>
+              <p className="text-xs text-gray-400">{isFr ? 'Gère l\'accès à la plateforme et notifie tous les utilisateurs' : 'Manage platform access and notify all users'}</p>
+            </div>
+          </div>
+          {maintenance !== null && (
+            <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${maintenance.active ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              {maintenance.active ? <WifiOff size={12} /> : <Wifi size={12} />}
+              {maintenance.active ? (isFr ? 'En maintenance' : 'Maintenance') : (isFr ? 'En ligne' : 'Online')}
+            </span>
+          )}
+        </div>
+
+        {/* Channels */}
+        <div className="flex flex-wrap gap-4 mb-5 p-4 bg-gray-50 rounded-xl">
+          <p className="w-full text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{isFr ? 'Canaux de notification' : 'Notification channels'}</p>
+          {[
+            { icon: <Mail size={13}/>, label: 'Email', val: mSendEmail, set: setMSendEmail },
+            { icon: <Bell size={13}/>, label: 'Push', val: mSendPush, set: setMSendPush },
+            { icon: <Phone size={13}/>, label: 'SMS', val: mSendSms, set: setMSendSms, note: isFr ? '(coût par envoi)' : '(cost per send)' },
+          ].map(ch => (
+            <label key={ch.label} className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={ch.val} onChange={e => ch.set(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-[#1B3A5C] focus:ring-[#4A8FC4] cursor-pointer" />
+              <span className="flex items-center gap-1 text-sm text-gray-700">{ch.icon} {ch.label}</span>
+              {ch.note && <span className="text-[10px] text-gray-400">{ch.note}</span>}
+            </label>
+          ))}
+        </div>
+
+        {mResult && (
+          <div className={`mb-4 flex items-center gap-2 text-sm px-4 py-3 rounded-xl border ${mResult === 'ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            {mResult === 'ok' ? <Check size={14}/> : <AlertTriangle size={14}/>}
+            {mResult === 'ok' ? (isFr ? 'Opération effectuée. Broadcasts en cours d\'envoi.' : 'Done. Broadcasts are being sent.') : (isFr ? 'Erreur. Réessayez.' : 'Error. Please try again.')}
+          </div>
+        )}
+
+        {maintenance?.active ? (
+          /* Deactivation form */
+          <form onSubmit={deactivateMaintenance} className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                {isFr ? 'Message de retour (optionnel) — apparaîtra dans les notifications' : 'Return message (optional) — will appear in notifications'}
+              </label>
+              <textarea
+                value={returnMsg}
+                onChange={e => setReturnMsg(e.target.value)}
+                rows={4}
+                placeholder={isFr ? 'Ex : Mise à jour terminée. Nouvelles fonctionnalités : …\nSi nécessaire, veuillez désinstaller et retélécharger l\'application.' : 'E.g.: Update complete. New features: …\nIf needed, please uninstall and reinstall the app.'}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
+              />
+            </div>
+            <button type="submit" disabled={mSending}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              {mSending ? <RefreshCw size={15} className="animate-spin"/> : <Wifi size={15}/>}
+              {isFr ? 'Remettre en ligne & notifier' : 'Bring back online & notify'}
+            </button>
+          </form>
+        ) : (
+          /* Activation form */
+          <form onSubmit={activateMaintenance} className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                {isFr ? 'Message de maintenance *' : 'Maintenance message *'}
+              </label>
+              <textarea
+                value={maintenanceMsg}
+                onChange={e => setMaintenanceMsg(e.target.value)}
+                rows={3}
+                required
+                placeholder={isFr ? 'Ex : La plateforme est en maintenance pour une mise à jour importante.' : 'E.g.: The platform is under maintenance for an important update.'}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                {isFr ? 'Retour estimé (optionnel)' : 'Estimated return (optional)'}
+              </label>
+              <input
+                type="datetime-local"
+                value={maintenanceEta}
+                onChange={e => setMaintenanceEta(e.target.value)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
+              />
+            </div>
+            <button type="submit" disabled={mSending || !maintenanceMsg.trim()}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 text-white font-semibold text-sm hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              {mSending ? <RefreshCw size={15} className="animate-spin"/> : <WifiOff size={15}/>}
+              {isFr ? 'Activer la maintenance & notifier' : 'Enable maintenance & notify'}
+            </button>
+          </form>
+        )}
       </section>
     </DashboardLayout>
   )

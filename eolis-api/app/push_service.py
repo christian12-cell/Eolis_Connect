@@ -135,3 +135,54 @@ def send_push_to_user(
                         push_db.commit()
             except Exception as exc:
                 logger.warning("[PUSH] unexpected error user=%s: %s", user_id, exc)
+
+
+def broadcast_push(title: str, body: str, url: str = "/") -> None:
+    """Send push to ALL subscribed devices — no preference checks (system-wide broadcast)."""
+    if not settings.VAPID_PRIVATE_KEY or not settings.VAPID_PUBLIC_KEY:
+        return
+
+    from .database import SessionLocal
+    from .models import PushSubscription
+
+    try:
+        with SessionLocal() as db:
+            subs = db.query(PushSubscription).all()
+            subs_data = [{"endpoint": s.endpoint, "p256dh": s.p256dh, "auth": s.auth, "id": s.id} for s in subs]
+    except Exception as exc:
+        logger.error("[PUSH broadcast] DB error: %s", exc)
+        return
+
+    if not subs_data:
+        return
+
+    payload = json.dumps({"title": title, "body": body, "url": url})
+
+    try:
+        from pywebpush import webpush, WebPushException
+    except ImportError:
+        logger.warning("pywebpush not installed — skipping broadcast push")
+        return
+
+    dead: list[str] = []
+    for sub in subs_data:
+        try:
+            webpush(
+                subscription_info={"endpoint": sub["endpoint"], "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}},
+                data=payload,
+                vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": f"mailto:{settings.VAPID_CLAIMS_EMAIL}"},
+            )
+        except WebPushException as exc:
+            status = exc.response.status_code if exc.response else 0
+            if status in (400, 404, 410):
+                dead.append(sub["id"])
+            logger.warning("[PUSH broadcast] sub %s: %s", sub["id"], exc)
+        except Exception as exc:
+            logger.warning("[PUSH broadcast] error sub %s: %s", sub["id"], exc)
+
+    if dead:
+        with SessionLocal() as db:
+            from .models import PushSubscription as PS
+            db.query(PS).filter(PS.id.in_(dead)).delete(synchronize_session=False)
+            db.commit()

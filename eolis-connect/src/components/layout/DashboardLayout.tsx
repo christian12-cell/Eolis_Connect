@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Navbar } from './Navbar'
 import { Sidebar } from './Sidebar'
 import { OfflineBanner } from '@/components/ui/OfflineBanner'
-import { isTokenExpired, clearSession } from '@/lib/api-client'
+import { isTokenExpired, clearSession, getUser, apiUrl } from '@/lib/api-client'
 import { subscribeToPush } from '@/lib/push'
 
 interface DashboardLayoutProps {
@@ -18,6 +18,16 @@ export function DashboardLayout({ children, locale, userName = '', role }: Dashb
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [accountDeleted, setAccountDeleted] = useState(false)
   const isFr = locale === 'fr'
+
+  useEffect(() => {
+    const u = getUser()
+    if (u?.role !== 'SYSTEM_ADMIN') {
+      fetch(apiUrl('/api/maintenance/status'))
+        .then(r => r.json())
+        .then(d => { if (d.active) window.location.href = `/${locale}/maintenance` })
+        .catch(() => {})
+    }
+  }, [locale])
 
   useEffect(() => {
     const sessionCheck = setInterval(() => {
