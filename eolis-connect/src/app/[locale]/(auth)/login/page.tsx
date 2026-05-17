@@ -50,11 +50,10 @@ export default function LoginPage({ params }: LoginPageProps) {
     return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
   }, [step])
 
-  useEffect(() => {
-    if (errorType !== 'temp_locked' || lockSecondsLeft <= 0) return
+  function startLockCountdown(seconds: number, usernameForPoll: string) {
     if (lockCountdownRef.current) clearInterval(lockCountdownRef.current)
 
-    // Real-time countdown
+    // Real-time countdown — starts immediately when called
     lockCountdownRef.current = setInterval(() => {
       setLockSecondsLeft(s => {
         if (s <= 1) {
@@ -67,11 +66,11 @@ export default function LoginPage({ params }: LoginPageProps) {
       })
     }, 1000)
 
-    // Poll server every 10s — if admin unlocks early, clear the screen immediately
+    // Poll server every 10s — if admin unlocks early, clear immediately
     const pollRef = setInterval(async () => {
-      if (!username) return
+      if (!usernameForPoll) return
       try {
-        const r = await fetch(apiUrl(`/api/auth/lock-status?username=${encodeURIComponent(username)}`))
+        const r = await fetch(apiUrl(`/api/auth/lock-status?username=${encodeURIComponent(usernameForPoll)}`))
         const d = await r.json().catch(() => ({}))
         if (d.status === 'available') {
           clearInterval(lockCountdownRef.current!)
@@ -82,12 +81,7 @@ export default function LoginPage({ params }: LoginPageProps) {
         }
       } catch {}
     }, 10_000)
-
-    return () => {
-      if (lockCountdownRef.current) clearInterval(lockCountdownRef.current)
-      clearInterval(pollRef)
-    }
-  }, [errorType])
+  }
 
   useEffect(() => {
     fetch(apiUrl('/api/maintenance/status'))
@@ -215,6 +209,7 @@ export default function LoginPage({ params }: LoginPageProps) {
         setLockSecondsLeft(secs)
         setErrorType('temp_locked')
         setError('')
+        startLockCountdown(secs, username)
       } else {
         setError(text.genericError); setErrorType('generic')
       }
