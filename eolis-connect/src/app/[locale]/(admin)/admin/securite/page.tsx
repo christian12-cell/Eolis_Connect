@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { apiFetch, getUser } from '@/lib/api-client'
@@ -22,6 +22,9 @@ export default function SecuritePage({ params }: { params: Promise<{ locale: str
   const [loading, setLoading] = useState(true)
   const [unlocking, setUnlocking] = useState<string | null>(null)
   const [msg, setMsg]         = useState<{ id: string; ok: boolean } | null>(null)
+  const [countdown, setCountdown] = useState(30)
+  const autoRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const countRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -31,6 +34,19 @@ export default function SecuritePage({ params }: { params: Promise<{ locale: str
     if (u.role !== 'SYSTEM_ADMIN') { router.replace(`/${locale}/accueil`); return }
     setUser(u)
   }, [locale])
+
+  useEffect(() => {
+    if (!user) return
+    setCountdown(30)
+    if (autoRef.current)  clearInterval(autoRef.current)
+    if (countRef.current) clearInterval(countRef.current)
+    autoRef.current  = setInterval(() => { fetchData(); setCountdown(30) }, 30_000)
+    countRef.current = setInterval(() => setCountdown(c => c <= 1 ? 30 : c - 1), 1_000)
+    return () => {
+      if (autoRef.current)  clearInterval(autoRef.current)
+      if (countRef.current) clearInterval(countRef.current)
+    }
+  }, [user, fetchData])
 
   const fetchData = useCallback(() => {
     setLoading(true)
@@ -79,9 +95,24 @@ export default function SecuritePage({ params }: { params: Promise<{ locale: str
               {isFr ? 'Comptes avec tentatives échouées, verrouillages temporaires ou blocages définitifs' : 'Accounts with failed attempts, temp locks or permanent blocks'}
             </p>
           </div>
-          <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-colors">
-            <RefreshCw size={13} /> {isFr ? 'Actualiser' : 'Refresh'}
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center justify-center"
+              title={`${isFr ? 'Actualisation dans' : 'Refresh in'} ${countdown}s`}>
+              <svg width="32" height="32" className="-rotate-90">
+                <circle cx="16" cy="16" r="12" fill="none" stroke="#e5e7eb" strokeWidth="2.5" />
+                <circle cx="16" cy="16" r="12" fill="none" stroke="#4A8FC4" strokeWidth="2.5"
+                  strokeDasharray={`${2 * Math.PI * 12}`}
+                  strokeDashoffset={`${2 * Math.PI * 12 * (1 - countdown / 30)}`}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 0.9s linear' }} />
+              </svg>
+              <span className="absolute text-[9px] font-bold text-gray-500 tabular-nums">{countdown}</span>
+            </div>
+            <button onClick={() => { fetchData(); setCountdown(30) }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-colors">
+              <RefreshCw size={13} /> {isFr ? 'Actualiser' : 'Refresh'}
+            </button>
+          </div>
         </div>
 
         {loading ? (
