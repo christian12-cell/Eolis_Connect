@@ -25,6 +25,7 @@ _SEED = [
 ]
 
 STAFF = ("AGENT", "OPS_ADMIN", "SYSTEM_ADMIN")
+OWNER_USERNAME = "Christian.DENMEKO"
 
 
 class PasswordChangeRequest(BaseModel):
@@ -111,6 +112,8 @@ def update_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.username == OWNER_USERNAME and current_user.username != OWNER_USERNAME:
+        raise HTTPException(status_code=403, detail="cannot_edit_owner")
     prev_status = user.status
     updates = body.model_dump(exclude_none=True, by_alias=False)
 
@@ -208,6 +211,8 @@ def delete_user(
         raise HTTPException(status_code=404, detail="not_found")
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="cannot_delete_self")
+    if user.username == OWNER_USERNAME:
+        raise HTTPException(status_code=403, detail="cannot_delete_owner")
 
     # Save contact info before deletion
     email      = user.email

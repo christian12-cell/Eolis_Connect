@@ -42,6 +42,7 @@ interface Props {
   onPageChange?: (p: number) => void
 }
 
+const OWNER_USERNAME = 'Christian.DENMEKO'
 const ROLES = ['CLIENT', 'AGENT', 'OPS_ADMIN', 'FINANCE_AGENT', 'SYSTEM_ADMIN']
 const ROLE_LABELS: Record<string, { fr: string; en: string }> = {
   CLIENT:        { fr: 'Client',          en: 'Client'         },
@@ -419,13 +420,15 @@ export default function UsersTable({ users, locale, total, page, pageSize, curre
                         {new Date(u.createdAt).toLocaleDateString(isFr ? 'fr-CM' : 'en-GB')}
                       </td>
                       <td className="px-3 py-3">
-                        <button onClick={() => setEditUser(u)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1B3A5C]/5 text-[#1B3A5C] text-xs font-semibold hover:bg-[#1B3A5C]/10 transition-colors">
-                          <Pencil size={12} /> {t.edit}
-                        </button>
+                        {u.username !== OWNER_USERNAME && (
+                          <button onClick={() => setEditUser(u)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1B3A5C]/5 text-[#1B3A5C] text-xs font-semibold hover:bg-[#1B3A5C]/10 transition-colors">
+                            <Pencil size={12} /> {t.edit}
+                          </button>
+                        )}
                       </td>
                       <td className="px-3 py-3">
-                        {u.id !== me?.id && (
+                        {u.id !== me?.id && u.username !== OWNER_USERNAME && (
                           <button onClick={() => setDeleteTarget(u)}
                             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 transition-colors">
                             <Trash2 size={12} />

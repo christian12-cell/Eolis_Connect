@@ -203,14 +203,60 @@ def delete_infra_cost(
 
 @router.get("/audit-log")
 def get_audit_log(
+    search:    Optional[str] = Query(None),
+    period:    Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date:   Optional[str] = Query(None, alias="to"),
+    page:      int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
     """Financial audit trail — SYSTEM_ADMIN only, immutable."""
-    logs = db.query(FinancialAuditLog).order_by(FinancialAuditLog.created_at.desc()).limit(200).all()
+    import math
+    from datetime import timedelta, timezone
+    from sqlalchemy import or_
 
-    # For CREDIT_* actions, entity_id is a CreditRequest id — fetch client info
-    from ..models import CreditRequest
+    q = db.query(FinancialAuditLog).order_by(FinancialAuditLog.created_at.desc())
+
+    now = datetime.now(timezone.utc)
+    if period == "day":
+        q = q.filter(FinancialAuditLog.created_at >= now - timedelta(days=1))
+    elif period == "week":
+        q = q.filter(FinancialAuditLog.created_at >= now - timedelta(days=7))
+    elif period == "month":
+        q = q.filter(FinancialAuditLog.created_at >= now - timedelta(days=30))
+    elif period == "year":
+        q = q.filter(FinancialAuditLog.created_at >= now - timedelta(days=365))
+
+    if from_date:
+        try:
+            q = q.filter(FinancialAuditLog.created_at >= datetime.fromisoformat(from_date))
+        except ValueError:
+            pass
+    if to_date:
+        try:
+            q = q.filter(FinancialAuditLog.created_at <= datetime.fromisoformat(to_date))
+        except ValueError:
+            pass
+
+    if search:
+        s = f"%{search}%"
+        q = q.outerjoin(User, FinancialAuditLog.user_id == User.id).filter(
+            or_(
+                FinancialAuditLog.action.ilike(s),
+                FinancialAuditLog.details.ilike(s),
+                FinancialAuditLog.ip_address.ilike(s),
+                FinancialAuditLog.entity_id.ilike(s),
+                User.username.ilike(s),
+                User.first_name.ilike(s),
+                User.last_name.ilike(s),
+            )
+        )
+
+    total = q.count()
+    logs = q.offset((page - 1) * page_size).limit(page_size).all()
+
     def _client_info(entity_id: str | None, action: str):
         if not entity_id or not action.startswith("CREDIT"):
             return None, None
@@ -219,24 +265,32 @@ def get_audit_log(
             return None, None
         return f"{req.client.first_name} {req.client.last_name}", req.client.username
 
-    return [
+    items = [
         {
-            "id":           l.id,
-            "action":       l.action,
-            "entityId":     l.entity_id,
-            "amountFcfa":   l.amount_fcfa,
-            "details":      l.details,
-            "ipAddress":    l.ip_address,
-            "createdAt":    l.created_at.isoformat() + "Z",
-            "doneBy":       f"{l.user.first_name} {l.user.last_name}" if l.user else l.user_id,
+            "id":             l.id,
+            "action":         l.action,
+            "entityId":       l.entity_id,
+            "amountFcfa":     l.amount_fcfa,
+            "details":        l.details,
+            "ipAddress":      l.ip_address,
+            "createdAt":      l.created_at.isoformat() + "Z",
+            "doneBy":         f"{l.user.first_name} {l.user.last_name}" if l.user else l.user_id,
             "doneByUsername": l.user.username if l.user else None,
-            "role":         l.user.role if l.user else None,
+            "role":           l.user.role if l.user else None,
             **dict(zip(
                 ("clientName", "clientUsername"),
                 _client_info(l.entity_id, l.action)
             )),
         } for l in logs
     ]
+
+    return {
+        "total":    total,
+        "page":     page,
+        "pageSize": page_size,
+        "pages":    math.ceil(total / page_size) if total > 0 else 1,
+        "items":    items,
+    }
 
 
 @router.get("/pnl")
