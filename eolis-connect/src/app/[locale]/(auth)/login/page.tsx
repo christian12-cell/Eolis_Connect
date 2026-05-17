@@ -21,6 +21,7 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [error, setError]       = useState('')
   const [errorType, setErrorType] = useState<'username' | 'password' | 'blocked' | 'generic' | 'temp_locked' | 'locked' | null>(null)
   const [lockSecondsLeft, setLockSecondsLeft] = useState(0)
+  const lockCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [isOffline, setIsOffline] = useState(false)
   // 2FA state
   const [step, setStep]           = useState<'credentials' | '2fa'>('credentials')
@@ -48,6 +49,23 @@ export default function LoginPage({ params }: LoginPageProps) {
     if (step === '2fa') startCountdown()
     return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
   }, [step])
+
+  useEffect(() => {
+    if (errorType !== 'temp_locked' || lockSecondsLeft <= 0) return
+    if (lockCountdownRef.current) clearInterval(lockCountdownRef.current)
+    lockCountdownRef.current = setInterval(() => {
+      setLockSecondsLeft(s => {
+        if (s <= 1) {
+          clearInterval(lockCountdownRef.current!)
+          setErrorType(null)
+          setError('')
+          return 0
+        }
+        return s - 1
+      })
+    }, 1000)
+    return () => { if (lockCountdownRef.current) clearInterval(lockCountdownRef.current) }
+  }, [errorType])
 
   useEffect(() => {
     fetch(apiUrl('/api/maintenance/status'))
@@ -327,18 +345,6 @@ export default function LoginPage({ params }: LoginPageProps) {
                   </div>
                 </div>
               )}
-              {errorType === 'temp_locked' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm">
-                  <p className="font-semibold">
-                    {locale === 'fr' ? 'Compte temporairement suspendu' : 'Account temporarily suspended'}
-                  </p>
-                  <p className="text-xs mt-1">
-                    {locale === 'fr'
-                      ? `Trop de tentatives incorrectes. Réessayez dans ${Math.ceil(lockSecondsLeft / 60)} min.`
-                      : `Too many failed attempts. Try again in ${Math.ceil(lockSecondsLeft / 60)} min.`}
-                  </p>
-                </div>
-              )}
 
               <button type="submit" disabled={loading || otpCode.length !== 6}
                 className="w-full py-3.5 rounded-xl bg-[#1B3A5C] text-white font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
@@ -379,6 +385,71 @@ export default function LoginPage({ params }: LoginPageProps) {
         ) : (
         <>
 
+        {/* ── LOCKED screen ── */}
+        {errorType === 'locked' ? (
+          <div className="text-center py-4 space-y-5">
+            <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto">
+              <span className="text-3xl">🔒</span>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">{locale === 'fr' ? 'Compte bloqué' : 'Account locked'}</h2>
+              <p className="text-sm text-gray-500 mt-2">
+                {locale === 'fr'
+                  ? 'Votre compte a été bloqué suite à trop de tentatives incorrectes.'
+                  : 'Your account has been locked due to too many failed attempts.'}
+              </p>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-left">
+              <p className="text-sm font-semibold text-red-700 mb-1">
+                {locale === 'fr' ? 'Que faire ?' : 'What to do?'}
+              </p>
+              <p className="text-xs text-red-600">
+                {locale === 'fr'
+                  ? 'Contactez notre support pour débloquer votre accès :'
+                  : 'Contact our support to unlock your access:'}
+              </p>
+              <a href="mailto:support@eolisconnect.online"
+                className="inline-block mt-2 text-sm font-bold text-red-700 underline">
+                support@eolisconnect.online
+              </a>
+            </div>
+          </div>
+
+        ) : errorType === 'temp_locked' ? (
+          /* ── TEMP LOCK countdown screen ── */
+          <div className="text-center py-4 space-y-5">
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto">
+              <span className="text-3xl">⏳</span>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {locale === 'fr' ? 'Compte temporairement suspendu' : 'Account temporarily suspended'}
+              </h2>
+              <p className="text-sm text-gray-500 mt-2">
+                {locale === 'fr'
+                  ? 'Trop de tentatives incorrectes. Votre accès sera rétabli dans :'
+                  : 'Too many failed attempts. Your access will be restored in:'}
+              </p>
+            </div>
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl py-6">
+              <p className="text-5xl font-mono font-black text-amber-700 tracking-widest">
+                {String(Math.floor(lockSecondsLeft / 60)).padStart(2, '0')}:{String(lockSecondsLeft % 60).padStart(2, '0')}
+              </p>
+              <p className="text-xs text-amber-600 mt-2 font-medium">
+                {locale === 'fr' ? 'minutes : secondes' : 'minutes : seconds'}
+              </p>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-left">
+              <p className="text-xs text-orange-700">
+                ⚠️ {locale === 'fr'
+                  ? 'Après ce délai, un nouvel échec entraînera un blocage définitif de votre compte.'
+                  : 'After this delay, another failure will permanently lock your account.'}
+              </p>
+            </div>
+          </div>
+
+        ) : (
+        <>
         <div className="mb-7">
           <h2 className="text-2xl font-bold text-gray-900">{text.title}</h2>
           <p className="text-gray-500 mt-1 text-sm">{text.subtitle}</p>
@@ -460,6 +531,8 @@ export default function LoginPage({ params }: LoginPageProps) {
         </p>
 
         <p className="mt-4 text-center text-xs text-gray-400 italic">&ldquo;{text.tagline}&rdquo;</p>
+        </>
+        )}
         </>
         )}
       </div>
