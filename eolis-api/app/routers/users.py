@@ -263,7 +263,9 @@ def reset_database(
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
-    """Delete all operational + financial data. Resets credit balances to FREE_CREDITS_ON_SIGNUP. Never deletes user accounts. SYSTEM_ADMIN only."""
+    """Delete all operational + financial data. Owner only."""
+    if current_user.username != OWNER_USERNAME:
+        raise HTTPException(status_code=403, detail="owner_only")
     # Delete in dependency order (children before parents)
     db.query(SatisfactionRating).delete()
     db.query(Attachment).delete()

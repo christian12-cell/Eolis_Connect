@@ -384,8 +384,8 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
         )}
       </section>
 
-      {/* Danger zone — Reset DB */}
-      <section className="bg-white rounded-2xl border-2 border-red-200 card-shadow p-6 max-w-md mt-6">
+      {/* Danger zone — Reset DB (owner only) */}
+      {user.username === 'Christian.DENMEKO' && <section className="bg-white rounded-2xl border-2 border-red-200 card-shadow p-6 max-w-md mt-6">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
             <AlertTriangle size={18} className="text-red-600" />
@@ -435,7 +435,7 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
             {isFr ? 'Réinitialiser la base de données' : 'Reset the database'}
           </button>
         </form>
-      </section>
+      </section>}
 
       {/* Maintenance — visible uniquement pour le compte propriétaire */}
       {user.username === 'Christian.DENMEKO' && <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 max-w-4xl">
