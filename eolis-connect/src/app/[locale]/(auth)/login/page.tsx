@@ -277,11 +277,35 @@ export default function LoginPage({ params }: LoginPageProps) {
       }
       const err    = await res.json().catch(() => ({}))
       const detail = err.detail ?? ''
-      if (detail === 'wrong_code')         setError(locale === 'fr' ? 'Code incorrect. Réessayez.' : 'Incorrect code. Please try again.')
-      else if (detail === 'otp_expired')   setError(locale === 'fr' ? 'Code expiré. Reconnectez-vous.' : 'Code expired. Please log in again.')
-      else if (detail === 'too_many_attempts') setError(locale === 'fr' ? 'Trop de tentatives. Reconnectez-vous.' : 'Too many attempts. Please log in again.')
-      else if (detail === 'invalid_pre_token') { setStep('credentials'); setError(locale === 'fr' ? 'Session expirée. Reconnectez-vous.' : 'Session expired. Please log in again.') }
-      else setError(text.genericError)
+      if (detail.startsWith('wrong_code')) {
+        const remaining = detail.includes(':') ? parseInt(detail.split(':')[1]) : null
+        setError(remaining !== null
+          ? (locale === 'fr'
+              ? `Code incorrect. Il vous reste ${remaining} tentative${remaining > 1 ? 's' : ''}.`
+              : `Wrong code. You have ${remaining} attempt${remaining > 1 ? 's' : ''} left.`)
+          : (locale === 'fr' ? 'Code incorrect. Réessayez.' : 'Incorrect code. Please try again.'))
+      } else if (detail === 'otp_expired') {
+        setError(locale === 'fr' ? 'Code expiré. Reconnectez-vous.' : 'Code expired. Please log in again.')
+      } else if (detail === 'too_many_attempts') {
+        setError(locale === 'fr' ? 'Trop de tentatives. Reconnectez-vous.' : 'Too many attempts. Please log in again.')
+      } else if (detail === 'invalid_pre_token') {
+        setStep('credentials'); setError(locale === 'fr' ? 'Session expirée. Reconnectez-vous.' : 'Session expired. Please log in again.')
+      } else if (detail === 'account_locked') {
+        setStep('credentials')
+        setErrorType('locked')
+        setError(locale === 'fr'
+          ? 'Votre compte a été bloqué suite à plusieurs tentatives incorrectes.'
+          : 'Your account has been locked due to multiple failed attempts.')
+      } else if (detail?.startsWith('temporarily_locked:')) {
+        const secs = parseInt(detail.split(':')[1] ?? '900')
+        setLockSecondsLeft(secs)
+        setStep('credentials')
+        setErrorType('temp_locked')
+        setError('')
+        startLockCountdown(secs, username)
+      } else {
+        setError(text.genericError)
+      }
     } catch {
       setError(text.genericError)
     }

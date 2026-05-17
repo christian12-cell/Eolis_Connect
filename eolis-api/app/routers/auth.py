@@ -193,10 +193,21 @@ def verify_2fa(request: Request, body: dict, db: Session = Depends(get_db)):
     if not user_id:
         raise HTTPException(status_code=401, detail="invalid_pre_token")
 
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="user_not_found")
+
+    now = datetime.utcnow()
+    if user.status == "LOCKED":
+        raise HTTPException(status_code=403, detail="account_locked")
+    if user.login_locked_until and user.login_locked_until > now:
+        secs = int((user.login_locked_until - now).total_seconds())
+        raise HTTPException(status_code=423, detail=f"temporarily_locked:{secs}")
+
     otp = db.query(OtpCode).filter(
         OtpCode.phone == f"2fa:{user_id}",
         OtpCode.used  == False,
-        OtpCode.expires_at > datetime.utcnow(),
+        OtpCode.expires_at > now,
     ).order_by(OtpCode.created_at.desc()).first()
 
     if not otp:
@@ -208,14 +219,28 @@ def verify_2fa(request: Request, body: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=429, detail="too_many_attempts")
 
     if otp.code != code:
+        had_prev_lock = user.login_locked_until is not None
+        user.login_failed_count = (user.login_failed_count or 0) + 1
+        if user.login_failed_count >= 3:
+            if had_prev_lock:
+                user.status = "LOCKED"
+                user.login_failed_count = 0
+                user.login_locked_until = None
+                db.commit()
+                raise HTTPException(status_code=403, detail="account_locked")
+            else:
+                user.login_locked_until = now + timedelta(minutes=15)
+                user.login_failed_count = 0
+                db.commit()
+                raise HTTPException(status_code=423, detail="temporarily_locked:900")
+        remaining = 3 - user.login_failed_count
         db.commit()
-        raise HTTPException(status_code=401, detail="wrong_code")
+        raise HTTPException(status_code=401, detail=f"wrong_code:{remaining}")
 
     otp.used = True
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="user_not_found")
-    user.last_login_at = datetime.utcnow()
+    user.login_failed_count = 0
+    user.login_locked_until = None
+    user.last_login_at = now
     db.commit()
     db.refresh(user)
     token = create_access_token({"sub": user.id, "role": user.role, "username": user.username}, role=user.role)
@@ -384,23 +409,47 @@ def fp_verify_otp(body: dict, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == payload["sub"], User.status == "ACTIVE").first()
     if not user:
         raise HTTPException(404, "user_not_found")
+
+    now = datetime.utcnow()
+    if user.login_locked_until and user.login_locked_until > now:
+        secs = int((user.login_locked_until - now).total_seconds())
+        raise HTTPException(status_code=423, detail=f"temporarily_locked:{secs}")
+
     code   = (body.get("code") or "").strip()
     fp_key = f"fp:{user.id}"
     otp = (db.query(OtpCode)
            .filter(OtpCode.phone == fp_key, OtpCode.used == False,
-                   OtpCode.expires_at > datetime.utcnow())
+                   OtpCode.expires_at > now)
            .order_by(OtpCode.created_at.desc()).first())
     if not otp:
         raise HTTPException(400, "otp_expired")
+
     otp.attempts += 1
-    if otp.attempts >= 3 and otp.code != code:
-        otp.used = True
-        db.commit()
-        raise HTTPException(400, "otp_max_attempts")
+
     if otp.code != code:
+        had_prev_lock = user.login_locked_until is not None
+        user.login_failed_count = (user.login_failed_count or 0) + 1
+        if otp.attempts >= 3:
+            otp.used = True
+        if user.login_failed_count >= 3:
+            if had_prev_lock:
+                user.status = "LOCKED"
+                user.login_failed_count = 0
+                user.login_locked_until = None
+                db.commit()
+                raise HTTPException(status_code=403, detail="account_locked")
+            else:
+                user.login_locked_until = now + timedelta(minutes=15)
+                user.login_failed_count = 0
+                db.commit()
+                raise HTTPException(status_code=423, detail="temporarily_locked:900")
+        remaining = min(3 - user.login_failed_count, max(0, 3 - otp.attempts))
         db.commit()
-        raise HTTPException(400, f"otp_wrong:{3 - otp.attempts}")
+        raise HTTPException(400, f"otp_wrong:{remaining}")
+
     otp.used = True
+    user.login_failed_count = 0
+    user.login_locked_until = None
     db.commit()
     verified_token = _sign_lookup(user.id, payload["fp_mode"] + ":verified")
     return {"ok": True, "maskedUsername": _mask_username(user.username), "verifiedToken": verified_token}

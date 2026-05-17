@@ -6,6 +6,7 @@ from ..database import get_db
 from ..models import User, OtpCode
 from ..schemas import OtpSendRequest, OtpVerifyRequest
 from ..sms_service import sms_otp, _e164
+from typing import Optional
 
 router = APIRouter(prefix="/auth/otp", tags=["otp"])
 
@@ -65,24 +66,57 @@ def verify_otp(body: OtpVerifyRequest, background_tasks: BackgroundTasks, db: Se
     if not otp:
         raise HTTPException(status_code=400, detail="otp_expired")
 
+    now = datetime.utcnow()
+
+    uid  = body.user_id or otp.user_id
+    user: Optional[User] = db.query(User).filter(User.id == uid).first() if uid else None
+
+    if user:
+        if user.status == "LOCKED":
+            raise HTTPException(status_code=403, detail="account_locked")
+        if user.login_locked_until and user.login_locked_until > now:
+            secs = int((user.login_locked_until - now).total_seconds())
+            raise HTTPException(status_code=423, detail=f"temporarily_locked:{secs}")
+
     otp.attempts += 1
-    if otp.attempts >= OTP_MAX_ATTEMPTS and otp.code != body.code:
-        otp.used = True
-        db.commit()
-        raise HTTPException(status_code=400, detail="otp_max_attempts")
 
     if otp.code != body.code:
+        if user:
+            had_prev_lock = user.login_locked_until is not None
+            user.login_failed_count = (user.login_failed_count or 0) + 1
+            if otp.attempts >= OTP_MAX_ATTEMPTS:
+                otp.used = True
+            if user.login_failed_count >= 3:
+                if had_prev_lock:
+                    user.status = "LOCKED"
+                    user.login_failed_count = 0
+                    user.login_locked_until = None
+                    db.commit()
+                    raise HTTPException(status_code=403, detail="account_locked")
+                else:
+                    user.login_locked_until = now + timedelta(minutes=15)
+                    user.login_failed_count = 0
+                    db.commit()
+                    raise HTTPException(status_code=423, detail="temporarily_locked:900")
+            if otp.attempts >= OTP_MAX_ATTEMPTS:
+                db.commit()
+                raise HTTPException(status_code=400, detail="otp_max_attempts")
+            remaining = min(3 - user.login_failed_count, OTP_MAX_ATTEMPTS - otp.attempts)
+        else:
+            if otp.attempts >= OTP_MAX_ATTEMPTS:
+                otp.used = True
+                db.commit()
+                raise HTTPException(status_code=400, detail="otp_max_attempts")
+            remaining = OTP_MAX_ATTEMPTS - otp.attempts
         db.commit()
-        remaining = OTP_MAX_ATTEMPTS - otp.attempts
         raise HTTPException(status_code=400, detail=f"otp_wrong:{remaining}")
 
     # Correct code — mark used and verify phone on user
     otp.used = True
-    if body.user_id or otp.user_id:
-        uid = body.user_id or otp.user_id
-        user = db.query(User).filter(User.id == uid).first()
-        if user:
-            user.phone_verified = True
+    if user:
+        user.phone_verified = True
+        user.login_failed_count = 0
+        user.login_locked_until = None
     db.commit()
     return {"verified": True}
 
