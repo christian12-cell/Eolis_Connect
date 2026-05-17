@@ -51,13 +51,19 @@ export default function AideClientPage({ params }: { params: Promise<{ locale: s
             : 'The complete application user guide will be available very soon. It will explain how to create a request, track your files, communicate with agents and much more.'}
         </p>
 
-        <div className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 flex items-center gap-3">
-          <Clock size={20} className="text-blue-200 flex-shrink-0" />
-          <p className="text-blue-100 text-sm text-left">
-            {isFr
-              ? 'En attendant, n\'hésitez pas à contacter le support si vous avez des questions.'
-              : 'In the meantime, feel free to contact support if you have any questions.'}
-          </p>
+        <div className="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 flex items-start gap-3">
+          <Clock size={20} className="text-blue-200 flex-shrink-0 mt-0.5" />
+          <div className="text-left">
+            <p className="text-blue-100 text-sm">
+              {isFr
+                ? 'En attendant, n\'hésitez pas à contacter le support si vous avez des questions.'
+                : 'In the meantime, feel free to contact support if you have any questions.'}
+            </p>
+            <a href="mailto:support@eolisconnect.online"
+              className="inline-block mt-2 text-sm font-semibold text-white underline underline-offset-2">
+              support@eolisconnect.online
+            </a>
+          </div>
         </div>
 
       </div>
