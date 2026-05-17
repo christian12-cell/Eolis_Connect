@@ -18,6 +18,109 @@ interface Props {
   currentLocale: string
 }
 
+function detectDevice(): string {
+  const ua = navigator.userAgent
+  const isIOS     = /iPhone|iPad|iPod/.test(ua)
+  const isAndroid = /Android/.test(ua)
+  const isSamsung = /SamsungBrowser/.test(ua)
+  const isFirefox = /Firefox/.test(ua)
+  const isEdge    = /Edg/.test(ua)
+  const isChrome  = /Chrome/.test(ua) && !isEdge && !isSamsung
+  const isSafari  = /Safari/.test(ua) && !isChrome && !isSamsung
+  if (isIOS)                         return 'ios-safari'
+  if (isAndroid && isSamsung)        return 'android-samsung'
+  if (isAndroid && isFirefox)        return 'android-firefox'
+  if (isAndroid)                     return 'android-chrome'
+  if (isEdge)                        return 'pc-edge'
+  if (isFirefox)                     return 'pc-firefox'
+  if (isSafari)                      return 'pc-safari'
+  return 'pc-chrome'
+}
+
+const DEVICE_GUIDE: Record<string, { label: string; icon: string; steps: { fr: string; en: string }[] }> = {
+  'android-chrome': {
+    label: 'Android — Chrome', icon: '🤖',
+    steps: [
+      { fr: 'Ouvre Chrome sur ton Android', en: 'Open Chrome on your Android' },
+      { fr: 'Appuie sur les 3 points ⋮ en haut à droite', en: 'Tap the 3 dots ⋮ at the top right' },
+      { fr: 'Va dans Paramètres → Paramètres du site', en: 'Go to Settings → Site settings' },
+      { fr: 'Appuie sur Notifications', en: 'Tap Notifications' },
+      { fr: 'Trouve eolisconnect.online et appuie dessus', en: 'Find eolisconnect.online and tap it' },
+      { fr: 'Change le réglage sur Autoriser', en: 'Change the setting to Allow' },
+    ],
+  },
+  'android-samsung': {
+    label: 'Android — Samsung Internet', icon: '📱',
+    steps: [
+      { fr: 'Ouvre Samsung Internet', en: 'Open Samsung Internet' },
+      { fr: 'Appuie sur les 3 lignes ☰ en bas à droite', en: 'Tap the 3 lines ☰ at the bottom right' },
+      { fr: 'Va dans Paramètres → Confidentialité et sécurité', en: 'Go to Settings → Privacy and security' },
+      { fr: 'Appuie sur Autorisations du site → Notifications', en: 'Tap Site permissions → Notifications' },
+      { fr: 'Trouve eolisconnect.online et active-le', en: 'Find eolisconnect.online and enable it' },
+    ],
+  },
+  'android-firefox': {
+    label: 'Android — Firefox', icon: '🦊',
+    steps: [
+      { fr: 'Ouvre Firefox sur ton Android', en: 'Open Firefox on your Android' },
+      { fr: 'Appuie sur les 3 points ⋮ → Paramètres', en: 'Tap the 3 dots ⋮ → Settings' },
+      { fr: 'Va dans Autorisations du site → Notifications', en: 'Go to Site permissions → Notifications' },
+      { fr: 'Trouve eolisconnect.online dans la liste bloquée', en: 'Find eolisconnect.online in the blocked list' },
+      { fr: 'Appuie dessus et change sur Autoriser', en: 'Tap it and change to Allow' },
+    ],
+  },
+  'ios-safari': {
+    label: 'iPhone / iPad — Safari', icon: '🍎',
+    steps: [
+      { fr: 'Les notifications push sur iPhone nécessitent d\'ajouter l\'app à l\'écran d\'accueil', en: 'Push notifications on iPhone require adding the app to the home screen' },
+      { fr: 'Dans Safari, appuie sur le bouton Partager ⬆', en: 'In Safari, tap the Share button ⬆' },
+      { fr: 'Sélectionne "Sur l\'écran d\'accueil"', en: 'Select "Add to Home Screen"' },
+      { fr: 'Ouvre l\'app depuis l\'écran d\'accueil (pas depuis Safari)', en: 'Open the app from the home screen (not from Safari)' },
+      { fr: 'Ensuite : Réglages iPhone → Apps → Safari → Notifications → Autoriser eolisconnect.online', en: 'Then: iPhone Settings → Apps → Safari → Notifications → Allow eolisconnect.online' },
+    ],
+  },
+  'pc-chrome': {
+    label: 'PC / Mac — Chrome', icon: '💻',
+    steps: [
+      { fr: 'Clique sur l\'icône 🔒 cadenas à gauche de l\'URL dans la barre d\'adresse', en: 'Click the 🔒 lock icon to the left of the URL in the address bar' },
+      { fr: 'Clique sur "Paramètres du site"', en: 'Click "Site settings"' },
+      { fr: 'Trouve la ligne Notifications', en: 'Find the Notifications row' },
+      { fr: 'Change le menu déroulant de "Bloquer" à "Autoriser"', en: 'Change the dropdown from "Block" to "Allow"' },
+      { fr: 'Recharge la page', en: 'Reload the page' },
+    ],
+  },
+  'pc-firefox': {
+    label: 'PC / Mac — Firefox', icon: '🦊',
+    steps: [
+      { fr: 'Clique sur l\'icône 🔒 cadenas à gauche de l\'URL', en: 'Click the 🔒 lock icon to the left of the URL' },
+      { fr: 'Clique sur "Connexion sécurisée" → "Plus d\'informations"', en: 'Click "Secure connection" → "More information"' },
+      { fr: 'Va dans l\'onglet Permissions', en: 'Go to the Permissions tab' },
+      { fr: 'Trouve Envoyer des notifications et décoche "Bloquer"', en: 'Find Send notifications and uncheck "Block"' },
+      { fr: 'Ferme et recharge la page', en: 'Close and reload the page' },
+    ],
+  },
+  'pc-edge': {
+    label: 'PC — Microsoft Edge', icon: '🌐',
+    steps: [
+      { fr: 'Clique sur l\'icône 🔒 cadenas à gauche de l\'URL', en: 'Click the 🔒 lock icon to the left of the URL' },
+      { fr: 'Clique sur "Autorisations pour ce site"', en: 'Click "Permissions for this site"' },
+      { fr: 'Trouve Notifications dans la liste', en: 'Find Notifications in the list' },
+      { fr: 'Change de "Bloquer" à "Autoriser"', en: 'Change from "Block" to "Allow"' },
+      { fr: 'Recharge la page', en: 'Reload the page' },
+    ],
+  },
+  'pc-safari': {
+    label: 'Mac — Safari', icon: '🧭',
+    steps: [
+      { fr: 'Dans le menu Safari en haut, clique sur Safari → Réglages', en: 'In the top Safari menu, click Safari → Settings' },
+      { fr: 'Va dans l\'onglet Sites web', en: 'Go to the Websites tab' },
+      { fr: 'Clique sur Notifications dans la colonne gauche', en: 'Click Notifications in the left column' },
+      { fr: 'Trouve eolisconnect.online dans la liste', en: 'Find eolisconnect.online in the list' },
+      { fr: 'Change le menu sur Autoriser', en: 'Change the dropdown to Allow' },
+    ],
+  },
+}
+
 export default function ClientSettings({ locale, userId, username, initialFirstName, initialLastName, initialEmail, initialPhone, initialPhoneVerified, currentLocale }: Props) {
   const router = useRouter()
   const isFr = locale === 'fr'
@@ -41,12 +144,14 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
   const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>('default')
   const [pushPrefs, setPushPrefs] = useState({ newMessage: true, finalResponse: true, documentRequested: true })
   const [pushSaving, setPushSaving] = useState(false)
+  const [selectedDevice, setSelectedDevice] = useState<string>('')
 
   useEffect(() => {
     if (!('Notification' in window) || !('PushManager' in window)) {
       setPushPermission('unsupported'); return
     }
     setPushPermission(Notification.permission)
+    setSelectedDevice(detectDevice())
     isPushSubscribed().then(setPushEnabled)
     apiFetch('/api/push/preferences').then(r => r.json()).then(d => {
       if (d) setPushPrefs({ newMessage: d.newMessage ?? true, finalResponse: d.finalResponse ?? true, documentRequested: d.documentRequested ?? true })
@@ -415,10 +520,61 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
           </div>
           <div className="px-6 py-5 space-y-3">
             {pushPermission === 'denied' && (
-              <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-xs text-red-600">
-                {isFr
-                  ? 'Vous avez bloqué les notifications. Pour les réactiver : Paramètres du navigateur → Notifications → autoriser ce site.'
-                  : 'You blocked notifications. To re-enable: Browser settings → Notifications → allow this site.'}
+              <div className="space-y-4">
+                <div className="p-3 rounded-xl bg-red-50 border border-red-100 flex items-start gap-2">
+                  <span className="text-lg flex-shrink-0">🔕</span>
+                  <div>
+                    <p className="text-sm font-semibold text-red-700">
+                      {isFr ? 'Notifications bloquées' : 'Notifications blocked'}
+                    </p>
+                    <p className="text-xs text-red-500 mt-0.5">
+                      {isFr
+                        ? 'Vous avez refusé les notifications. JavaScript ne peut pas les réactiver — c\'est l\'OS qui bloque. Suivez le guide ci-dessous.'
+                        : 'You denied notifications. JavaScript can\'t re-enable them — the OS is blocking. Follow the guide below.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Sélection du device */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 mb-2">
+                    {isFr ? 'Sélectionne ton appareil / navigateur :' : 'Select your device / browser:'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(DEVICE_GUIDE).map(([id, d]) => (
+                      <button key={id} onClick={() => setSelectedDevice(id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left text-xs font-medium transition-all ${
+                          selectedDevice === id
+                            ? 'border-[#1B3A5C] bg-[#1B3A5C]/5 text-[#1B3A5C]'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}>
+                        <span className="text-base">{d.icon}</span>
+                        <span className="leading-tight">{d.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Étapes pour le device sélectionné */}
+                {selectedDevice && DEVICE_GUIDE[selectedDevice] && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-xs font-bold text-amber-800 mb-3">
+                      {isFr ? `Guide — ${DEVICE_GUIDE[selectedDevice].label}` : `Guide — ${DEVICE_GUIDE[selectedDevice].label}`}
+                    </p>
+                    <ol className="space-y-2">
+                      {DEVICE_GUIDE[selectedDevice].steps.map((step, i) => (
+                        <li key={i} className="flex items-start gap-2.5">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold flex items-center justify-center mt-0.5">
+                            {i + 1}
+                          </span>
+                          <span className="text-xs text-amber-900 leading-relaxed">
+                            {isFr ? step.fr : step.en}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
               </div>
             )}
             {pushPermission === 'default' && !pushEnabled && (
