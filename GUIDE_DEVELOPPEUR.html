@@ -115,6 +115,7 @@
     <li><a href="#modeles">Modèles SQLAlchemy</a></li>
     <li><a href="#schemas">Schemas Pydantic</a></li>
     <li><a href="#routers">Routers — endpoints</a></li>
+    <li><a href="#creer-endpoint">🛠️ Créer un endpoint — tutoriel</a></li>
     <li><a href="#auth-jwt">Auth & JWT</a></li>
     <li><a href="#websocket">WebSocket — chat temps réel</a></li>
     <li><a href="#push-notifs">Notifications push — Web Push</a></li>
@@ -612,6 +613,97 @@ app.<span class="f">include_router</span>(tickets.router, prefix=<span class="s"
 
 app.<span class="f">include_router</span>(ws.router)
 <span class="c"># → WebSocket /ws/ticket/{id} (pas de /api prefix)</span></pre>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="creer-endpoint">
+  <h2>🛠️ Créer un endpoint — Tutoriel pas à pas</h2>
+
+  <p>Un endpoint c'est juste une <strong>URL que le frontend peut appeler</strong>. Il reçoit des données, fait quelque chose, et répond en JSON.</p>
+
+  <h3>Les 3 types de paramètres</h3>
+  <pre><span class="c"># 1. Paramètre dans l'URL  →  /faq/abc-123</span>
+<span class="v">@router.get</span>(<span class="s">"/{faq_id}"</span>)
+<span class="k">def</span> <span class="f">get_one</span>(faq_id: <span class="f">str</span>):       <span class="c">← FastAPI lit l'accolade dans l'URL</span>
+    ...
+
+<span class="c"># 2. Paramètre query  →  /faq?locale=en</span>
+<span class="v">@router.get</span>(<span class="s">""</span>)
+<span class="k">def</span> <span class="f">list_faq</span>(locale: <span class="f">str</span> = <span class="s">"fr"</span>):  <span class="c">← valeur par défaut = optionnel</span>
+    ...
+
+<span class="c"># 3. Body JSON  →  POST avec {"question": "...", "answer": "..."}</span>
+<span class="k">class</span> <span class="f">MonBody</span>(BaseModel):
+    question: <span class="f">str</span>
+    answer:   <span class="f">str</span>
+
+<span class="v">@router.post</span>(<span class="s">""</span>)
+<span class="k">def</span> <span class="f">create</span>(body: <span class="f">MonBody</span>):         <span class="c">← FastAPI valide et lit le JSON</span>
+    ...</pre>
+
+  <h3>Exemple réel — faq.py analysé ligne par ligne</h3>
+  <pre><span class="c"># ① Imports — les outils dont on a besoin</span>
+<span class="k">from</span> fastapi <span class="k">import</span> APIRouter, Depends
+<span class="k">from</span> sqlalchemy.orm <span class="k">import</span> Session
+<span class="k">from</span> ..database <span class="k">import</span> get_db      <span class="c">← fonction qui ouvre une connexion DB</span>
+<span class="k">from</span> ..models  <span class="k">import</span> FAQ           <span class="c">← la classe Python = la table SQL "faq"</span>
+<span class="k">from</span> ..schemas <span class="k">import</span> FAQResponse   <span class="c">← format de la réponse JSON</span>
+
+<span class="c"># ② Le router — groupe tous les endpoints sous /api/faq</span>
+router = APIRouter(prefix=<span class="s">"/faq"</span>, tags=[<span class="s">"faq"</span>])
+<span class="c">#   prefix="/faq"  → chaque endpoint ici commence par /api/faq</span>
+<span class="c">#   tags=["faq"]   → groupe dans Swagger UI (/docs)</span>
+
+<span class="c"># ③ L'endpoint — GET /api/faq ou GET /api/faq?locale=en</span>
+<span class="v">@router.get</span>(<span class="s">""</span>, response_model=list[FAQResponse])
+<span class="k">def</span> <span class="f">list_faq</span>(
+    locale: <span class="f">str</span> = <span class="s">"fr"</span>,            <span class="c">← query param optionnel, défaut = "fr"</span>
+    db: Session = Depends(get_db)   <span class="c">← connexion DB injectée automatiquement</span>
+):
+    <span class="k">return</span> db.query(FAQ)            <span class="c">← SELECT * FROM faq</span>
+              .filter(FAQ.locale == locale)   <span class="c">← WHERE locale = 'fr'</span>
+              .order_by(FAQ.order.asc())      <span class="c">← ORDER BY order ASC</span>
+              .all()                          <span class="c">← → liste Python → JSON</span></pre>
+
+  <h3>Exercice — ajoute cet endpoint toi-même</h3>
+  <p>Dans <code>eolis-api/app/routers/faq.py</code>, ajoute ce bloc après la fonction existante :</p>
+  <pre><span class="c"># GET /api/faq/abc-123 — récupère une FAQ par son ID</span>
+<span class="v">@router.get</span>(<span class="s">"/{faq_id}"</span>)
+<span class="k">def</span> <span class="f">get_one_faq</span>(faq_id: <span class="f">str</span>, db: Session = Depends(get_db)):
+    faq = db.query(FAQ).filter(FAQ.id == faq_id).<span class="f">first</span>()
+    <span class="c"># .first() au lieu de .all() → un seul résultat ou None</span>
+
+    <span class="k">if not</span> faq:
+        <span class="k">from</span> fastapi <span class="k">import</span> HTTPException
+        <span class="k">raise</span> HTTPException(status_code=<span class="f">404</span>, detail=<span class="s">"not_found"</span>)
+        <span class="c">← si pas trouvé → renvoie {"detail": "not_found"} avec code 404</span>
+
+    <span class="k">return</span> faq   <span class="c">← objet Python → JSON automatiquement</span></pre>
+
+  <div class="alert-box" style="margin-top:16px">
+    <strong>💡 Différence .first() vs .all()</strong><br>
+    <code>.all()</code> → retourne une <strong>liste</strong> (même vide <code>[]</code>)<br>
+    <code>.first()</code> → retourne <strong>un objet</strong> ou <strong>None</strong> si pas trouvé
+  </div>
+
+  <h3>Où voir et tester tous les endpoints — Swagger UI</h3>
+  <p>FastAPI génère automatiquement une interface interactive. Ouvre dans ton navigateur :</p>
+  <pre>https://[ton-backend-railway].railway.app/docs</pre>
+  <p>Tu y verras <strong>tous les endpoints</strong> du projet, groupés par tag. Pour chacun :</p>
+  <ul style="margin:12px 0 0 20px;line-height:2;font-size:.9rem">
+    <li>La méthode HTTP (GET, POST, PATCH, DELETE)</li>
+    <li>Les paramètres attendus et leur type</li>
+    <li>Un bouton <strong>"Try it out"</strong> → teste en direct sans coder</li>
+    <li>La réponse exacte retournée par le serveur</li>
+  </ul>
+
+  <h3>Checklist pour créer un nouveau endpoint</h3>
+  <ol style="margin:12px 0 0 20px;line-height:2;font-size:.9rem">
+    <li>Écris la fonction dans le bon fichier router (ou crée-en un nouveau)</li>
+    <li>Si nouveau fichier → l'importer dans <code>main.py</code> et ajouter <code>app.include_router(...)</code></li>
+    <li>Redémarre le backend (Railway redémarre automatiquement)</li>
+    <li>Va sur <code>/docs</code> → ton endpoint apparaît → teste-le</li>
+  </ol>
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
