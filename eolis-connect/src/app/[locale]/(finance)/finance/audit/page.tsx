@@ -15,25 +15,25 @@ function toUsd(f: number) { return (f / USD).toFixed(2) }
 function toEur(f: number) { return (f / EUR).toFixed(2) }
 
 const ACTION_META: Record<string, { icon: React.ReactNode; color: string; label_fr: string; label_en: string }> = {
-  CREDIT_APPROVE:              { icon: <CheckCircle size={14} />,  color: 'text-emerald-600 bg-emerald-50', label_fr: 'Recharge approuvée',   label_en: 'Credit approved'        },
-  CREDIT_REJECT:               { icon: <XCircle size={14} />,      color: 'text-red-500 bg-red-50',         label_fr: 'Recharge refusée',     label_en: 'Credit rejected'        },
-  INFRA_COST_ADD:              { icon: <Plus size={14} />,          color: 'text-amber-600 bg-amber-50',     label_fr: 'Charge ajoutée',       label_en: 'Cost added'             },
-  INFRA_COST_DELETE:           { icon: <Trash2 size={14} />,        color: 'text-gray-500 bg-gray-100',      label_fr: 'Charge supprimée',     label_en: 'Cost deleted'           },
-  CREDIT_PENDING_ADMIN:        { icon: <ShieldAlert size={14} />,   color: 'text-orange-600 bg-orange-50',   label_fr: 'En attente admin',     label_en: 'Pending admin'          },
-  CREDIT_ADMIN_CONFIRM:        { icon: <ShieldCheck size={14} />,   color: 'text-emerald-600 bg-emerald-50', label_fr: 'Confirmé admin',       label_en: 'Admin confirmed'        },
-  CREDIT_ADMIN_REJECT:         { icon: <ShieldAlert size={14} />,   color: 'text-red-500 bg-red-50',         label_fr: 'Annulé admin',         label_en: 'Admin cancelled'        },
-  CREDIT_DIRECT_ADMIN_APPROVE: { icon: <ShieldCheck size={14} />,   color: 'text-emerald-600 bg-emerald-50', label_fr: 'Approuvé direct admin', label_en: 'Direct admin approval' },
-  CREDIT_DIRECT_ADMIN_REJECT:  { icon: <ShieldAlert size={14} />,   color: 'text-red-500 bg-red-50',         label_fr: 'Refusé direct admin',  label_en: 'Direct admin rejection' },
+  CREDIT_APPROVE:              { icon: <CheckCircle size={14} />,  color: 'text-emerald-600 bg-emerald-50', label_fr: 'Recharge approuvée',    label_en: 'Credit approved'        },
+  CREDIT_REJECT:               { icon: <XCircle size={14} />,      color: 'text-red-500 bg-red-50',         label_fr: 'Recharge refusée',      label_en: 'Credit rejected'        },
+  INFRA_COST_ADD:              { icon: <Plus size={14} />,          color: 'text-amber-600 bg-amber-50',     label_fr: 'Charge ajoutée',        label_en: 'Cost added'             },
+  INFRA_COST_DELETE:           { icon: <Trash2 size={14} />,        color: 'text-gray-500 bg-gray-100',      label_fr: 'Charge supprimée',      label_en: 'Cost deleted'           },
+  CREDIT_PENDING_ADMIN:        { icon: <ShieldAlert size={14} />,   color: 'text-orange-600 bg-orange-50',   label_fr: 'En attente admin',      label_en: 'Pending admin'          },
+  CREDIT_ADMIN_CONFIRM:        { icon: <ShieldCheck size={14} />,   color: 'text-emerald-600 bg-emerald-50', label_fr: 'Confirmé admin',        label_en: 'Admin confirmed'        },
+  CREDIT_ADMIN_REJECT:         { icon: <ShieldAlert size={14} />,   color: 'text-red-500 bg-red-50',         label_fr: 'Annulé admin',          label_en: 'Admin cancelled'        },
+  CREDIT_DIRECT_ADMIN_APPROVE: { icon: <ShieldCheck size={14} />,   color: 'text-emerald-600 bg-emerald-50', label_fr: 'Approuvé direct admin', label_en: 'Direct admin approval'  },
+  CREDIT_DIRECT_ADMIN_REJECT:  { icon: <ShieldAlert size={14} />,   color: 'text-red-500 bg-red-50',         label_fr: 'Refusé direct admin',   label_en: 'Direct admin rejection' },
 }
 
 type Period = 'all' | 'day' | 'week' | 'month' | 'year'
 
 const PERIOD_LABELS: Record<Period, { fr: string; en: string }> = {
-  all:   { fr: 'Tout',       en: 'All'    },
-  day:   { fr: 'Aujourd\'hui', en: 'Today' },
-  week:  { fr: 'Semaine',    en: 'Week'   },
-  month: { fr: 'Mois',       en: 'Month'  },
-  year:  { fr: 'Année',      en: 'Year'   },
+  all:   { fr: 'Tout',          en: 'All'   },
+  day:   { fr: 'Aujourd\'hui',  en: 'Today' },
+  week:  { fr: 'Semaine',       en: 'Week'  },
+  month: { fr: 'Mois',          en: 'Month' },
+  year:  { fr: 'Année',         en: 'Year'  },
 }
 
 export default function AuditPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -46,12 +46,11 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
   const [page, setPage]     = useState(1)
   const [loading, setLoading] = useState(true)
 
-  const [searchInput, setSearchInput]   = useState('')
-  const [searchQuery, setSearchQuery]   = useState('')
-  const [period, setPeriod]             = useState<Period>('all')
-  const [fromDate, setFromDate]         = useState('')
-  const [toDate, setToDate]             = useState('')
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [period, setPeriod]           = useState<Period>('all')
+  const [fromDate, setFromDate]       = useState('')
+  const [toDate, setToDate]           = useState('')
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -62,7 +61,6 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
     setUser(u)
   }, [locale])
 
-  // Debounce search input
   useEffect(() => {
     const t = setTimeout(() => {
       setSearchQuery(searchInput)
@@ -73,12 +71,11 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
 
   const fetchLogs = useCallback(() => {
     setLoading(true)
-    setSelected(new Set())
     const qs = new URLSearchParams()
-    if (searchQuery)        qs.set('search', searchQuery)
-    if (period !== 'all')   qs.set('period', period)
-    if (fromDate)           qs.set('from', fromDate)
-    if (toDate)             qs.set('to', toDate)
+    if (searchQuery)       qs.set('search', searchQuery)
+    if (period !== 'all')  qs.set('period', period)
+    if (fromDate)          qs.set('from', fromDate)
+    if (toDate)            qs.set('to', toDate)
     qs.set('page', String(page))
     qs.set('page_size', '50')
     apiFetch(`/api/finance/audit-log?${qs}`)
@@ -99,35 +96,10 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
 
   const isFr = locale === 'fr'
 
-  const allSelected = logs.length > 0 && logs.every(l => selected.has(l.id))
-  const someSelected = selected.size > 0
-
-  function toggleAll() {
-    if (allSelected) setSelected(new Set())
-    else setSelected(new Set(logs.map(l => l.id)))
-  }
-  function toggleOne(id: string) {
-    const s = new Set(selected)
-    if (s.has(id)) s.delete(id); else s.add(id)
-    setSelected(s)
-  }
-
   function changePeriod(p: Period) {
     setPeriod(p)
     setFromDate('')
     setToDate('')
-    setPage(1)
-  }
-
-  function changeFromDate(v: string) {
-    setFromDate(v)
-    setPeriod('all')
-    setPage(1)
-  }
-
-  function changeToDate(v: string) {
-    setToDate(v)
-    setPeriod('all')
     setPage(1)
   }
 
@@ -149,7 +121,6 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
 
         {/* Filters */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
-          {/* Search bar */}
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
@@ -161,7 +132,6 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
             />
           </div>
 
-          {/* Period quick-filters */}
           <div className="flex flex-wrap gap-2">
             {(['all', 'day', 'week', 'month', 'year'] as Period[]).map(p => (
               <button
@@ -178,14 +148,13 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
             ))}
           </div>
 
-          {/* Custom date range */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500 whitespace-nowrap">{isFr ? 'Du' : 'From'}</span>
               <input
                 type="date"
                 value={fromDate}
-                onChange={e => changeFromDate(e.target.value)}
+                onChange={e => { setFromDate(e.target.value); setPeriod('all'); setPage(1) }}
                 className="px-3 py-1.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
               />
             </div>
@@ -194,7 +163,7 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
               <input
                 type="date"
                 value={toDate}
-                onChange={e => changeToDate(e.target.value)}
+                onChange={e => { setToDate(e.target.value); setPeriod('all'); setPage(1) }}
                 className="px-3 py-1.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
               />
             </div>
@@ -217,60 +186,30 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
         ) : logs.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
             <Shield size={32} className="text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-400 text-sm">{isFr ? 'Aucune action enregistrée pour ces critères.' : 'No actions match these criteria.'}</p>
+            <p className="text-gray-400 text-sm">
+              {isFr ? 'Aucune action enregistrée pour ces critères.' : 'No actions match these criteria.'}
+            </p>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {/* Table header */}
-            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  className="w-4 h-4 rounded border-gray-300 text-[#1B3A5C] focus:ring-[#4A8FC4] cursor-pointer"
-                />
-                <p className="font-bold text-gray-900 text-sm">
-                  {total.toLocaleString()} {isFr ? 'action(s)' : 'action(s)'}
-                  {someSelected && (
-                    <span className="ml-2 text-xs font-normal text-[#4A8FC4]">
-                      — {selected.size} {isFr ? 'sélectionné(s)' : 'selected'}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <p className="text-xs text-gray-400">
-                {isFr ? `Page ${page} / ${pages}` : `Page ${page} / ${pages}`}
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <p className="font-bold text-gray-900 text-sm">
+                {total.toLocaleString()} {isFr ? 'action(s) enregistrée(s)' : 'action(s) recorded'}
               </p>
+              <p className="text-xs text-gray-400">{isFr ? `Page ${page} / ${pages}` : `Page ${page} of ${pages}`}</p>
             </div>
 
-            {/* Rows */}
             <div className="divide-y divide-gray-50">
               {logs.map((l) => {
                 const meta = ACTION_META[l.action]
-                const isSelected = selected.has(l.id)
                 return (
-                  <div
-                    key={l.id}
-                    className={`flex items-start gap-3 px-5 py-4 transition-colors ${isSelected ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}
-                  >
-                    {/* Checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleOne(l.id)}
-                      className="w-4 h-4 mt-1 rounded border-gray-300 text-[#1B3A5C] focus:ring-[#4A8FC4] cursor-pointer flex-shrink-0"
-                    />
-
-                    {/* Action badge */}
+                  <div key={l.id} className="flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
                     {meta && (
                       <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 mt-0.5 ${meta.color}`}>
                         {meta.icon}
                         <span>{isFr ? meta.label_fr : meta.label_en}</span>
                       </div>
                     )}
-
-                    {/* Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-semibold text-gray-900">{l.doneBy}</p>
@@ -280,9 +219,7 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
                           </span>
                         )}
                         <span className="text-[10px] text-gray-400 font-mono bg-gray-100 px-1.5 py-0.5 rounded">{l.role}</span>
-                        {l.ipAddress && (
-                          <span className="text-[10px] text-gray-400 font-mono">IP: {l.ipAddress}</span>
-                        )}
+                        {l.ipAddress && <span className="text-[10px] text-gray-400 font-mono">IP: {l.ipAddress}</span>}
                       </div>
                       {l.clientName && (
                         <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-1">
@@ -294,8 +231,6 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
                       {l.details && <p className="text-xs text-gray-500 mt-0.5 truncate">{l.details}</p>}
                       {l.entityId && <p className="text-[10px] text-gray-400 font-mono mt-0.5">ID: {l.entityId}</p>}
                     </div>
-
-                    {/* Amount + date */}
                     <div className="text-right flex-shrink-0">
                       {l.amountFcfa != null && (
                         <>
@@ -315,7 +250,6 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
               })}
             </div>
 
-            {/* Pagination */}
             {pages > 1 && (
               <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
                 <button
@@ -325,9 +259,7 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
                 >
                   <ChevronLeft size={14} /> {isFr ? 'Précédent' : 'Previous'}
                 </button>
-                <span className="text-xs text-gray-500">
-                  {page} / {pages}
-                </span>
+                <span className="text-xs text-gray-500">{page} / {pages}</span>
                 <button
                   onClick={() => setPage(p => Math.min(pages, p + 1))}
                   disabled={page === pages}
