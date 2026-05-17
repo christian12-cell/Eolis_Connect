@@ -92,7 +92,7 @@ def request_password_otp(
 ):
     """Send an OTP to the user's phone before allowing a password change."""
     if not current_user.phone:
-        return {"ok": True, "skipped": True}
+        raise HTTPException(status_code=400, detail="phone_required")
     from ..models import OtpCode as OtpCodeModel
     import random as _rand
     key = f"pwchange:{current_user.id}"
@@ -111,27 +111,25 @@ def request_password_otp(
 def change_my_password(body: PasswordChangeRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not verify_password(body.current_password, current_user.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="wrong_current_password")
-    # Step-up OTP check (only if user has a phone)
-    if current_user.phone:
-        if not body.otp_code:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="otp_required")
-        from ..models import OtpCode as OtpCodeModel
-        key = f"pwchange:{current_user.id}"
-        otp = db.query(OtpCodeModel).filter(
-            OtpCodeModel.phone == key,
-            OtpCodeModel.used == False,
-            OtpCodeModel.expires_at > datetime.now(timezone.utc).replace(tzinfo=None),
-        ).order_by(OtpCodeModel.created_at.desc()).first()
-        if not otp:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="otp_expired")
-        otp.attempts += 1
-        if otp.attempts > 5:
-            db.commit()
-            raise HTTPException(status_code=429, detail="otp_too_many_attempts")
-        if otp.code != body.otp_code.strip():
-            db.commit()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="otp_wrong")
-        otp.used = True
+    if not body.otp_code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="otp_required")
+    from ..models import OtpCode as OtpCodeModel
+    key = f"pwchange:{current_user.id}"
+    otp = db.query(OtpCodeModel).filter(
+        OtpCodeModel.phone == key,
+        OtpCodeModel.used == False,
+        OtpCodeModel.expires_at > datetime.now(timezone.utc).replace(tzinfo=None),
+    ).order_by(OtpCodeModel.created_at.desc()).first()
+    if not otp:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="otp_expired")
+    otp.attempts += 1
+    if otp.attempts > 5:
+        db.commit()
+        raise HTTPException(status_code=429, detail="otp_too_many_attempts")
+    if otp.code != body.otp_code.strip():
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="otp_wrong")
+    otp.used = True
     current_user.password_hash = hash_password(body.new_password)
     db.commit()
     return {"ok": True}

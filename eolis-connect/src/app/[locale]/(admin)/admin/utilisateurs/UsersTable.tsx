@@ -100,6 +100,7 @@ function CreateModal({ locale, onClose, onDone }: { locale: string; onClose: () 
   const [usernameEdited, setUsernameEdited] = useState(false)
   const [email, setEmail]         = useState('')
   const [phone, setPhone]         = useState('+237')
+  const [phoneValid, setPhoneValid] = useState(false)
   const [role, setRole]           = useState('AGENT')
   const [password, setPassword]   = useState('')
   const [language, setLanguage]   = useState('fr')
@@ -116,7 +117,7 @@ function CreateModal({ locale, onClose, onDone }: { locale: string; onClose: () 
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!firstName || !lastName || !username || !email || !phone || !password) return
+    if (!firstName || !lastName || !username || !email || !phoneValid || !password) return
     setSaving(true)
     setMsg(null)
     try {
@@ -178,7 +179,7 @@ function CreateModal({ locale, onClose, onDone }: { locale: string; onClose: () 
           </Field>
 
           <Field label={isFr ? 'Téléphone *' : 'Phone *'}>
-            <PhoneInput value={phone} onChange={setPhone} required />
+            <PhoneInput value={phone} onChange={setPhone} onValidChange={setPhoneValid} required />
           </Field>
 
           <Field label={isFr ? 'Mot de passe temporaire *' : 'Temporary password *'}>

@@ -298,9 +298,16 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
   async function requestPwOtp() {
     setPwMsg(null)
     const r = await apiFetch('/api/users/me/password/request-otp', { method: 'POST' })
-    const d = await r.json().catch(() => ({}))
-    if (d.skipped) { setPwOtpSkipped(true); setPwOtpSent(true) }
-    else { setPwOtpSent(true); startPwOtpCountdown() }
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}))
+      if (d.detail === 'phone_required')
+        setPwMsg({ ok: false, text: isFr ? 'Veuillez d\'abord ajouter un numéro de téléphone dans votre profil.' : 'Please add a phone number to your profile first.' })
+      else
+        setPwMsg({ ok: false, text: isFr ? 'Erreur lors de l\'envoi du code.' : 'Failed to send code.' })
+      return
+    }
+    setPwOtpSent(true)
+    startPwOtpCountdown()
   }
 
   async function changePassword() {

@@ -305,9 +305,16 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
   async function requestPwOtp() {
     setPassMsg(null)
     const r = await apiFetch('/api/users/me/password/request-otp', { method: 'POST' })
-    const d = await r.json().catch(() => ({}))
-    if (d.skipped) { setPwOtpSkipped(true); setPwOtpSent(true) }
-    else { setPwOtpSent(true); startPwOtpCountdown() }
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}))
+      const txt = d.detail === 'phone_required'
+        ? (isFr ? 'Veuillez d\'abord ajouter un numéro de téléphone dans votre profil.' : 'Please add a phone number to your profile first.')
+        : (isFr ? 'Erreur lors de l\'envoi du code.' : 'Failed to send code.')
+      setPassMsg({ type: 'error', text: txt })
+      return
+    }
+    setPwOtpSent(true)
+    startPwOtpCountdown()
   }
 
   async function savePassword(e: React.FormEvent) {

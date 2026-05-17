@@ -29,7 +29,7 @@ class RegisterRequest(BaseModel):
     first_name: str
     last_name: str
     email: str
-    phone: Optional[str] = None
+    phone: str
     password: str
     language: str = "fr"
 
@@ -92,7 +92,7 @@ class CreateUserRequest(BaseModel):
     last_name: str
     username: str
     email: str
-    phone: Optional[str] = None
+    phone: str
     role: str
     password: str
     language: str = 'fr'
