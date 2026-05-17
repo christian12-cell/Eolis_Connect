@@ -59,11 +59,17 @@ export default function AideStaffPage({ params }: { params: Promise<{ locale: st
 
         <div className="bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 flex items-start gap-3 text-left">
           <Clock size={18} className="text-gray-400 flex-shrink-0 mt-0.5" />
-          <p className="text-gray-500 text-sm">
-            {isFr
-              ? 'En attendant, contactez l\'administrateur système si vous avez des questions sur le fonctionnement de la plateforme.'
-              : 'In the meantime, contact the system administrator if you have questions about how the platform works.'}
-          </p>
+          <div>
+            <p className="text-gray-500 text-sm">
+              {isFr
+                ? 'En attendant, contactez le support si vous avez des questions sur le fonctionnement de la plateforme.'
+                : 'In the meantime, contact support if you have any questions about how the platform works.'}
+            </p>
+            <a href="mailto:support@eolisconnect.online"
+              className="inline-block mt-2 text-sm font-semibold text-[#1B3A5C] underline underline-offset-2">
+              support@eolisconnect.online
+            </a>
+          </div>
         </div>
 
       </div>

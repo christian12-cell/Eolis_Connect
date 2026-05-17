@@ -285,6 +285,20 @@ export default function FinanceAidePage({ params }: { params: Promise<{ locale: 
           </div>
         </Section>
 
+        {/* Contact support */}
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+          <Clock size={18} className="text-gray-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-gray-500">
+              {isFr ? 'Une question sur les données financières ou le fonctionnement de la plateforme ?' : 'A question about financial data or how the platform works?'}
+            </p>
+            <a href="mailto:support@eolisconnect.online"
+              className="inline-block mt-1.5 text-sm font-semibold text-[#1B3A5C] underline underline-offset-2">
+              support@eolisconnect.online
+            </a>
+          </div>
+        </div>
+
       </div>
     </DashboardLayout>
   )
