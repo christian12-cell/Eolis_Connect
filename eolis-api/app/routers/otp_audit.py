@@ -56,11 +56,18 @@ def get_otp_audit(
     total = q.count()
     rows  = q.offset((page - 1) * page_size).limit(page_size).all()
 
+    # Batch-load users to avoid N+1
+    user_ids = {o.user_id for o in rows if o.user_id}
+    users_by_id: dict = {}
+    if user_ids:
+        for u in db.query(User).filter(User.id.in_(user_ids)).all():
+            users_by_id[u.id] = u
+
     items = []
     for o in rows:
-        is_2fa   = o.phone.startswith("2fa:")
+        is_2fa        = o.phone.startswith("2fa:")
         phone_display = None if is_2fa else o.phone
-        expired  = o.expires_at < now
+        expired       = o.expires_at < now
         if o.used:
             status = "used"
         elif expired:
@@ -68,6 +75,7 @@ def get_otp_audit(
         else:
             status = "active"
 
+        u = users_by_id.get(o.user_id) if o.user_id else None
         items.append({
             "id":        o.id,
             "code":      o.code,
@@ -78,11 +86,11 @@ def get_otp_audit(
             "createdAt": o.created_at.isoformat() + "Z",
             "expiresAt": o.expires_at.isoformat() + "Z",
             "user": {
-                "id":        o.user.id        if o.user else None,
-                "username":  o.user.username  if o.user else None,
-                "firstName": o.user.first_name if o.user else None,
-                "lastName":  o.user.last_name  if o.user else None,
-            } if o.user else None,
+                "id":        u.id,
+                "username":  u.username,
+                "firstName": u.first_name,
+                "lastName":  u.last_name,
+            } if u else None,
         })
 
     return {
