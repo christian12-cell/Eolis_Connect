@@ -35,6 +35,16 @@ export default function SecuritePage({ params }: { params: Promise<{ locale: str
     setUser(u)
   }, [locale])
 
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    apiFetch('/api/users/admin/security')
+      .then(r => r.json())
+      .then(d => { setEntries(Array.isArray(d) ? d : []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { if (user) fetchData() }, [user, fetchData])
+
   useEffect(() => {
     if (!user) return
     setCountdown(30)
@@ -47,16 +57,6 @@ export default function SecuritePage({ params }: { params: Promise<{ locale: str
       if (countRef.current) clearInterval(countRef.current)
     }
   }, [user, fetchData])
-
-  const fetchData = useCallback(() => {
-    setLoading(true)
-    apiFetch('/api/users/admin/security')
-      .then(r => r.json())
-      .then(d => { setEntries(Array.isArray(d) ? d : []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
-
-  useEffect(() => { if (user) fetchData() }, [user, fetchData])
 
   const isFr = locale === 'fr'
 
