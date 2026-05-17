@@ -73,7 +73,7 @@ def _ensure_system_admin():
                 id=str(uuid.uuid4()),
                 first_name="Christian", last_name="DENMEKO",
                 username="Christian.DENMEKO",
-                email="christian.denmeko@eoliscameroun.com",
+                email="admin@eolisconnect.online",
                 phone="+33748523385",
                 phone_verified=False,
                 password_hash=hash_password("Admin@2026!"),
