@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { ScrollText, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ScrollText, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { getUser, apiFetch } from '@/lib/api-client'
 
 const ACTION_COLORS: Record<string, string> = {
@@ -35,9 +34,17 @@ export default function LogsPage({ params }: { params: Promise<{ locale: string 
   const [loading, setLoading] = useState(true)
   const [actionFilter, setActionFilter] = useState('')
   const [page, setPage] = useState(1)
+  const [countdown, setCountdown] = useState(30)
   const PAGE_SIZE = 20
+  const autoRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const countRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pageRef   = useRef(1)
+  const actionRef = useRef('')
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
+
+  useEffect(() => { pageRef.current = page }, [page])
+  useEffect(() => { actionRef.current = actionFilter }, [actionFilter])
 
   useEffect(() => {
     const u = getUser()
@@ -47,15 +54,28 @@ export default function LogsPage({ params }: { params: Promise<{ locale: string 
     fetchLogs(1, '')
   }, [locale])
 
-  async function fetchLogs(p: number, action: string) {
-    setLoading(true)
-    const params = new URLSearchParams({ page: String(p), page_size: String(PAGE_SIZE) })
-    if (action) params.set('action', action)
-    const data = await apiFetch(`/api/admin/logs?${params.toString()}`).then(r => r.json())
+  async function fetchLogs(p: number, action: string, silent = false) {
+    if (!silent) setLoading(true)
+    const qs = new URLSearchParams({ page: String(p), page_size: String(PAGE_SIZE) })
+    if (action) qs.set('action', action)
+    const data = await apiFetch(`/api/admin/logs?${qs.toString()}`).then(r => r.json())
     setLogs(data.items ?? [])
     setTotal(data.total ?? 0)
-    setLoading(false)
+    if (!silent) setLoading(false)
   }
+
+  useEffect(() => {
+    if (!user) return
+    setCountdown(30)
+    if (autoRef.current)  clearInterval(autoRef.current)
+    if (countRef.current) clearInterval(countRef.current)
+    autoRef.current  = setInterval(() => { fetchLogs(pageRef.current, actionRef.current, true); setCountdown(30) }, 30_000)
+    countRef.current = setInterval(() => setCountdown(c => c <= 1 ? 30 : c - 1), 1_000)
+    return () => {
+      if (autoRef.current)  clearInterval(autoRef.current)
+      if (countRef.current) clearInterval(countRef.current)
+    }
+  }, [user])
 
   function search(action: string) {
     setActionFilter(action)
@@ -88,8 +108,29 @@ export default function LogsPage({ params }: { params: Promise<{ locale: string 
     <DashboardLayout locale={locale} userName={`${user.firstName} ${user.lastName}`} role={user.role}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <ScrollText size={22} className="text-[#1B3A5C]" />
+            {t.title}
+          </h1>
           <p className="text-gray-500 text-sm mt-1">{total} {t.total}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex items-center justify-center"
+            title={`${isFr ? 'Actualisation dans' : 'Refresh in'} ${countdown}s`}>
+            <svg width="32" height="32" className="-rotate-90">
+              <circle cx="16" cy="16" r="12" fill="none" stroke="#e5e7eb" strokeWidth="2.5" />
+              <circle cx="16" cy="16" r="12" fill="none" stroke="#4A8FC4" strokeWidth="2.5"
+                strokeDasharray={`${2 * Math.PI * 12}`}
+                strokeDashoffset={`${2 * Math.PI * 12 * (1 - countdown / 30)}`}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.9s linear' }} />
+            </svg>
+            <span className="absolute text-[9px] font-bold text-gray-500 tabular-nums">{countdown}</span>
+          </div>
+          <button onClick={() => { fetchLogs(pageRef.current, actionRef.current, true); setCountdown(30) }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-colors">
+            <RefreshCw size={13} /> {isFr ? 'Actualiser' : 'Refresh'}
+          </button>
         </div>
       </div>
 

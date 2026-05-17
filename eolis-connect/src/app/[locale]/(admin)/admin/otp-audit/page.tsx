@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { apiFetch, getUser } from '@/lib/api-client'
 import { PeriodFilter, DateRange } from '@/components/ui/PeriodFilter'
-import { KeyRound, Phone, Search, ChevronLeft, ChevronRight, Loader2, ShieldAlert, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { KeyRound, Phone, Search, ChevronLeft, ChevronRight, Loader2, ShieldAlert, CheckCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react'
 
 const OWNER_USERNAME = 'Christian.DENMEKO'
 
@@ -28,6 +28,10 @@ export default function OtpAuditPage({ params }: { params: Promise<{ locale: str
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [dateRange, setDateRange]     = useState<DateRange | null>(null)
+  const [countdown, setCountdown]     = useState(30)
+  const autoRef        = useRef<ReturnType<typeof setInterval> | null>(null)
+  const countRef       = useRef<ReturnType<typeof setInterval> | null>(null)
+  const fetchDataRef   = useRef<(silent?: boolean) => void>(() => {})
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -43,21 +47,37 @@ export default function OtpAuditPage({ params }: { params: Promise<{ locale: str
     return () => clearTimeout(t)
   }, [searchInput])
 
-  const fetchData = useCallback(() => {
-    setLoading(true)
+  const fetchData = useCallback((silent = false) => {
+    if (!silent) setLoading(true)
     const qs = new URLSearchParams()
-    if (searchQuery)    qs.set('search', searchQuery)
+    if (searchQuery)     qs.set('search', searchQuery)
     if (dateRange?.from) qs.set('from', dateRange.from)
     if (dateRange?.to)   qs.set('to', dateRange.to)
     qs.set('page', String(page))
     qs.set('page_size', '50')
     apiFetch(`/api/admin/otp-audit?${qs}`)
       .then(r => r.json())
-      .then(d => { setItems(d.items ?? []); setTotal(d.total ?? 0); setPages(d.pages ?? 1); setLoading(false) })
-      .catch(() => setLoading(false))
+      .then(d => { setItems(d.items ?? []); setTotal(d.total ?? 0); setPages(d.pages ?? 1); if (!silent) setLoading(false) })
+      .catch(() => { if (!silent) setLoading(false) })
   }, [searchQuery, dateRange, page])
 
+  // Keep ref fresh so the auto-refresh interval always uses the latest query/page
+  useEffect(() => { fetchDataRef.current = fetchData }, [fetchData])
+
   useEffect(() => { if (user) fetchData() }, [user, fetchData])
+
+  useEffect(() => {
+    if (!user) return
+    setCountdown(30)
+    if (autoRef.current)  clearInterval(autoRef.current)
+    if (countRef.current) clearInterval(countRef.current)
+    autoRef.current  = setInterval(() => { fetchDataRef.current(true); setCountdown(30) }, 30_000)
+    countRef.current = setInterval(() => setCountdown(c => c <= 1 ? 30 : c - 1), 1_000)
+    return () => {
+      if (autoRef.current)  clearInterval(autoRef.current)
+      if (countRef.current) clearInterval(countRef.current)
+    }
+  }, [user])
 
   const isFr = locale === 'fr'
 
@@ -65,15 +85,35 @@ export default function OtpAuditPage({ params }: { params: Promise<{ locale: str
     <DashboardLayout locale={locale} userName={user ? `${user.firstName} ${user.lastName}` : ''} role={user?.role ?? ''}>
       <div className="space-y-5 max-w-5xl">
 
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <KeyRound size={22} className="text-[#1B3A5C]" />
-            {isFr ? 'Audit des codes OTP' : 'OTP code audit'}
-          </h1>
-          <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-            <ShieldAlert size={12} />
-            {isFr ? 'Codes générés par le système — accès propriétaire uniquement' : 'System-generated codes — owner access only'}
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <KeyRound size={22} className="text-[#1B3A5C]" />
+              {isFr ? 'Audit des codes OTP' : 'OTP code audit'}
+            </h1>
+            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+              <ShieldAlert size={12} />
+              {isFr ? 'Codes générés par le système — accès propriétaire uniquement' : 'System-generated codes — owner access only'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center justify-center"
+              title={`${isFr ? 'Actualisation dans' : 'Refresh in'} ${countdown}s`}>
+              <svg width="32" height="32" className="-rotate-90">
+                <circle cx="16" cy="16" r="12" fill="none" stroke="#e5e7eb" strokeWidth="2.5" />
+                <circle cx="16" cy="16" r="12" fill="none" stroke="#4A8FC4" strokeWidth="2.5"
+                  strokeDasharray={`${2 * Math.PI * 12}`}
+                  strokeDashoffset={`${2 * Math.PI * 12 * (1 - countdown / 30)}`}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 0.9s linear' }} />
+              </svg>
+              <span className="absolute text-[9px] font-bold text-gray-500 tabular-nums">{countdown}</span>
+            </div>
+            <button onClick={() => { fetchDataRef.current(true); setCountdown(30) }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-colors">
+              <RefreshCw size={13} /> {isFr ? 'Actualiser' : 'Refresh'}
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
