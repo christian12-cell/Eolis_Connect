@@ -189,6 +189,34 @@ Format : `[Date] — Type — Description`
 
 ---
 
+## [2026-05-17] — Session score composite, page Performance, documentation
+
+### Frontend — `eolis-connect`
+
+#### Page Performance — refonte du tableau comparatif (`ops/performances/page.tsx`)
+- **Colonne RANK supprimée** : remplacée par une colonne **SCORE /100** — même formule composite que le Classement (sat 25% + vitesse 25% + SLA 30% + 1ère réponse 20%).
+- **Tri alphabétique** : le tableau est trié par prénom/nom. Neutre, sans jugement implicite de qualité (la page Classement gère déjà le tri par qualité).
+- **Coloration vert/rouge** : le score composite de chaque agent est affiché en vert s'il est ≥ à la moyenne équipe, en rouge s'il est en dessous.
+- **`teamComposite` hoissé au niveau composant** : calculé une seule fois (IIFE) avant le JSX, accessible à la fois dans la ligne Team Average et dans la coloration des lignes agents.
+- **`computeStats()` enrichi** : calcul du score composite ajouté dans la fonction, retourné dans les stats de chaque agent.
+
+#### Distinction claire Classement vs Performance
+- **Page Classement** : répond à "qui est le meilleur ?" — trié par score composite, badges awards, pas de détail individuel.
+- **Page Performance** : répond à "quelles sont les stats ?" — trié alphabétiquement, score composite visible en colonne, détail individuel (charts, SLA, commentaires clients).
+
+### Documentation
+
+#### `GUIDE_DEVELOPPEUR.html`
+- **Section WebSocket** (nouvelle) : protocole WS vs HTTP, `ws_manager.py` commenté ligne par ligne, `routers/ws.py` (boucle `while True`, ping/pong), hook React `useTicketWS.ts`, flow complet d'un message de A à Z, tracking de présence, reconnexion automatique.
+- **Section Score composite /100** (nouvelle) : formule des 4 critères, conversion de chaque critère en /100, redistribution si critère absent, SLA cibles par urgence, exemple chiffré complet.
+- **Section Classement vs Performance** (nouvelle) : tableau comparatif des deux pages, pourquoi le tri alphabétique, les deux fonctions (`computeAgentStats` / `computeStats`) à garder synchronisées, coloration vert/rouge expliquée, note technique sur le hoisting de `teamComposite`.
+
+#### `MANUEL_AGENT.html` + `MANUEL_OPS_ADMIN.html`
+- Sections notifications push ajoutées (catégories, activation, comportement intelligent, avertissements).
+- Mode Équité ⚖️ documenté dans les pages Performance et Classement (`MANUEL_OPS_ADMIN`).
+
+---
+
 ## Prochaines étapes prévues
 - [ ] Mode offline pour le BL upload (scan/upload sans réseau, sync à la reconnexion)
 - [ ] SYSTEM ADMIN : redesign dashboard
