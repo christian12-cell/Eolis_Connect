@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Eolis Connect — Plan de déploiement mondial</title>
+<style>
+  :root {
+    --navy:   #1B3A5C;
+    --blue:   #4A8FC4;
+    --light:  #EEF6FF;
+    --green:  #10b981;
+    --red:    #ef4444;
+    --amber:  #f59e0b;
+    --violet: #7c3aed;
+    --gray:   #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1f2937; line-height: 1.6; }
+
+  header {
+    background: linear-gradient(135deg, #1B3A5C 0%, #0f2540 100%);
+    color: #fff; padding: 52px 40px; text-align: center;
+  }
+  header .label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #93c5fd; margin-bottom: 14px; }
+  header h1 { font-size: 34px; font-weight: 800; margin-bottom: 10px; }
+  header p { font-size: 15px; color: #a8c8e8; max-width: 680px; margin: 0 auto; line-height: 1.7; }
+  .badge-row { display: flex; gap: 10px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
+  .badge { padding: 5px 16px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+  .b-green  { background: rgba(16,185,129,.2);  color: #6ee7b7; border: 1px solid rgba(16,185,129,.3); }
+  .b-blue   { background: rgba(74,143,196,.2);  color: #93c5fd; border: 1px solid rgba(74,143,196,.3); }
+  .b-amber  { background: rgba(245,158,11,.2);  color: #fcd34d; border: 1px solid rgba(245,158,11,.3); }
+  .b-violet { background: rgba(124,58,237,.2);  color: #c4b5fd; border: 1px solid rgba(124,58,237,.3); }
+
+  main { max-width: 980px; margin: 0 auto; padding: 44px 20px; }
+  section { margin-bottom: 52px; }
+
+  .section-title {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 22px; font-weight: 800; color: var(--navy);
+    padding-bottom: 14px; border-bottom: 2px solid var(--light); margin-bottom: 28px;
+  }
+  .section-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+
+  .card { background: #fff; border-radius: 16px; border: 1px solid #e5e7eb; padding: 26px; margin-bottom: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 10px; display: flex; align-items: center; gap: 9px; }
+  .card-body  { font-size: 14px; color: #374151; line-height: 1.7; }
+  .card-grid  { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+
+  .agency-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+  .agency-flag { font-size: 28px; margin-bottom: 8px; }
+  .agency-name { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 2px; }
+  .agency-sub  { font-size: 12px; color: var(--gray); font-style: italic; margin-bottom: 12px; }
+  .agency-row  { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: #4b5563; margin-bottom: 5px; }
+  .agency-row .lbl { font-weight: 700; color: var(--navy); min-width: 72px; flex-shrink: 0; }
+
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; border: 1px solid #e5e7eb; }
+  th { background: var(--navy); color: #fff; padding: 11px 14px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; }
+  td { padding: 11px 14px; font-size: 13px; border-top: 1px solid #f3f4f6; vertical-align: top; }
+  tr:hover td { background: #fafafa; }
+  .table-wrap { overflow-x: auto; margin: 16px 0; border-radius: 14px; border: 1px solid #e5e7eb; }
+
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; margin: 1px; }
+  .pill-green  { background: #dcfce7; color: #15803d; }
+  .pill-red    { background: #fee2e2; color: #b91c1c; }
+  .pill-amber  { background: #fef3c7; color: #92400e; }
+  .pill-blue   { background: #dbeafe; color: #1d4ed8; }
+  .pill-gray   { background: #f3f4f6; color: #374151; }
+  .pill-violet { background: #ede9fe; color: #5b21b6; }
+
+  .alert { border-radius: 12px; padding: 14px 18px; margin: 14px 0; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; line-height: 1.6; }
+  .alert-green  { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; }
+  .alert-amber  { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .alert-red    { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+  .alert-blue   { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+
+  .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 16px 0; }
+  .flow-step { background: var(--light); border: 1px solid #bfdbfe; border-radius: 10px; padding: 9px 16px; font-size: 12px; font-weight: 600; color: var(--navy); }
+  .flow-step.green  { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+  .flow-step.amber  { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+  .flow-step.red    { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+  .flow-arrow { color: #9ca3af; font-size: 18px; }
+
+  .phase { border-radius: 14px; border: 2px solid; padding: 22px; margin-bottom: 16px; }
+  .phase-1 { background: #ecfdf5; border-color: #6ee7b7; }
+  .phase-2 { background: #eff6ff; border-color: #bfdbfe; }
+  .phase-3 { background: #f5f3ff; border-color: #c4b5fd; }
+  .phase-title { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+  .phase-1 .phase-title { color: #065f46; }
+  .phase-2 .phase-title { color: #1e40af; }
+  .phase-3 .phase-title { color: #5b21b6; }
+  .phase-body { font-size: 13px; color: #4b5563; line-height: 1.7; }
+
+  .legal-card { background: #fff; border-radius: 14px; border-left: 5px solid; padding: 20px 24px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+  .legal-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .legal-body  { font-size: 13px; color: #4b5563; line-height: 1.7; }
+
+  .revenue-box { background: linear-gradient(135deg, #1B3A5C, #2a5480); border-radius: 16px; padding: 28px; color: #fff; margin: 20px 0; }
+  .revenue-box h3 { font-size: 17px; font-weight: 800; margin-bottom: 6px; color: #93c5fd; }
+  .revenue-box p  { font-size: 14px; color: #a8c8e8; line-height: 1.7; }
+  .revenue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 20px; }
+  .revenue-item { background: rgba(255,255,255,.1); border-radius: 10px; padding: 16px; }
+  .revenue-label { font-size: 11px; font-weight: 700; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .revenue-val   { font-size: 22px; font-weight: 800; color: #fff; }
+  .revenue-sub   { font-size: 11px; color: #a8c8e8; margin-top: 2px; }
+
+  footer { text-align: center; padding: 36px; font-size: 12px; color: #9ca3af; background: #fff; border-top: 1px solid #e5e7eb; margin-top: 20px; }
+
+  @media (max-width: 600px) {
+    header { padding: 36px 20px; }
+    header h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="label">Eolis Connect · Document confidentiel</div>
+  <h1>Plan de déploiement mondial</h1>
+  <p>Architecture, modèle économique, spécificités par agence, obligations légales et roadmap pour le déploiement d'Eolis Connect dans les 9 agences du groupe Compagnie Fruitière.</p>
+  <div class="badge-row">
+    <span class="badge b-green">✓ 9 agences</span>
+    <span class="badge b-blue">✓ Multi-tenant</span>
+    <span class="badge b-amber">✓ Auto-financé</span>
+    <span class="badge b-violet">✓ Multi-langue</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════
+     1. VISION
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#EEF6FF">🎯</div>
+    Vision & Contexte
+  </div>
+
+  <div class="card">
+    <div class="card-title">💡 Pourquoi ce système existe</div>
+    <div class="card-body">
+      <p style="margin-bottom:12px">Eolis Connect est une plateforme de gestion des dossiers clients et des demandes logistiques développée initialement pour l'agence <strong>Eolis Cameroun</strong>. Elle digitalise les échanges entre les clients, les agents de terrain et les équipes opérationnelles.</p>
+      <p>L'objectif à long terme est de déployer ce système dans l'ensemble des <strong>9 agences du groupe Compagnie Fruitière</strong>, tout en adaptant chaque instance aux spécificités locales (devise, langue, moyens de paiement, contexte réglementaire).</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚠️ Le problème central</div>
+    <div class="card-body">
+      <p style="margin-bottom:12px">Actuellement, la gestion des demandes clients dans les agences Eolis repose sur des échanges par email, téléphone et outils non centralisés. Cela entraîne :</p>
+      <ul style="padding-left:18px;display:flex;flex-direction:column;gap:6px">
+        <li>Des informations perdues ou mal transmises entre services</li>
+        <li>Aucune traçabilité structurée des dossiers clients</li>
+        <li>Un suivi manuel chronophage pour les équipes</li>
+        <li>Aucune visibilité globale pour la direction</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✅ Ce que le système apporte</div>
+    <div class="card-body">
+      <div class="card-grid" style="margin-top:4px">
+        <div style="background:#ecfdf5;border-radius:10px;padding:14px">
+          <p style="font-weight:700;font-size:13px;color:#065f46;margin-bottom:6px">Pour les clients</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Soumettre et suivre leurs demandes 24h/24</li>
+            <li>Accès aux documents (BL, factures)</li>
+            <li>Extraction automatique des BL par IA</li>
+            <li>Communication directe avec les agents</li>
+          </ul>
+        </div>
+        <div style="background:#eff6ff;border-radius:10px;padding:14px">
+          <p style="font-weight:700;font-size:13px;color:#1e40af;margin-bottom:6px">Pour les équipes Eolis</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>File de tickets centralisée et priorisée</li>
+            <li>Historique complet de chaque dossier</li>
+            <li>Notifications en temps réel</li>
+            <li>Tableau de bord performance et finance</li>
+          </ul>
+        </div>
+        <div style="background:#f5f3ff;border-radius:10px;padding:14px">
+          <p style="font-weight:700;font-size:13px;color:#5b21b6;margin-bottom:6px">Pour la direction</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Vue globale sur toutes les agences</li>
+            <li>KPIs financiers en temps réel</li>
+            <li>Audit immuable de toutes les actions</li>
+            <li>Système auto-financé via crédits IA</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     2. MODÈLE ÉCONOMIQUE
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#ecfdf5">💰</div>
+    Modèle économique — Le système qui se finance lui-même
+  </div>
+
+  <div class="revenue-box">
+    <h3>Principe fondamental</h3>
+    <p>Eolis Connect n'est pas une charge pour la société. Les clients achètent des <strong>crédits IA</strong> pour utiliser les fonctionnalités avancées (extraction automatique de Bill of Lading). Ces crédits génèrent des revenus qui couvrent les coûts d'infrastructure et dégagent une marge.</p>
+    <div class="revenue-grid">
+      <div class="revenue-item">
+        <div class="revenue-label">Coût extraction BL</div>
+        <div class="revenue-val">~0.02€</div>
+        <div class="revenue-sub">Coût réel OpenAI par BL</div>
+      </div>
+      <div class="revenue-item">
+        <div class="revenue-label">Prix facturé client</div>
+        <div class="revenue-val">0.05–0.10€</div>
+        <div class="revenue-sub">En crédits Eolis Connect</div>
+      </div>
+      <div class="revenue-item">
+        <div class="revenue-label">Marge brute</div>
+        <div class="revenue-val">&gt; 50%</div>
+        <div class="revenue-sub">Par extraction BL</div>
+      </div>
+      <div class="revenue-item">
+        <div class="revenue-label">Crédits offerts</div>
+        <div class="revenue-val">100</div>
+        <div class="revenue-sub">À l'inscription (essai gratuit)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📄 La fonctionnalité BL — Agnostique logiciel</div>
+    <div class="card-body">
+      <p style="margin-bottom:12px">L'extraction de Bill of Lading par IA fonctionne sur <strong>n'importe quel PDF</strong>, quelle que soit sa source — Eagle, Inttra, CMA CGM, MSC, Maersk, etc. Le système lit le document et en extrait automatiquement les données clés :</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+        <span class="pill pill-blue">N° de booking</span>
+        <span class="pill pill-blue">Navire & voyage</span>
+        <span class="pill pill-blue">Port de chargement</span>
+        <span class="pill pill-blue">Port de déchargement</span>
+        <span class="pill pill-blue">ETS / ETA</span>
+        <span class="pill pill-blue">Description des marchandises</span>
+      </div>
+      <div class="alert alert-green" style="margin-top:14px">
+        <span>✅</span>
+        <span>Toutes les agences peuvent utiliser cette fonctionnalité, quelle que soit leur organisation interne ou leur logiciel de shipping.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💳 Flux financier des crédits</div>
+    <div class="card-body">
+      <div class="flow">
+        <div class="flow-step">Client recharge ses crédits</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step amber">Paiement validé par Finance Eolis</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Crédits ajoutés au compte</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step green">Client extrait ses BL</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step green">Crédits débités + revenus Eolis</div>
+      </div>
+      <div class="alert alert-amber" style="margin-top:4px">
+        <span>⚠️</span>
+        <span>La validation des paiements est manuelle (l'agent Finance vérifie la preuve de paiement). Ce processus devra évoluer vers un paiement automatique (Stripe en Europe, intégrations mobile money en Afrique) pour gagner en efficacité.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     3. LES 9 AGENCES
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#fffbeb">🌍</div>
+    Les 9 agences — Spécificités par pays
+  </div>
+
+  <div class="card-grid">
+
+    <div class="agency-card" style="border-top:4px solid #10b981">
+      <div class="agency-flag">🇨🇲</div>
+      <div class="agency-name">Cameroun</div>
+      <div class="agency-sub">Agence pilote — déjà en production</div>
+      <div class="agency-row"><span class="lbl">Devise</span> XAF (Franc CFA)</div>
+      <div class="agency-row"><span class="lbl">Langue</span> Français</div>
+      <div class="agency-row"><span class="lbl">Paiement</span> Orange Money, MTN Mobile Money</div>
+      <div class="agency-row"><span class="lbl">Timezone</span> Africa/Douala (UTC+1)</div>
+      <div class="agency-row"><span class="lbl">Statut</span> <span class="pill pill-green">✓ En production</span></div>
+    </div>
+
+    <div class="agency-card" style="border-top:4px solid #4A8FC4">
+      <div class="agency-flag">🇸🇳</div>
+      <div class="agency-name">Sénégal</div>
+      <div class="agency-sub">Afrique de l'Ouest francophone</div>
+      <div class="agency-row"><span class="lbl">Devise</span> XOF (Franc CFA)</div>
+      <div class="agency-row"><span class="lbl">Langue</span> Français</div>
+      <div class="agency-row"><span class="lbl">Paiement</span> Wave, Orange Money Sénégal</div>
+      <div class="agency-row"><span class="lbl">Timezone</span> Africa/Dakar (UTC+0)</div>
+      <div class="agency-row"><span class="lbl">Statut</span> <span class="pill pill-amber">À déployer</span></div>
+    </div>
+
+    <div class="agency-card" style="border-top:4px solid #4A8FC4">
+      <div class="agency-flag">🇨🇮</div>
+      <div class="agency-name">Côte d'Ivoire</div>
+      <div class="agency-sub">Afrique de l'Ouest francophone</div>
+      <div class="agency-row"><span class="lbl">Devise</span> XOF (Franc CFA)</div>
+      <div class="agency-row"><span class="lbl">Langue</span> Français</div>
+      <div class="agency-row"><span class="lbl">Paiement</span> Orange Money CI, MTN CI, Wave</div>
+      <div class="agency-row"><span class="lbl">Timezone</span> Africa/Abidjan (UTC+0)</div>
+      <div class="agency-row"><span class="lbl">Statut</span> <span class="pill pill-amber">À déployer</span></div>
+    </div>
+
+    <div class="agency-card" style="border-top:4px solid #4A8FC4">
+      <div class="agency-flag">🇬🇭</div>
+      <div class="agency-name">Ghana</div>
+      <div class="agency-sub">Afrique de l'Ouest anglophone</div>
+      <div class="agency-row"><span class="lbl">Devise</span> GHS (Cedi ghanéen)</div>
+      <div class="agency-row"><span class="lbl">Langue</span> Anglais</div>
+      <div class="agency-row"><span class="lbl">Paiement</span> MTN Mobile Money GH, Vodafone Cash</div>
+      <div class="agency-row"><span class="lbl">Timezone</span> Africa/Accra (UTC+0)</div>
+      <div class="agency-row"><span class="lbl">Statut</span> <span class="pill pill-amber">À déployer</span></div>
+    </div>
+
+    <div class="agency-card" style="border-top:4px solid #f59e0b">
+      <div class="agency-flag">🇲🇦</div>
+      <div class="agency-name">Maroc</div>
+      <div class="agency-sub">Afrique du Nord</div>
+      <div class="agency-row"><span class="lbl">Devise</span> MAD (Dirham marocain)</div>
+      <div class="agency-row"><span class="lbl">Langue</span> Français / Arabe</div>
+      <div class="agency-row"><span class="lbl">Paiement</span> Virement bancaire, carte Maroc</div>
+      <div class="agency-row"><span class="lbl">Timezone</span> Africa/Casablanca (UTC+1)</div>
+      <div class="agency-row"><span class="lbl">Statut</span> <span class="pill pill-amber">À déployer</span></div>
+    </div>
+
+    <div class="agency-card" style="border-top:4px solid #7c3aed">
+      <div class="agency-flag">🇫🇷</div>
+      <div class="agency-name">France</div>
+      <div class="agency-sub">Transit Fruits France</div>
+      <div class="agency-row"><span class="lbl">Devise</span> EUR (Euro)</div>
+      <div class="agency-row"><span class="lbl">Langue</span> Français</div>
+      <div class="agency-row"><span class="lbl">Paiement</span> Carte bancaire (Stripe), virement SEPA</div>
+      <div class="agency-row"><span class="lbl">Timezone</span> Europe/Paris (UTC+1/+2)</div>
+      <div class="agency-row"><span class="lbl">Légal</span> <span class="pill pill-violet">RGPD obligatoire</span></div>
+      <div class="agency-row"><span class="lbl">Statut</span> <span class="pill pill-amber">À déployer</span></div>
+    </div>
+
+    <div class="agency-card" style="border-top:4px solid #7c3aed">
+      <div class="agency-flag">🇧🇪</div>
+      <div class="agency-name">Belgique</div>
+      <div class="agency-sub">Agence Europe</div>
+      <div class="agency-row"><span class="lbl">Devise</span> EUR (Euro)</div>
+      <div class="agency-row"><span class="lbl">Langue</span> Français</div>
+      <div class="agency-row"><span class="lbl">Paiement</span> Carte bancaire (Stripe), virement SEPA</div>
+      <div class="agency-row"><span class="lbl">Timezone</span> Europe/Brussels (UTC+1/+2)</div>
+      <div class="agency-row"><span class="lbl">Légal</span> <span class="pill pill-violet">RGPD obligatoire</span></div>
+      <div class="agency-row"><span class="lbl">Statut</span> <span class="pill pill-amber">À déployer</span></div>
+    </div>
+
+    <div class="agency-card" style="border-top:4px solid #7c3aed">
+      <div class="agency-flag">🇮🇹</div>
+      <div class="agency-name">Italie</div>
+      <div class="agency-sub">CSA Italie</div>
+      <div class="agency-row"><span class="lbl">Devise</span> EUR (Euro)</div>
+      <div class="agency-row"><span class="lbl">Langue</span> <strong>Italien</strong> (à ajouter)</div>
+      <div class="agency-row"><span class="lbl">Paiement</span> Carte bancaire (Stripe), virement SEPA</div>
+      <div class="agency-row"><span class="lbl">Timezone</span> Europe/Rome (UTC+1/+2)</div>
+      <div class="agency-row"><span class="lbl">Légal</span> <span class="pill pill-violet">RGPD obligatoire</span></div>
+      <div class="agency-row"><span class="lbl">Statut</span> <span class="pill pill-amber">À déployer</span></div>
+    </div>
+
+    <div class="agency-card" style="border-top:4px solid #7c3aed">
+      <div class="agency-flag">🇬🇧</div>
+      <div class="agency-name">Royaume-Uni</div>
+      <div class="agency-sub">Portico UK</div>
+      <div class="agency-row"><span class="lbl">Devise</span> GBP (Livre sterling)</div>
+      <div class="agency-row"><span class="lbl">Langue</span> Anglais</div>
+      <div class="agency-row"><span class="lbl">Paiement</span> Carte bancaire (Stripe), virement BACS</div>
+      <div class="agency-row"><span class="lbl">Timezone</span> Europe/London (UTC+0/+1)</div>
+      <div class="agency-row"><span class="lbl">Légal</span> <span class="pill pill-red">UK GDPR (post-Brexit)</span></div>
+      <div class="agency-row"><span class="lbl">Statut</span> <span class="pill pill-amber">À déployer</span></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     4. ARCHITECTURE TECHNIQUE CIBLE
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#f5f3ff">⚙️</div>
+    Architecture technique cible
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-title">🏗️ Modèle Multi-tenant — Une seule instance, 9 agences</div>
+    <div class="card-body">
+      <p style="margin-bottom:14px">Au lieu de déployer 9 systèmes séparés (9× plus coûteux, 9× plus difficile à maintenir), une <strong>seule instance</strong> gère toutes les agences avec un concept d'isolation des données par agence.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Approche</th><th>Coût mensuel estimé</th><th>Maintenance</th><th>Recommandé</th></tr></thead>
+          <tbody>
+            <tr><td>9 déploiements séparés</td><td>~150–200 €/mois</td><td>Très élevée (9× les mises à jour)</td><td><span class="pill pill-red">Non</span></td></tr>
+            <tr><td>Instance unique multi-tenant</td><td>~30–50 €/mois</td><td>Faible (1 seule mise à jour)</td><td><span class="pill pill-green">Oui ✓</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:14px;font-size:13px;color:#4b5563">Techniquement, cela implique d'ajouter une table <strong>agencies</strong> et un champ <code>agency_id</code> sur les tables users, tickets, etc. Chaque utilisateur ne voit que les données de son agence. Le propriétaire (super-admin) voit toutes les agences.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-title">🌐 Multi-langue — Langues à supporter</div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Langue</th><th>Agences concernées</th><th>Statut</th></tr></thead>
+          <tbody>
+            <tr><td>🇫🇷 Français</td><td>Cameroun, Sénégal, Côte d'Ivoire, Maroc, France, Belgique</td><td><span class="pill pill-green">✓ Fait</span></td></tr>
+            <tr><td>🇬🇧 Anglais</td><td>Ghana, Royaume-Uni</td><td><span class="pill pill-green">✓ Fait</span></td></tr>
+            <tr><td>🇮🇹 Italien</td><td>Italie</td><td><span class="pill pill-amber">À ajouter</span></td></tr>
+            <tr><td>🇲🇦 Arabe (optionnel)</td><td>Maroc</td><td><span class="pill pill-gray">À évaluer</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-title">💱 Multi-devise — Devises par région</div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Devise</th><th>Pays</th><th>Paiements mobiles</th><th>Paiements carte</th></tr></thead>
+          <tbody>
+            <tr><td><strong>XAF</strong> — Franc CFA</td><td>Cameroun</td><td>Orange Money, MTN</td><td>Non prioritaire</td></tr>
+            <tr><td><strong>XOF</strong> — Franc CFA</td><td>Sénégal, Côte d'Ivoire</td><td>Wave, Orange, MTN</td><td>Non prioritaire</td></tr>
+            <tr><td><strong>GHS</strong> — Cedi</td><td>Ghana</td><td>MTN MoMo, Vodafone Cash</td><td>Non prioritaire</td></tr>
+            <tr><td><strong>MAD</strong> — Dirham</td><td>Maroc</td><td>Non</td><td>Carte Maroc locale</td></tr>
+            <tr><td><strong>EUR</strong> — Euro</td><td>France, Belgique, Italie</td><td>Non</td><td>Stripe (Visa/MC/Amex)</td></tr>
+            <tr><td><strong>GBP</strong> — Livre sterling</td><td>Royaume-Uni</td><td>Non</td><td>Stripe (Visa/MC/Amex)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💳 Stripe — Paiements Europe</div>
+    <div class="card-body">
+      <p style="margin-bottom:12px"><strong>Stripe</strong> est le service de paiement par carte bancaire standard pour l'Europe (Visa, Mastercard, American Express). Il remplace Orange Money/MTN pour les agences européennes.</p>
+      <div class="card-grid">
+        <div style="background:#f0f4f8;border-radius:10px;padding:14px">
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:6px">Comment ça marche</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Le client paie par carte sur le site</li>
+            <li>Stripe sécurise la transaction</li>
+            <li>L'argent arrive sur le compte bancaire Eolis</li>
+            <li>Délai de virement : 7 jours (standard)</li>
+          </ul>
+        </div>
+        <div style="background:#f0f4f8;border-radius:10px;padding:14px">
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:6px">Coûts Stripe</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>1.4% + 0.25€ par transaction (UE)</li>
+            <li>2.9% + 0.30€ (hors UE / UK)</li>
+            <li>Pas d'abonnement mensuel</li>
+            <li>Uniquement sur les transactions réelles</li>
+          </ul>
+        </div>
+        <div style="background:#f0f4f8;border-radius:10px;padding:14px">
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:6px">Compte bancaire associé</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>1 compte Stripe = 1 entité juridique</li>
+            <li>Option : 1 compte groupe (siège Marseille)</li>
+            <li>Option : 1 compte par agence Europe</li>
+            <li>À décider avec la direction financière</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     5. OBLIGATIONS LÉGALES
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#fef2f2">⚖️</div>
+    Obligations légales
+  </div>
+
+  <div class="legal-card" style="border-color:#7c3aed">
+    <div class="legal-title" style="color:#5b21b6">🔒 RGPD — Règlement Général sur la Protection des Données</div>
+    <div class="legal-body">
+      <p style="margin-bottom:10px">Le RGPD est la loi européenne qui protège les données personnelles des utilisateurs. Il s'applique obligatoirement dès lors qu'une agence traite des données de personnes situées en Europe (<strong>France, Belgique, Italie</strong>).</p>
+      <p style="margin-bottom:10px"><strong>Ce que ça implique concrètement pour Eolis Connect :</strong></p>
+      <ul style="padding-left:18px;display:flex;flex-direction:column;gap:6px">
+        <li>Les utilisateurs européens ont le <strong>droit d'accès</strong> à leurs données (pouvoir les télécharger)</li>
+        <li>Les utilisateurs ont le <strong>droit à l'oubli</strong> (pouvoir demander la suppression de leur compte et données)</li>
+        <li>Les données doivent être stockées sur des <strong>serveurs en Europe</strong> — ✅ déjà le cas (Neon EU-West)</li>
+        <li>En cas de <strong>fuite de données</strong>, obligation de le déclarer à la CNIL sous 72h</li>
+        <li>Une <strong>politique de confidentialité</strong> doit être affichée et acceptée à l'inscription</li>
+        <li>Les cookies doivent faire l'objet d'un <strong>consentement explicite</strong></li>
+      </ul>
+      <div class="alert alert-green" style="margin-top:14px">
+        <span>✅</span>
+        <span>Le système actuel est bien positionné : hébergement EU, pas de tracking tiers, JWT en mémoire. Il faudra ajouter une page "Politique de confidentialité" et un bouton "Supprimer mon compte" pour les agences européennes.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="legal-card" style="border-color:#ef4444">
+    <div class="legal-title" style="color:#b91c1c">🇬🇧 UK GDPR — Post-Brexit</div>
+    <div class="legal-body">
+      <p>Depuis le Brexit, le Royaume-Uni a sa propre version du RGPD appelée <strong>UK GDPR</strong>. Elle est quasi-identique au RGPD européen, mais l'autorité de contrôle est l'<strong>ICO</strong> (Information Commissioner's Office) et non la CNIL. Les mêmes obligations s'appliquent pour l'agence UK (Portico UK).</p>
+    </div>
+  </div>
+
+  <div class="legal-card" style="border-color:#f59e0b">
+    <div class="legal-title" style="color:#92400e">💳 Réglementation des paiements</div>
+    <div class="legal-body">
+      <p style="margin-bottom:10px"><strong>En Europe :</strong> Les paiements en ligne sont régis par la directive <strong>PSD2</strong> (authentification forte obligatoire). Stripe gère cela automatiquement — c'est l'une des raisons pour lesquelles il est recommandé.</p>
+      <p style="margin-bottom:10px"><strong>En Afrique :</strong> Chaque opérateur mobile money (Orange, MTN, Wave) a ses propres APIs et contrats. Il faudra négocier des accords commerciaux avec chaque opérateur par pays. Actuellement le système valide les paiements manuellement (preuve photo) — acceptable en phase de démarrage.</p>
+      <div class="alert alert-amber">
+        <span>⚠️</span>
+        <span>Pour les agences Europe, utiliser Stripe résout automatiquement 90% des contraintes légales de paiement (PCI DSS, 3D Secure, PSD2).</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="legal-card" style="border-color:#4A8FC4">
+    <div class="legal-title" style="color:#1e40af">📋 Autres points légaux à anticiper</div>
+    <div class="legal-body">
+      <ul style="padding-left:18px;display:flex;flex-direction:column;gap:8px">
+        <li><strong>Contrats d'utilisation</strong> — Des CGU (Conditions Générales d'Utilisation) adaptées par région seront nécessaires</li>
+        <li><strong>Facturation</strong> — Les factures de crédits devront être conformes aux législations locales (TVA en Europe, etc.)</li>
+        <li><strong>Conservation des données</strong> — Le RGPD impose de ne pas conserver les données plus longtemps que nécessaire</li>
+        <li><strong>Transfert de données hors UE</strong> — Si des données de clients européens transitent vers des serveurs hors UE, des garanties contractuelles sont requises</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     6. FONCTIONNALITÉS PAR AGENCE
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#EEF6FF">📋</div>
+    Fonctionnalités — Ce qui s'applique à chaque agence
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Fonctionnalité</th>
+          <th>CM 🇨🇲</th>
+          <th>SN 🇸🇳</th>
+          <th>CI 🇨🇮</th>
+          <th>GH 🇬🇭</th>
+          <th>MA 🇲🇦</th>
+          <th>FR 🇫🇷</th>
+          <th>BE 🇧🇪</th>
+          <th>IT 🇮🇹</th>
+          <th>UK 🇬🇧</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Gestion tickets & demandes</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td>Extraction BL par IA</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td>Crédits & facturation</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td>Notifications push / email / SMS</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td>Orange Money / MTN</td><td>✅</td><td>🔶</td><td>🔶</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+        <tr><td>Mobile Money local</td><td>—</td><td>🔶</td><td>🔶</td><td>🔶</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+        <tr><td>Carte bancaire (Stripe)</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>🔶</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td>Interface en français</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td>Interface en anglais</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>✅</td></tr>
+        <tr><td>Interface en italien</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>🔶</td><td>❌</td></tr>
+        <tr><td>Conformité RGPD / UK GDPR</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:12px;color:#6b7280;margin-top:8px">✅ Fait / applicable &nbsp;·&nbsp; 🔶 À intégrer &nbsp;·&nbsp; ❌ Non applicable</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     7. ROADMAP
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#ecfdf5">🗺️</div>
+    Roadmap — Phases de déploiement
+  </div>
+
+  <div class="phase phase-1">
+    <div class="phase-title">✅ Phase 1 — Cameroun (TERMINÉE)</div>
+    <div class="phase-body">
+      <p>Prototype complet déployé : gestion des tickets, extraction BL par IA, crédits, Orange Money / MTN Money, notifications push, 2FA, sécurité avancée, tableaux de bord finance et performance.</p>
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
+        <span class="pill pill-green">Tickets & messages</span>
+        <span class="pill pill-green">BL extraction IA</span>
+        <span class="pill pill-green">Crédits</span>
+        <span class="pill pill-green">Orange Money / MTN</span>
+        <span class="pill pill-green">2FA SMS</span>
+        <span class="pill pill-green">Notifications push</span>
+        <span class="pill pill-green">Dashboard finance</span>
+        <span class="pill pill-green">Sécurité brute-force</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="phase phase-2">
+    <div class="phase-title">🔵 Phase 2 — Agences francophones Afrique</div>
+    <div class="phase-body">
+      <p style="margin-bottom:10px">Déploiement vers Sénégal, Côte d'Ivoire et Ghana. La base de code est déjà compatible (FR + EN). Travaux principaux :</p>
+      <ul style="padding-left:18px;display:flex;flex-direction:column;gap:4px">
+        <li>Ajouter la table <code>agencies</code> + isolation des données par agence</li>
+        <li>Configurer les devises XOF et GHS</li>
+        <li>Intégrer les moyens de paiement locaux (Wave, MTN GH, Vodafone Cash)</li>
+        <li>Créer les comptes admin de chaque agence</li>
+        <li>Former les équipes locales</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="phase phase-2">
+    <div class="phase-title">🔵 Phase 2b — Maroc</div>
+    <div class="phase-body">
+      <p>Devise MAD, paiement par virement bancaire ou carte locale marocaine. Évaluation de la nécessité d'une interface en arabe.</p>
+    </div>
+  </div>
+
+  <div class="phase phase-3">
+    <div class="phase-title">🟣 Phase 3 — Europe (France, Belgique, Italie, Royaume-Uni)</div>
+    <div class="phase-body">
+      <p style="margin-bottom:10px">Phase la plus complexe sur le plan légal et technique. Travaux principaux :</p>
+      <ul style="padding-left:18px;display:flex;flex-direction:column;gap:4px">
+        <li>Intégration Stripe pour les paiements par carte</li>
+        <li>Mise en conformité RGPD (politique de confidentialité, droit à l'oubli, consentement cookies)</li>
+        <li>Ajout de l'interface en <strong>italien</strong> pour l'agence IT</li>
+        <li>UK GDPR pour Portico UK</li>
+        <li>Adaptation de la facturation (TVA européenne)</li>
+        <li>Décision sur la structure des comptes Stripe (groupe vs. par agence)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="alert alert-blue" style="margin-top:4px">
+    <span>ℹ️</span>
+    <span><strong>Priorité recommandée :</strong> Démarrer par la Phase 2 (Sénégal, CI, Ghana) car le code est déjà prêt pour ces marchés. L'Europe (Phase 3) demande plus de préparation légale et d'intégration technique.</span>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     8. RISQUES
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#fef2f2">⚠️</div>
+    Risques & points d'attention
+  </div>
+
+  <div class="card-grid">
+    <div class="card" style="border-left:4px solid #ef4444">
+      <div class="card-title">⚖️ Non-conformité RGPD</div>
+      <div class="card-body" style="font-size:13px">Ouvrir les agences européennes sans mise en conformité RGPD expose Eolis à des amendes jusqu'à <strong>20M€ ou 4% du CA mondial</strong>. À traiter en priorité avant tout déploiement en Europe.</div>
+    </div>
+    <div class="card" style="border-left:4px solid #f59e0b">
+      <div class="card-title">💳 Intégration paiements Afrique</div>
+      <div class="card-body" style="font-size:13px">Chaque opérateur mobile money (Wave, MTN GH, Vodafone Cash) nécessite un accord commercial et une intégration API spécifique. Délai estimé : 1–3 mois par opérateur.</div>
+    </div>
+    <div class="card" style="border-left:4px solid #f59e0b">
+      <div class="card-title">🇮🇹 Traduction italienne</div>
+      <div class="card-body" style="font-size:13px">Toutes les interfaces, emails et notifications devront être traduits en italien par un traducteur natif. Une traduction approximative pourrait nuire à l'image professionnelle d'Eolis en Italie.</div>
+    </div>
+    <div class="card" style="border-left:4px solid #4A8FC4">
+      <div class="card-title">👥 Formation des équipes</div>
+      <div class="card-body" style="font-size:13px">Chaque agence devra former ses agents, ops-admins et responsables finance. Prévoir des sessions de formation et des guides utilisateurs traduits dans la langue locale.</div>
+    </div>
+    <div class="card" style="border-left:4px solid #4A8FC4">
+      <div class="card-title">📡 Connectivité variable</div>
+      <div class="card-body" style="font-size:13px">En Afrique, la connectivité internet peut être instable. Le système est déjà une PWA (Progressive Web App) avec mode offline partiel, ce qui est un avantage.</div>
+    </div>
+    <div class="card" style="border-left:4px solid #7c3aed">
+      <div class="card-title">💰 Structure Stripe Europe</div>
+      <div class="card-body" style="font-size:13px">La décision d'avoir 1 ou plusieurs comptes Stripe doit être validée avec la direction financière et juridique du groupe Compagnie Fruitière avant le déploiement en Europe.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     SYNTHÈSE
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#ecfdf5">✅</div>
+    Synthèse
+  </div>
+  <div class="card-grid">
+    <div class="card" style="border-left:4px solid #10b981">
+      <div class="card-title">🚀 Ce qui est prêt</div>
+      <div class="card-body" style="font-size:13px">Le cœur du système est fonctionnel et déployé au Cameroun. L'architecture est extensible. FR + EN déjà disponibles. BL extraction agnostique tout logiciel.</div>
+    </div>
+    <div class="card" style="border-left:4px solid #f59e0b">
+      <div class="card-title">🔧 Ce qui reste à faire</div>
+      <div class="card-body" style="font-size:13px">Multi-tenant (agency_id), devises multiples, Stripe pour l'Europe, paiements mobile money Afrique, interface italienne, conformité RGPD.</div>
+    </div>
+    <div class="card" style="border-left:4px solid #7c3aed">
+      <div class="card-title">💡 L'avantage clé</div>
+      <div class="card-body" style="font-size:13px">Un système qui génère ses propres revenus via les crédits IA. Ce n'est pas une charge pour Eolis — c'est une nouvelle source de revenus tout en apportant de la valeur aux clients.</div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  © 2026 Eolis Connect · Plan de déploiement mondial · Document confidentiel · Compagnie Fruitière
+</footer>
+
+</body>
+</html>
