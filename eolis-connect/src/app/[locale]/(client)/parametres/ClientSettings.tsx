@@ -164,6 +164,11 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
   const [showPw, setShowPw] = useState({ current: false, newPass: false, confirm: false })
   const [passSaving, setPassSaving] = useState(false)
   const [passMsg, setPassMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [pwOtpSent, setPwOtpSent]       = useState(false)
+  const [pwOtpCode, setPwOtpCode]       = useState('')
+  const [pwOtpCountdown, setPwOtpCountdown] = useState(0)
+  const [pwOtpSkipped, setPwOtpSkipped] = useState(false)
+  const pwOtpCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const t = {
     title: isFr ? 'Paramètres' : 'Settings',
@@ -289,23 +294,46 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
     setProfileSaving(false)
   }
 
+  function startPwOtpCountdown() {
+    if (pwOtpCountdownRef.current) clearInterval(pwOtpCountdownRef.current)
+    setPwOtpCountdown(30)
+    pwOtpCountdownRef.current = setInterval(() => {
+      setPwOtpCountdown(c => { if (c <= 1) { clearInterval(pwOtpCountdownRef.current!); return 0 } return c - 1 })
+    }, 1000)
+  }
+
+  async function requestPwOtp() {
+    setPassMsg(null)
+    const r = await apiFetch('/api/users/me/password/request-otp', { method: 'POST' })
+    const d = await r.json().catch(() => ({}))
+    if (d.skipped) { setPwOtpSkipped(true); setPwOtpSent(true) }
+    else { setPwOtpSent(true); startPwOtpCountdown() }
+  }
+
   async function savePassword(e: React.FormEvent) {
     e.preventDefault()
     if (passwords.newPass !== passwords.confirm) {
       setPassMsg({ type: 'error', text: t.mismatch }); return
     }
+    if (!pwOtpSkipped && !pwOtpCode) {
+      setPassMsg({ type: 'error', text: isFr ? 'Entrez le code de vérification.' : 'Enter the verification code.' }); return
+    }
     setPassSaving(true)
     setPassMsg(null)
     const res = await apiFetch('/api/users/me/password', {
       method: 'PATCH',
-      body: JSON.stringify({ currentPassword: passwords.current, newPassword: passwords.newPass }),
+      body: JSON.stringify({ currentPassword: passwords.current, newPassword: passwords.newPass, otpCode: pwOtpSkipped ? undefined : pwOtpCode }),
     })
     if (res.ok) {
       setPassMsg({ type: 'success', text: t.passwordUpdated })
       setPasswords({ current: '', newPass: '', confirm: '' })
+      setPwOtpSent(false); setPwOtpCode(''); setPwOtpSkipped(false)
     } else {
       const data = await res.json().catch(() => ({}))
-      const msg = data.detail === 'wrong_current_password' ? t.wrongCurrent : t.error
+      const msg = data.detail === 'wrong_current_password' ? t.wrongCurrent
+        : data.detail === 'otp_wrong'   ? (isFr ? 'Code incorrect.' : 'Wrong code.')
+        : data.detail === 'otp_expired' ? (isFr ? 'Code expiré.' : 'Code expired.')
+        : t.error
       setPassMsg({ type: 'error', text: msg })
     }
     setPassSaving(false)
@@ -509,13 +537,31 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
                 {passMsg.text}
               </div>
             )}
+            {!pwOtpSent ? (
+              <button type="button" onClick={requestPwOtp}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors">
+                📱 {isFr ? 'Envoyer un code de vérification' : 'Send verification code'}
+              </button>
+            ) : !pwOtpSkipped && (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">{isFr ? 'Code envoyé par SMS — saisissez-le ci-dessous' : 'Code sent by SMS — enter it below'}</p>
+                <input type="text" inputMode="numeric" maxLength={6} value={pwOtpCode}
+                  onChange={e => setPwOtpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="_ _ _ _ _ _"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-center font-mono text-sm tracking-widest focus:outline-none focus:ring-2 focus:ring-[#4A8FC4]" />
+                <button type="button" onClick={requestPwOtp} disabled={pwOtpCountdown > 0}
+                  className="flex items-center gap-1 text-xs text-[#4A8FC4] disabled:opacity-40 disabled:cursor-not-allowed">
+                  🔄 {pwOtpCountdown > 0 ? (isFr ? `Renvoyer (${pwOtpCountdown}s)` : `Resend (${pwOtpCountdown}s)`) : (isFr ? 'Renvoyer le code' : 'Resend code')}
+                </button>
+              </div>
+            )}
             <button
               type="submit"
-              disabled={passSaving}
+              disabled={passSaving || !pwOtpSent || (!pwOtpSkipped && pwOtpCode.length < 6)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#4A8FC4] text-white font-semibold text-sm hover:bg-[#3a7ab0] disabled:opacity-60 transition-colors"
             >
               {passSaving && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
-              {t.updatePassword}
+              {isFr ? 'Confirmer le changement' : 'Confirm change'}
             </button>
           </form>
         </div>
