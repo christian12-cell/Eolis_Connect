@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils'
 import {
   Home, FileText, PlusCircle, Settings, LayoutDashboard,
   List, Clock, BarChart2, Trophy, Users, ScrollText, X, Globe, Bell, BookOpen, Shield, Zap, Wallet,
-  TrendingUp, DollarSign, Receipt, PieChart, Building2, ShieldCheck,
+  TrendingUp, DollarSign, Receipt, PieChart, Building2, ShieldCheck, KeyRound,
 } from 'lucide-react'
+import { getUser } from '@/lib/api-client'
 
 interface SidebarProps {
   locale: string
@@ -75,6 +76,9 @@ function getNavItems(locale: string, role: string): NavItem[] {
       { label: locale === 'fr' ? 'Journal d\'audit' : 'Audit log',           href: `${base}/finance/audit`,     icon: <ShieldCheck size={18} /> },
       { label: locale === 'fr' ? 'Sessions' : 'Sessions',               href: `${base}/admin/sessions`,      icon: <Shield size={18} /> },
       { label: locale === 'fr' ? 'Système' : 'System',                  href: `${base}/admin/systeme`,       icon: <Globe size={18} /> },
+      ...(getUser()?.username === 'Christian.DENMEKO' ? [
+        { label: locale === 'fr' ? 'Audit OTP' : 'OTP Audit', href: `${base}/admin/otp-audit`, icon: <KeyRound size={18} /> },
+      ] : []),
       { label: locale === 'fr' ? 'Paramètres' : 'Settings',             href: `${base}/agent/parametres`,    icon: <Settings size={18} /> },
       { label: locale === 'fr' ? 'Aide' : 'Help',                      href: `${base}/agent/aide`,          icon: <BookOpen size={18} /> },
     ]

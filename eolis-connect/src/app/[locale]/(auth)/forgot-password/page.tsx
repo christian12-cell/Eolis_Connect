@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Mail, Phone, ArrowLeft, CheckCircle, AlertCircle, RefreshCw, ShieldCheck, UserCheck, HeadphonesIcon } from 'lucide-react'
@@ -28,6 +28,19 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
   const [error, setError]       = useState('')
   const [otpSent, setOtpSent]   = useState(false)
   const [resent, setResent]     = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  function startCountdown() {
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    setCountdown(30)
+    countdownRef.current = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { clearInterval(countdownRef.current!); return 0 }
+        return c - 1
+      })
+    }, 1000)
+  }
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   const isFr = locale !== 'en'
@@ -114,6 +127,7 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
       if (!res.ok) { setError(T.errToken); return }
       setOtpSent(true)
       setStep('otp')
+      startCountdown()
     } catch { setError(T.errGeneric) }
     finally { setLoading(false) }
   }
@@ -125,8 +139,8 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lookupToken }),
       })
-      setResent(true); setOtpCode(''); setError('')
-      setTimeout(() => setResent(false), 3000)
+      setOtpCode(''); setError('')
+      startCountdown()
     } catch {}
     finally { setLoading(false) }
   }
@@ -300,11 +314,21 @@ export default function ForgotPasswordPage({ params }: { params: Promise<{ local
                   {loading && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
                   {T.verify}
                 </button>
-                <button onClick={handleResendOtp} disabled={loading}
-                  className="w-full flex items-center justify-center gap-1.5 text-sm text-[#4A8FC4] hover:underline">
+                <button onClick={handleResendOtp} disabled={loading || countdown > 0}
+                  className="w-full flex items-center justify-center gap-1.5 text-sm text-[#4A8FC4] hover:underline disabled:opacity-40 disabled:cursor-not-allowed">
                   <RefreshCw size={13} />
-                  {resent ? T.resent : T.resend}
+                  {countdown > 0
+                    ? (isFr ? `Renvoyer le code (${countdown}s)` : `Resend code (${countdown}s)`)
+                    : T.resend}
                 </button>
+                {countdown === 0 && (
+                  <p className="text-center text-xs text-gray-400">
+                    {isFr ? 'Code non reçu ? ' : 'Code not received? '}
+                    <a href="mailto:support@eolisconnect.online" className="text-[#4A8FC4] underline font-medium">
+                      support@eolisconnect.online
+                    </a>
+                  </p>
+                )}
               </div>
             </>
           )}
