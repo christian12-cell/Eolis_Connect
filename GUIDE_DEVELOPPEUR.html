@@ -117,6 +117,7 @@
     <li><a href="#routers">Routers — endpoints</a></li>
     <li><a href="#auth-jwt">Auth & JWT</a></li>
     <li><a href="#websocket">WebSocket — chat temps réel</a></li>
+    <li><a href="#push-notifs">Notifications push — Web Push</a></li>
     <li><a href="#migrations">Migrations DB</a></li>
   </ul>
   <div class="toc-section">Base de données</div>
@@ -961,6 +962,144 @@ setInterval(() => {
   <div class="alert alert-warn">
     <span class="alert-icon">⚠️</span>
     <div class="alert-body"><strong>Reconnexion automatique</strong> Si le serveur redémarre (déploiement Railway) ou que le réseau coupe, <code>ws.onclose</code> est déclenché → <code>setTimeout(connect, 3000)</code> réessaie 3s plus tard. L'utilisateur ne perd pas la connexion définitivement.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="push-notifs">
+  <h2>🔔 Notifications Push — Web Push API</h2>
+
+  <p>Eolis Connect envoie des notifications système sur le téléphone ou l'ordinateur de l'utilisateur même quand l'app est fermée. La technologie utilisée est le <strong>Web Push API</strong>, standard supporté par tous les navigateurs modernes.</p>
+
+  <h3>Les fichiers concernés</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Fichier</th><th>Côté</th><th>Rôle</th></tr></thead>
+    <tbody>
+      <tr><td><code>app/push_service.py</code></td><td>Backend</td><td>Envoie la notification push via pywebpush — logique 3 couches</td></tr>
+      <tr><td><code>app/routers/push.py</code></td><td>Backend</td><td>5 endpoints : clé VAPID, subscribe, unsubscribe, GET/PATCH préférences</td></tr>
+      <tr><td><code>app/models.py</code></td><td>Backend</td><td>Tables <code>PushSubscription</code> et <code>PushPreference</code></td></tr>
+      <tr><td><code>src/lib/push.ts</code></td><td>Frontend</td><td><code>subscribeToPush()</code>, <code>unsubscribeFromPush()</code>, <code>isPushSubscribed()</code></td></tr>
+      <tr><td><code>public/sw.js</code></td><td>Frontend</td><td>Handler <code>push</code> event + <code>notificationclick</code> + <code>CLOSE_NOTIFICATIONS</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Les clés VAPID — c'est quoi</h3>
+  <p>VAPID (Voluntary Application Server Identification) est un système de clés cryptographiques qui prouve au navigateur que la notification vient bien de ton serveur. Sans ça, n'importe qui pourrait envoyer des notifs à tes utilisateurs.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Variable Railway</th><th>Format</th><th>Usage</th></tr></thead>
+    <tbody>
+      <tr><td><code>VAPID_PRIVATE_KEY</code></td><td>Base64url raw P-256 scalar (32 bytes)</td><td>Backend signe chaque notification</td></tr>
+      <tr><td><code>VAPID_PUBLIC_KEY</code></td><td>Base64url uncompressed point (65 bytes)</td><td>Frontend s'y abonne, navigateur vérifie</td></tr>
+      <tr><td><code>VAPID_CLAIMS_EMAIL</code></td><td>Email</td><td>Identifiant contact en cas de problème</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="alert alert-danger">
+    <span class="alert-icon">🚨</span>
+    <div class="alert-body"><strong>Format critique</strong> Les clés doivent être en format raw base64url (PAS PEM). Si tu vois <code>-----BEGIN EC PRIVATE KEY-----</code>, c'est le mauvais format. Utilise <code>generate_vapid.py</code> pour générer les bonnes clés.</div>
+  </div>
+
+  <h3>Logique 3 couches dans push_service.py</h3>
+  <p>Avant d'envoyer une notification, le service vérifie 3 conditions dans l'ordre pour éviter le spam :</p>
+  <pre><span class="k">def</span> <span class="f">send_push_to_user</span>(user_id, notif_type, title, body, ticket_id=<span class="v">None</span>, delay_seconds=5):
+
+    <span class="c"># Couche 1 — Présence WebSocket (instantané)</span>
+    <span class="c"># Si l'utilisateur a un WS actif sur ce ticket → il est déjà en train de lire</span>
+    <span class="k">if</span> ticket_id <span class="k">and</span> ws_manager.is_user_on_ticket(user_id, ticket_id):
+        <span class="k">return</span>  <span class="c"># → push annulé immédiatement</span>
+
+    <span class="c"># Couche 2 — Délai 5s</span>
+    <span class="c"># Le navigateur throttle les onglets en arrière-plan → mark-read peut arriver tard</span>
+    time.sleep(delay_seconds)
+
+    <span class="c"># Couche 3 — Vérification is_read après le délai</span>
+    <span class="c"># Si le message a été lu pendant les 5s → plus besoin de notifier</span>
+    <span class="k">with</span> SessionLocal() <span class="k">as</span> db:
+        still_unread = db.query(Notification).filter(
+            Notification.user_id == user_id,
+            Notification.ticket_id == ticket_id,
+            Notification.is_read == <span class="v">False</span>,
+        ).first()
+    <span class="k">if not</span> still_unread: <span class="k">return</span>
+
+    <span class="c"># → Envoie la push via pywebpush</span></pre>
+
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div class="alert-body"><strong>Session DB indépendante obligatoire</strong> FastAPI ferme la session DB injectée via <code>Depends(get_db)</code> après la réponse HTTP, AVANT que les background tasks s'exécutent. <code>push_service.py</code> crée donc ses propres sessions avec <code>with SessionLocal() as db:</code> et n'accepte pas de paramètre <code>db</code>.</div>
+  </div>
+
+  <h3>Rotation des clés VAPID — détection côté frontend</h3>
+  <p>Si les clés VAPID changent sur le serveur, le navigateur a une ancienne subscription → erreur 400 <code>VapidPkHashMismatch</code>. <code>push.ts</code> gère ça automatiquement :</p>
+  <pre><span class="c">// push.ts — detects key rotation</span>
+<span class="k">const</span> storedKey = localStorage.getItem(<span class="s">'eolis_vapid_pk'</span>)
+<span class="k">if</span> (storedKey && storedKey !== currentVapidKey) {
+  <span class="c">// Clé changée → unsubscribe l'ancienne subscription d'abord</span>
+  <span class="k">await</span> unsubscribeFromPush()
+}
+<span class="c">// Puis re-subscribe avec la nouvelle clé</span>
+localStorage.setItem(<span class="s">'eolis_vapid_pk'</span>, currentVapidKey)</pre>
+
+  <h3>Les états de permission — Notification.permission</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>État</th><th>Valeur</th><th>Ce que ça signifie</th><th>Que faire côté code</th></tr></thead>
+    <tbody>
+      <tr><td>Accepté</td><td><code>"granted"</code></td><td>L'utilisateur a cliqué Autoriser</td><td>Afficher toggle ON, proposer préférences</td></tr>
+      <tr><td>Pas encore demandé</td><td><code>"default"</code></td><td>La popup n'a jamais été affichée</td><td>Afficher toggle OFF — au clic, déclenche la popup navigateur</td></tr>
+      <tr><td>Bloqué</td><td><code>"denied"</code></td><td>L'utilisateur a cliqué Bloquer</td><td>JS ne peut plus rien faire — afficher le guide de déblocage manuel</td></tr>
+      <tr><td>Non supporté</td><td><code>"unsupported"</code></td><td>Navigateur trop vieux ou pas de PushManager</td><td>Cacher toute la section notifications</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="alert alert-danger">
+    <span class="alert-icon">🚨</span>
+    <div class="alert-body"><strong>État "denied" — JavaScript ne peut RIEN faire</strong> Quand l'utilisateur a refusé, <code>Notification.requestPermission()</code> retourne immédiatement <code>"denied"</code> sans afficher de popup. C'est l'OS/navigateur qui bloque. La seule solution est que l'utilisateur aille manuellement dans les paramètres du navigateur.</div>
+  </div>
+
+  <h3>Accordion "Problème avec les notifications ?" — Pattern UX</h3>
+  <p>Dans la page Paramètres/Profil de chaque rôle, un accordion est toujours visible (pas seulement quand bloqué) :</p>
+  <pre><span class="c">// Toujours présent — s'ouvre automatiquement si denied</span>
+<span class="k">const</span> [guideOpen, setGuideOpen] = useState(<span class="v">false</span>)
+
+useEffect(() => {
+  <span class="k">if</span> (!(<span class="s">'Notification'</span> <span class="k">in</span> window)) { setPushPermission(<span class="s">'unsupported'</span>); <span class="k">return</span> }
+  setPushPermission(Notification.permission)
+  setSelectedDevice(detectDevice())
+  <span class="k">if</span> (Notification.permission === <span class="s">'denied'</span>) setGuideOpen(<span class="v">true</span>)  <span class="c">← auto-ouvert</span>
+}, [])</pre>
+  <p>Résultat UX :</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>État permission</th><th>Accordion</th><th>Alerte rouge</th></tr></thead>
+    <tbody>
+      <tr><td><code>granted</code> ou <code>default</code></td><td>Fermé — cliquable discrètement</td><td>Non</td></tr>
+      <tr><td><code>denied</code></td><td>Auto-ouvert au chargement</td><td>Oui</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Détection automatique du device — detectDevice()</h3>
+  <pre><span class="k">function</span> <span class="f">detectDevice</span>(): string {
+  <span class="k">const</span> ua = navigator.userAgent
+  <span class="k">const</span> isIOS     = <span class="s">/iPhone|iPad|iPod/</span>.test(ua)
+  <span class="k">const</span> isAndroid = <span class="s">/Android/</span>.test(ua)
+  <span class="k">const</span> isSamsung = <span class="s">/SamsungBrowser/</span>.test(ua)
+  <span class="k">const</span> isFirefox = <span class="s">/Firefox/</span>.test(ua)
+  <span class="k">const</span> isEdge    = <span class="s">/Edg/</span>.test(ua)
+  <span class="k">const</span> isChrome  = <span class="s">/Chrome/</span>.test(ua) && !isEdge && !isSamsung
+  <span class="k">const</span> isSafari  = <span class="s">/Safari/</span>.test(ua) && !isChrome && !isSamsung
+  <span class="k">if</span> (isIOS)                  <span class="k">return</span> <span class="s">'ios-safari'</span>
+  <span class="k">if</span> (isAndroid && isSamsung) <span class="k">return</span> <span class="s">'android-samsung'</span>
+  <span class="k">if</span> (isAndroid && isFirefox) <span class="k">return</span> <span class="s">'android-firefox'</span>
+  <span class="k">if</span> (isAndroid)              <span class="k">return</span> <span class="s">'android-chrome'</span>
+  <span class="k">if</span> (isEdge)                 <span class="k">return</span> <span class="s">'pc-edge'</span>
+  <span class="k">if</span> (isFirefox)              <span class="k">return</span> <span class="s">'pc-firefox'</span>
+  <span class="k">if</span> (isSafari)               <span class="k">return</span> <span class="s">'pc-safari'</span>
+  <span class="k">return</span> <span class="s">'pc-chrome'</span>  <span class="c">← fallback</span>
+}</pre>
+  <p>L'ordre des conditions est important : Samsung doit être testé avant Chrome car <code>SamsungBrowser</code> inclut aussi <code>Chrome</code> dans son user-agent. Edge doit être testé avant Chrome pour la même raison.</p>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">💡</span>
+    <div class="alert-body"><strong>Pages concernées</strong> Le guide est présent dans <code>(client)/parametres/page.tsx</code> (Profil client) et <code>(agent)/agent/parametres/page.tsx</code> (Paramètres agent — partagé avec OPS_ADMIN, SYSTEM_ADMIN, FINANCE_AGENT). Sur la page agent, les options PC apparaissent en premier dans la grille (agents principalement sur ordinateur).</div>
   </div>
 </div>
 
