@@ -107,6 +107,7 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
   const [pushSaving, setPushSaving]         = useState(false)
   const [pushMsg, setPushMsg]               = useState<{ ok: boolean; text: string } | null>(null)
   const [selectedDevice, setSelectedDevice] = useState('')
+  const [guideOpen, setGuideOpen]           = useState(false)
 
   useEffect(() => {
     if (!('Notification' in window) || !('PushManager' in window)) {
@@ -114,6 +115,7 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
     }
     setPushPermission(Notification.permission)
     setSelectedDevice(detectDevice())
+    if (Notification.permission === 'denied') setGuideOpen(true)
     isPushSubscribed().then(setPushEnabled)
     apiFetch('/api/push/preferences').then(r => r.json()).then(d => {
       if (d) setPushPrefs(p => ({ ...p, ...{
@@ -415,40 +417,50 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
           </div>
           <p className="text-xs text-gray-400 -mt-2">{isFr ? 'Alertes système sur votre ordinateur/téléphone même app fermée.' : 'System alerts on your computer/phone even when app is closed.'}</p>
 
-          {pushPermission === 'denied' && (
-            <div className="space-y-3">
-              <div className="p-3 rounded-xl bg-red-50 border border-red-100 flex items-start gap-2">
-                <span className="text-base flex-shrink-0">🔕</span>
-                <div>
-                  <p className="text-sm font-semibold text-red-700">{isFr ? 'Notifications bloquées' : 'Notifications blocked'}</p>
-                  <p className="text-xs text-red-500 mt-0.5">{isFr ? 'Vous avez refusé les notifications. Sélectionnez votre navigateur ci-dessous pour débloquer.' : 'You denied notifications. Select your browser below to unblock.'}</p>
+          {/* Accordion — toujours visible, auto-ouvert si bloqué */}
+          <div className="border-t border-gray-100 pt-3">
+            <button onClick={() => setGuideOpen(o => !o)}
+              className="flex items-center justify-between w-full text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">
+              <span>{isFr ? '❓ Problème avec les notifications ?' : '❓ Problem with notifications?'}</span>
+              <span className={`transition-transform ${guideOpen ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            {guideOpen && (
+              <div className="mt-3 space-y-3">
+                {pushPermission === 'denied' && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-100 flex items-start gap-2">
+                    <span className="text-base flex-shrink-0">🔕</span>
+                    <div>
+                      <p className="text-sm font-semibold text-red-700">{isFr ? 'Notifications bloquées' : 'Notifications blocked'}</p>
+                      <p className="text-xs text-red-500 mt-0.5">{isFr ? 'Vous avez refusé les notifications. Sélectionnez votre navigateur ci-dessous pour débloquer.' : 'You denied notifications. Select your browser below to unblock.'}</p>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs font-semibold text-gray-600">{isFr ? 'Sélectionnez votre navigateur / appareil :' : 'Select your browser / device:'}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(DEVICE_GUIDE).map(([id, d]) => (
+                    <button key={id} onClick={() => setSelectedDevice(id)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left text-xs font-medium transition-all ${selectedDevice === id ? 'border-[#1B3A5C] bg-[#1B3A5C]/5 text-[#1B3A5C]' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                      <span className="text-base">{d.icon}</span>
+                      <span className="leading-tight">{d.label}</span>
+                    </button>
+                  ))}
                 </div>
+                {selectedDevice && DEVICE_GUIDE[selectedDevice] && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-xs font-bold text-amber-800 mb-3">{DEVICE_GUIDE[selectedDevice].label}</p>
+                    <ol className="space-y-2">
+                      {DEVICE_GUIDE[selectedDevice].steps.map((step, i) => (
+                        <li key={i} className="flex items-start gap-2.5">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                          <span className="text-xs text-amber-900 leading-relaxed">{isFr ? step.fr : step.en}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
               </div>
-              <p className="text-xs font-semibold text-gray-600">{isFr ? 'Sélectionnez votre navigateur / appareil :' : 'Select your browser / device:'}</p>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(DEVICE_GUIDE).map(([id, d]) => (
-                  <button key={id} onClick={() => setSelectedDevice(id)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left text-xs font-medium transition-all ${selectedDevice === id ? 'border-[#1B3A5C] bg-[#1B3A5C]/5 text-[#1B3A5C]' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                    <span className="text-base">{d.icon}</span>
-                    <span className="leading-tight">{d.label}</span>
-                  </button>
-                ))}
-              </div>
-              {selectedDevice && DEVICE_GUIDE[selectedDevice] && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-xs font-bold text-amber-800 mb-3">{DEVICE_GUIDE[selectedDevice].label}</p>
-                  <ol className="space-y-2">
-                    {DEVICE_GUIDE[selectedDevice].steps.map((step, i) => (
-                      <li key={i} className="flex items-start gap-2.5">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
-                        <span className="text-xs text-amber-900 leading-relaxed">{isFr ? step.fr : step.en}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           {pushEnabled && (
             <div className="space-y-2.5 pt-1">
