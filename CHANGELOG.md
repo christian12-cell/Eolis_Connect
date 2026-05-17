@@ -248,6 +248,9 @@ Format : `[Date] — Type — Description`
 #### `MANUEL_AGENT.html` + `MANUEL_OPS_ADMIN.html`
 - Sections notifications push ajoutées (catégories, activation, comportement intelligent, avertissements).
 - Mode Équité ⚖️ documenté dans les pages Performance et Classement (`MANUEL_OPS_ADMIN`).
+- Guide déblocage notifications documenté : accordion intégré dans Paramètres, 8 cas couverts, auto-ouvert si bloqué.
+- Contact support `support@eolisconnect.online` ajouté dans les deux manuels.
+- **Section Notifications Push** (nouvelle dans `GUIDE_DEVELOPPEUR.html`, `#push-notifs`) : clés VAPID format raw base64url, variables Railway, logique 3 couches `push_service.py` (présence WS → délai 5s → `is_read`), session DB indépendante obligatoire, rotation VAPID côté frontend (`eolis_vapid_pk`), les 4 états `Notification.permission`, pattern accordion (auto-ouvert si `denied`), `detectDevice()` annoté (ordre des conditions Samsung/Edge avant Chrome).
 
 ---
 
