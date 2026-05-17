@@ -174,6 +174,11 @@
     <li><a href="#composants-ui">Composants réutilisables</a></li>
     <li><a href="#manifest-pwa">Manifest PWA (icône, nom)</a></li>
   </ul>
+  <div class="toc-section">Sécurité avancée</div>
+  <ul>
+    <li><a href="#brute-force">Protection brute-force 3+3</a></li>
+    <li><a href="#auto-refresh-ring">Anneau SVG auto-refresh</a></li>
+  </ul>
 </div>
 </aside>
 
@@ -2765,6 +2770,186 @@ locale:   string    <span class="c">← 'fr' ou 'en'</span></pre>
   ]
 }</pre>
   <p>Pour changer l'icône → remplacer <code>public/logo.png</code> par ta nouvelle image (PNG carré, 512×512 minimum).</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="brute-force">
+  <h2>🛡️ Protection anti-brute-force — Principe 3+3</h2>
+
+  <p>Le système applique le <strong>même principe de verrouillage progressif sur tous les points d'authentification</strong> : mot de passe ET codes OTP. 3 échecs → suspension temporaire 15 min, 3 nouveaux échecs → blocage permanent <code>LOCKED</code>.</p>
+
+  <h3>Points d'authentification couverts</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Endpoint</th><th>Fichier</th><th>Déclencheur</th></tr></thead>
+      <tbody>
+        <tr><td><code>POST /api/auth/login</code></td><td><code>routers/auth.py</code></td><td>Mauvais mot de passe</td></tr>
+        <tr><td><code>POST /api/auth/2fa/verify</code></td><td><code>routers/auth.py</code></td><td>Mauvais code 2FA SMS</td></tr>
+        <tr><td><code>POST /api/auth/otp/verify</code></td><td><code>routers/otp.py</code></td><td>Mauvais code vérif. téléphone</td></tr>
+        <tr><td><code>POST /api/auth/forgot-password/verify-otp</code></td><td><code>routers/auth.py</code></td><td>Mauvais code réinitialisation</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Colonnes utilisées dans la table <code>users</code></h3>
+  <pre><span class="c"># Ajoutées via migration startup() dans main.py</span>
+login_failed_count  INTEGER  <span class="c">← nombre d'échecs cumulés (reset à 0 à chaque succès)</span>
+login_locked_until  TIMESTAMP <span class="c">← heure de fin de la suspension temporaire (NULL = pas de lock)</span>
+login_last_ip       VARCHAR(50) <span class="c">← dernière IP utilisée (pour audit)</span></pre>
+
+  <h3>Logique backend — même code reproduit sur chaque endpoint</h3>
+  <pre><span class="c"># 1. Au début de chaque endpoint → vérifier l'état du compte</span>
+<span class="k">if</span> user.status == <span class="s">"LOCKED"</span>:
+    <span class="k">raise</span> HTTPException(<span class="n">403</span>, <span class="s">"account_locked"</span>)
+<span class="k">if</span> user.login_locked_until <span class="k">and</span> user.login_locked_until > now:
+    secs = int((user.login_locked_until - now).total_seconds())
+    <span class="k">raise</span> HTTPException(<span class="n">423</span>, <span class="s">f"temporarily_locked:{secs}"</span>)
+
+<span class="c"># 2. En cas d'échec → incrémenter et décider</span>
+had_prev_lock = user.login_locked_until <span class="k">is not</span> <span class="n">None</span>
+user.login_failed_count = (user.login_failed_count <span class="k">or</span> <span class="n">0</span>) + <span class="n">1</span>
+
+<span class="k">if</span> user.login_failed_count >= <span class="n">3</span>:
+    <span class="k">if</span> had_prev_lock:              <span class="c"># 2ᵉ tour → blocage définitif</span>
+        user.status = <span class="s">"LOCKED"</span>
+        user.login_failed_count = <span class="n">0</span>
+        user.login_locked_until = <span class="n">None</span>
+        db.commit()
+        <span class="k">raise</span> HTTPException(<span class="n">403</span>, <span class="s">"account_locked"</span>)
+    <span class="k">else</span>:                          <span class="c"># 1ᵉʳ tour → suspension 15 min</span>
+        user.login_locked_until = now + timedelta(minutes=<span class="n">15</span>)
+        user.login_failed_count = <span class="n">0</span>
+        db.commit()
+        <span class="k">raise</span> HTTPException(<span class="n">423</span>, <span class="s">"temporarily_locked:900"</span>)
+
+remaining = <span class="n">3</span> - user.login_failed_count
+db.commit()
+<span class="k">raise</span> HTTPException(<span class="n">401</span>, <span class="s">f"wrong_password:{remaining}"</span>)  <span class="c"># ou wrong_code:{remaining}</span>
+
+<span class="c"># 3. En cas de succès → tout remettre à 0</span>
+user.login_failed_count = <span class="n">0</span>
+user.login_locked_until = <span class="n">None</span></pre>
+
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div class="alert-body">
+      <strong>Détection du 2ᵉ tour</strong> — La variable <code>had_prev_lock</code> détecte si <code>login_locked_until</code> est non-null <em>avant</em> l'échec courant. Si une suspension 15 min avait déjà eu lieu (et s'est terminée), un nouveau groupe de 3 échecs déclenche le LOCKED permanent. Sans ça, l'attaquant pourrait faire des groupes de 2 indéfiniment.
+    </div>
+  </div>
+
+  <h3>Frontend — Gestion des codes d'erreur</h3>
+  <p>Le frontend (<code>login/page.tsx</code>) gère 4 codes retournés par l'API :</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Code API</th><th>HTTP</th><th>Affichage frontend</th></tr></thead>
+      <tbody>
+        <tr><td><code>wrong_password:2</code> / <code>wrong_code:1</code></td><td>401</td><td>Message "Il vous reste X tentative(s)"</td></tr>
+        <tr><td><code>temporarily_locked:900</code></td><td>423</td><td>Écran amber avec compte à rebours MM:SS</td></tr>
+        <tr><td><code>account_locked</code></td><td>403</td><td>Écran rouge avec lien support@eolisconnect.online</td></tr>
+        <tr><td><code>temporarily_locked:xxx</code> (depuis 2FA)</td><td>423</td><td>setStep('credentials') → même écran amber</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <pre><span class="c">// Depuis handle2FA — la page 2FA redirige vers l'écran de lock credentials</span>
+} <span class="k">else if</span> (detail === <span class="s">'account_locked'</span>) {
+  setStep(<span class="s">'credentials'</span>)
+  setErrorType(<span class="s">'locked'</span>)
+} <span class="k">else if</span> (detail?.startsWith(<span class="s">'temporarily_locked:'</span>)) {
+  <span class="k">const</span> secs = parseInt(detail.split(<span class="s">':'</span>)[<span class="n">1</span>] ?? <span class="s">'900'</span>)
+  setLockSecondsLeft(secs)
+  setStep(<span class="s">'credentials'</span>)
+  setErrorType(<span class="s">'temp_locked'</span>)
+  startLockCountdown(secs, username)
+}</pre>
+
+  <h3>Polling admin — déblocage anticipé</h3>
+  <p>Quand le compte est en suspension temporaire, le frontend interroge <code>GET /api/auth/lock-status?username=xxx</code> toutes les 10 secondes. Si un admin a débloqué le compte depuis la page Sécurité, le compte à rebours disparaît immédiatement.</p>
+
+  <div class="alert alert-info">
+    <span class="alert-icon">ℹ️</span>
+    <div class="alert-body">
+      <strong>Page Sécurité</strong> — <code>/admin/securite</code> liste tous les comptes avec <code>login_failed_count &gt; 0</code>, <code>login_locked_until IS NOT NULL</code>, ou <code>status = 'LOCKED'</code>. Le bouton "Débloquer" fait un <code>PATCH /api/users/{id}</code> avec <code>{"status": "ACTIVE"}</code>, ce qui remet aussi à 0 les compteurs. La page s'auto-rafraîchit toutes les 30 s.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="section" id="auto-refresh-ring">
+  <h2>🔄 Anneau SVG auto-refresh — Pattern réutilisable</h2>
+
+  <p>Trois pages admin utilisent ce pattern : <strong>Sécurité</strong>, <strong>Audit immuable</strong>, et <strong>Audit OTP</strong>. Il affiche un anneau animé qui se vide en 30 s, puis déclenche un refresh silencieux (sans flash de chargement).</p>
+
+  <h3>Les 4 éléments indispensables</h3>
+  <pre><span class="c">// 1. State + refs</span>
+<span class="k">const</span> [countdown, setCountdown] = useState(<span class="n">30</span>)
+<span class="k">const</span> autoRef  = useRef&lt;ReturnType&lt;<span class="k">typeof</span> setInterval&gt; | <span class="k">null</span>&gt;(<span class="n">null</span>)
+<span class="k">const</span> countRef = useRef&lt;ReturnType&lt;<span class="k">typeof</span> setInterval&gt; | <span class="k">null</span>&gt;(<span class="n">null</span>)
+
+<span class="c">// 2. fetchData avec paramètre silent</span>
+<span class="k">const</span> fetchData = useCallback((<span class="v">silent</span> = <span class="n">false</span>) =&gt; {
+  <span class="k">if</span> (!silent) setLoading(<span class="n">true</span>)
+  apiFetch(<span class="s">'/api/...'</span>)
+    .then(r =&gt; r.json())
+    .then(d =&gt; { setData(d); <span class="k">if</span> (!silent) setLoading(<span class="n">false</span>) })
+    .catch(() =&gt; { <span class="k">if</span> (!silent) setLoading(<span class="n">false</span>) })
+}, [])
+
+<span class="c">// 3. useEffect auto-refresh — démarre après que user est chargé</span>
+useEffect(() =&gt; {
+  <span class="k">if</span> (!user) <span class="k">return</span>
+  setCountdown(<span class="n">30</span>)
+  <span class="k">if</span> (autoRef.current)  clearInterval(autoRef.current)
+  <span class="k">if</span> (countRef.current) clearInterval(countRef.current)
+  autoRef.current  = setInterval(() =&gt; { fetchData(<span class="n">true</span>); setCountdown(<span class="n">30</span>) }, <span class="n">30_000</span>)
+  countRef.current = setInterval(() =&gt; setCountdown(c =&gt; c &lt;= <span class="n">1</span> ? <span class="n">30</span> : c - <span class="n">1</span>), <span class="n">1_000</span>)
+  <span class="k">return</span> () =&gt; {
+    <span class="k">if</span> (autoRef.current)  clearInterval(autoRef.current)
+    <span class="k">if</span> (countRef.current) clearInterval(countRef.current)
+  }
+}, [user, fetchData])</pre>
+
+  <h3>L'anneau SVG dans le JSX</h3>
+  <pre><span class="c">{/* Anneau animé — 2*π*r = 2*π*12 ≈ 75.4 */}</span>
+&lt;div className=<span class="s">"relative flex items-center justify-center"</span>
+  title={`Actualisation dans ${countdown}s`}&gt;
+  &lt;svg width=<span class="s">"32"</span> height=<span class="s">"32"</span> className=<span class="s">"-rotate-90"</span>&gt;
+    &lt;<span class="k">circle</span> cx=<span class="s">"16"</span> cy=<span class="s">"16"</span> r=<span class="s">"12"</span> fill=<span class="s">"none"</span> stroke=<span class="s">"#e5e7eb"</span> strokeWidth=<span class="s">"2.5"</span> /&gt;
+    &lt;<span class="k">circle</span> cx=<span class="s">"16"</span> cy=<span class="s">"16"</span> r=<span class="s">"12"</span> fill=<span class="s">"none"</span> stroke=<span class="s">"#4A8FC4"</span> strokeWidth=<span class="s">"2.5"</span>
+      strokeDasharray={`${<span class="n">2</span> * Math.PI * <span class="n">12</span>}`}
+      strokeDashoffset={`${<span class="n">2</span> * Math.PI * <span class="n">12</span> * (<span class="n">1</span> - countdown / <span class="n">30</span>)}`}
+      strokeLinecap=<span class="s">"round"</span>
+      style={{ transition: <span class="s">'stroke-dashoffset 0.9s linear'</span> }} /&gt;
+  &lt;/svg&gt;
+  &lt;span className=<span class="s">"absolute text-[9px] font-bold text-gray-500 tabular-nums"</span>&gt;{countdown}&lt;/span&gt;
+&lt;/div&gt;
+&lt;button onClick={() =&gt; { fetchData(<span class="n">true</span>); setCountdown(<span class="n">30</span>) }}
+  className=<span class="s">"flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200"</span>&gt;
+  &lt;RefreshCw size={<span class="n">13</span>} /&gt; Actualiser
+&lt;/button&gt;</pre>
+
+  <div class="alert alert-warn">
+    <span class="alert-icon">⚠️</span>
+    <div class="alert-body">
+      <strong>Cas de la page Audit OTP</strong> — <code>fetchData</code> est dans un <code>useCallback</code> avec des dépendances (<code>[searchQuery, dateRange, page]</code>). Pour que l'intervalle auto-refresh appelle toujours la version fraîche (avec la bonne query et page), on utilise un <code>fetchDataRef</code> :
+      <br/><code>const fetchDataRef = useRef(() =&gt; {})</code>
+      <br/><code>useEffect(() =&gt; &#123; fetchDataRef.current = fetchData &#125;, [fetchData])</code>
+      <br/>Puis l'intervalle appelle <code>fetchDataRef.current(true)</code> — sans jamais réinitialiser l'intervalle quand la query change.
+    </div>
+  </div>
+
+  <h3>Cas spécial : page avec pagination et filtres (Audit immuable)</h3>
+  <p>La page Audit immuable a une pagination explicite (<code>page</code>) et un filtre action. L'auto-refresh doit rester sur la page et le filtre en cours. On utilise des refs pour capturer les valeurs fraîches :</p>
+  <pre><span class="k">const</span> pageRef   = useRef(<span class="n">1</span>)
+<span class="k">const</span> actionRef = useRef(<span class="s">''</span>)
+useEffect(() =&gt; { pageRef.current = page }, [page])
+useEffect(() =&gt; { actionRef.current = actionFilter }, [actionFilter])
+
+<span class="c">// Dans l'intervalle :</span>
+autoRef.current = setInterval(() =&gt; {
+  fetchLogs(pageRef.current, actionRef.current, <span class="n">true</span>)
+  setCountdown(<span class="n">30</span>)
+}, <span class="n">30_000</span>)</pre>
 </div>
 
 </main>

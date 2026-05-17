@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Eolis Connect — Documentation Sécurité & Finance</title>
+<style>
+  :root {
+    --navy:   #1B3A5C;
+    --blue:   #4A8FC4;
+    --light:  #EEF6FF;
+    --green:  #10b981;
+    --red:    #ef4444;
+    --amber:  #f59e0b;
+    --violet: #7c3aed;
+    --gray:   #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1f2937; line-height: 1.6; }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, var(--navy) 0%, #2a5480 100%);
+    color: #fff; padding: 48px 40px; text-align: center;
+  }
+  header .logo { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #a8c8e8; margin-bottom: 12px; }
+  header h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+  header p  { font-size: 15px; color: #a8c8e8; max-width: 600px; margin: 0 auto; }
+  .badge-row { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .badge { padding: 4px 14px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+  .badge-green  { background: rgba(16,185,129,.2);  color: #6ee7b7; border: 1px solid rgba(16,185,129,.3); }
+  .badge-blue   { background: rgba(74,143,196,.2);  color: #93c5fd; border: 1px solid rgba(74,143,196,.3); }
+  .badge-amber  { background: rgba(245,158,11,.2);  color: #fcd34d; border: 1px solid rgba(245,158,11,.3); }
+
+  /* ── Layout ── */
+  main { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
+  section { margin-bottom: 48px; }
+  .section-title {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 22px; font-weight: 800; color: var(--navy);
+    padding-bottom: 12px; border-bottom: 2px solid var(--light); margin-bottom: 24px;
+  }
+  .section-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+
+  /* ── Cards ── */
+  .card { background: #fff; border-radius: 16px; border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .card-body  { font-size: 14px; color: #374151; }
+  .card-grid  { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+  /* ── Security layers ── */
+  .layer { display: flex; gap: 16px; background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+  .layer-num { width: 32px; height: 32px; border-radius: 50%; background: var(--navy); color: #fff; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .layer-content h3 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .layer-content p  { font-size: 13px; color: #4b5563; }
+  .layer-content code { background: #f3f4f6; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: monospace; color: var(--navy); }
+
+  /* ── Flow diagram ── */
+  .flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin: 16px 0; }
+  .flow-step { background: var(--light); border: 1px solid #bfdbfe; border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--navy); }
+  .flow-arrow { color: #9ca3af; font-size: 18px; margin: 0 6px; }
+  .flow-step.red    { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+  .flow-step.amber  { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+  .flow-step.green  { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+  .flow-step.violet { background: #f5f3ff; border-color: #c4b5fd; color: #5b21b6; }
+
+  /* ── KPI Cards ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .kpi-card { background: #fff; border-radius: 16px; border: 1px solid #e5e7eb; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+  .kpi-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 12px; }
+  .kpi-number { font-size: 28px; font-weight: 800; margin-bottom: 2px; }
+  .kpi-label  { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+  .kpi-formula { background: #f9fafb; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-family: monospace; color: #6b7280; border: 1px solid #f3f4f6; }
+  .kpi-desc { font-size: 12px; color: #6b7280; margin-top: 8px; line-height: 1.5; }
+  .em { background: #f3f4f6; border-radius: 4px; padding: 1px 6px; font-family: monospace; font-size: 12px; }
+
+  /* ── Graph section ── */
+  .chart-desc { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 20px; margin-bottom: 16px; display: flex; gap: 16px; align-items: flex-start; }
+  .chart-icon-big { font-size: 32px; flex-shrink: 0; }
+  .chart-desc h3 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .chart-desc p  { font-size: 13px; color: #4b5563; }
+  .chart-desc .axes { margin-top: 8px; display: flex; gap: 16px; font-size: 12px; color: #6b7280; }
+  .chart-desc .axes span { background: #f3f4f6; border-radius: 6px; padding: 2px 8px; }
+
+  /* ── Simple bar chart ── */
+  .bar-chart { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 16px; }
+  .bar-chart h3 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px; }
+  .bars { display: flex; align-items: flex-end; gap: 12px; height: 140px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar-wrap { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; flex: 1; }
+  .bar { border-radius: 6px 6px 0 0; width: 100%; transition: all .3s; }
+  .bar-label { font-size: 10px; color: #6b7280; font-weight: 600; text-align: center; }
+  .legend { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap-6px; font-size: 12px; color: #4b5563; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  /* ── Status table ── */
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; border: 1px solid #e5e7eb; }
+  th { background: #f9fafb; padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 12px 16px; font-size: 13px; border-top: 1px solid #f3f4f6; vertical-align: top; }
+  tr:hover td { background: #fafafa; }
+
+  /* ── Tag / pill ── */
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .pill-green  { background: #dcfce7; color: #15803d; }
+  .pill-red    { background: #fee2e2; color: #b91c1c; }
+  .pill-amber  { background: #fef3c7; color: #92400e; }
+  .pill-blue   { background: #dbeafe; color: #1d4ed8; }
+  .pill-gray   { background: #f3f4f6; color: #374141; }
+  .pill-violet { background: #ede9fe; color: #5b21b6; }
+
+  /* ── Alert box ── */
+  .alert { border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
+  .alert-green  { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; }
+  .alert-amber  { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .alert-red    { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+  .alert-blue   { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+
+  /* ── Footer ── */
+  footer { text-align: center; padding: 32px; font-size: 12px; color: #9ca3af; background: #fff; border-top: 1px solid #e5e7eb; }
+
+  @media (max-width: 600px) {
+    header { padding: 32px 20px; }
+    header h1 { font-size: 24px; }
+    .bar-col .bar-label { font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════ -->
+<header>
+  <div class="logo">Eolis Connect · Documentation technique</div>
+  <h1>Sécurité & Tableau de bord financier</h1>
+  <p>Vue d'ensemble des mécanismes de sécurité, des indicateurs financiers et des graphiques analytiques de la plateforme Eolis Connect.</p>
+  <div class="badge-row">
+    <span class="badge badge-green">✓ Multi-couche</span>
+    <span class="badge badge-blue">✓ 2FA obligatoire (Staff)</span>
+    <span class="badge badge-amber">✓ Audit immuable</span>
+    <span class="badge badge-green">✓ Brute-force protection</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════
+     1. SÉCURITÉ
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#EEF6FF">🔒</div>
+    Sécurité de la plateforme
+  </div>
+
+  <!-- 1.1 Authentication -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">🔑 Authentification — Flux de connexion</div>
+    <div class="card-body">
+      <div class="flow">
+        <div class="flow-step">Identifiant + mot de passe</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step amber">Vérification brute-force</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step violet">2FA SMS (Staff)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step green">JWT · Accès autorisé</div>
+      </div>
+      <p style="font-size:13px;color:#4b5563;margin-top:12px">
+        Pour les rôles sensibles (<strong>SYSTEM_ADMIN, FINANCE_AGENT, OPS_ADMIN</strong>), une vérification en deux étapes par SMS est obligatoire avant d'accéder au système.
+        Les clients (<strong>CLIENT</strong>) se connectent directement après vérification du mot de passe.
+      </p>
+    </div>
+  </div>
+
+  <!-- 1.2 Brute-force -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">🛡️ Protection contre le brute-force — Principe 3+3</div>
+    <div class="card-body">
+      <div class="flow" style="margin-bottom:16px">
+        <div class="flow-step">Tentative 1–2</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step amber">3ᵉ échec → verrouillage 15 min</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step amber">3 nouveaux échecs</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step red">Compte LOCKED · Support requis</div>
+      </div>
+      <p style="font-size:13px;color:#4b5563;margin-bottom:12px">Ce mécanisme s'applique sur <strong>tous les points d'authentification</strong>, pas seulement le mot de passe :</p>
+      <table style="margin-bottom:12px">
+        <thead><tr><th>Point d'authentification</th><th>Ce qui est compté</th></tr></thead>
+        <tbody>
+          <tr><td>Connexion (mot de passe)</td><td>Mauvais mot de passe</td></tr>
+          <tr><td>2FA SMS (Staff)</td><td>Mauvais code 2FA à la connexion</td></tr>
+          <tr><td>Vérification numéro de téléphone</td><td>Mauvais code OTP d'inscription</td></tr>
+          <tr><td>Mot de passe oublié</td><td>Mauvais code OTP de réinitialisation</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Événement</th><th>Résultat</th><th>Message utilisateur</th></tr></thead>
+        <tbody>
+          <tr><td>1 ou 2 tentatives échouées</td><td><span class="pill pill-amber">Compteur incrémenté</span></td><td>"Mot de passe incorrect — il vous reste X tentative(s)"</td></tr>
+          <tr><td>3ᵉ tentative échouée (1er tour)</td><td><span class="pill pill-amber">Suspendu 15 min</span></td><td>Écran amber avec compte à rebours MM:SS</td></tr>
+          <tr><td>3 nouveaux échecs après les 15 min</td><td><span class="pill pill-red">LOCKED permanent</span></td><td>Écran rouge — "contactez support@eolisconnect.online"</td></tr>
+          <tr><td>Connexion / code OTP réussi</td><td><span class="pill pill-green">Compteur remis à 0</span></td><td>Accès au dashboard</td></tr>
+          <tr><td>Admin remet le statut à ACTIVE (page Sécurité)</td><td><span class="pill pill-green">Compte débloqué</span></td><td>L'utilisateur peut se reconnecter immédiatement</td></tr>
+        </tbody>
+      </table>
+      <div class="alert alert-blue" style="margin-top:12px">
+        <span>ℹ️</span>
+        <span>Le blocage s'applique au <strong>compte</strong> (pas à l'IP) — efficace même si l'attaquant change d'adresse. Le compteur <code>login_failed_count</code> est partagé entre tous les types d'échecs : 2 mauvais mots de passe + 1 mauvais OTP = suspension.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.3 2FA -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">📱 Double authentification (2FA)</div>
+    <div class="card-body">
+      <div class="card-grid">
+        <div style="background:#f0f4f8;border-radius:12px;padding:16px">
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">Rôles concernés</p>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span class="pill pill-red" style="display:inline-block;width:fit-content">SYSTEM_ADMIN</span>
+            <span class="pill pill-violet" style="display:inline-block;width:fit-content">FINANCE_AGENT</span>
+            <span class="pill pill-blue" style="display:inline-block;width:fit-content">OPS_ADMIN</span>
+          </div>
+        </div>
+        <div style="background:#f0f4f8;border-radius:12px;padding:16px">
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">Mécanisme OTP</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Code à 6 chiffres par SMS</li>
+            <li>Expire après <strong>10 minutes</strong></li>
+            <li>Usage unique — ne peut pas être réutilisé</li>
+            <li>Max <strong>5 tentatives</strong> par code avant invalidation</li>
+            <li>Protection brute-force 3+3 <strong>au niveau compte</strong></li>
+            <li>Renvoi possible après <strong>30 secondes</strong></li>
+          </ul>
+        </div>
+        <div style="background:#f0f4f8;border-radius:12px;padding:16px">
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">Sécurité du token</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li><code class="em">pre_token</code> JWT signé</li>
+            <li>Valide <strong>10 min</strong> uniquement</li>
+            <li>Scope limité : <code class="em">2fa_pending</code></li>
+            <li>Nouveau token à chaque renvoi</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.4 Step-up auth -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">🔐 Authentification renforcée (Step-up auth)</div>
+    <div class="card-body">
+      <p style="font-size:13px;color:#4b5563;margin-bottom:12px">
+        Avant de valider un changement de mot de passe, le système envoie un code SMS de confirmation supplémentaire.
+        Cette étape est obligatoire pour <strong>tous les utilisateurs ayant un téléphone enregistré</strong>.
+      </p>
+      <div class="flow">
+        <div class="flow-step">Formulaire mdp</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step violet">Demande OTP SMS</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step amber">Code valable 10 min</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step green">Nouveau mdp enregistré</div>
+      </div>
+      <div class="alert alert-amber" style="margin-top:12px">
+        <span>⚠️</span>
+        <span>Le <strong>téléphone est obligatoire</strong> à l'inscription. Chaque utilisateur doit en avoir un enregistré — c'est le canal de sécurité central de la plateforme.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.5 Owner protection -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">👑 Protection du compte propriétaire</div>
+    <div class="card-body">
+      <p style="font-size:13px;color:#4b5563;margin-bottom:12px">
+        Le compte <code class="em">Christian.DENMEKO</code> bénéficie de protections exclusives, même vis-à-vis des autres SYSTEM_ADMIN créés.
+      </p>
+      <table>
+        <thead><tr><th>Action</th><th>Autre SYSTEM_ADMIN</th><th>Propriétaire</th></tr></thead>
+        <tbody>
+          <tr><td>Modifier le compte propriétaire</td><td><span class="pill pill-red">❌ 403 Interdit</span></td><td><span class="pill pill-green">✓ Autorisé</span></td></tr>
+          <tr><td>Supprimer le compte propriétaire</td><td><span class="pill pill-red">❌ 403 Interdit</span></td><td><span class="pill pill-red">❌ Interdit</span></td></tr>
+          <tr><td>Activer la maintenance</td><td><span class="pill pill-red">❌ 403 Interdit</span></td><td><span class="pill pill-green">✓ Autorisé</span></td></tr>
+          <tr><td>Reset base de données</td><td><span class="pill pill-red">❌ 403 Interdit</span></td><td><span class="pill pill-green">✓ Autorisé</span></td></tr>
+          <tr><td>Naviguer pendant la maintenance</td><td><span class="pill pill-red">❌ Page maintenance</span></td><td><span class="pill pill-green">✓ Accès normal</span></td></tr>
+          <tr><td>Voir l'audit OTP</td><td><span class="pill pill-red">❌ 403 Interdit</span></td><td><span class="pill pill-green">✓ Autorisé</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 1.6 Statuts compte -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">📋 Statuts des comptes utilisateurs</div>
+    <div class="card-body">
+      <table>
+        <thead><tr><th>Statut</th><th>Signification</th><th>Origine</th><th>Connexion autorisée</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="pill pill-amber">PENDING</span></td>
+            <td>Compte créé, en attente de validation admin</td>
+            <td>Auto-inscription client</td>
+            <td><span class="pill pill-red">Non</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-green">ACTIVE</span></td>
+            <td>Compte actif, accès normal</td>
+            <td>Validation admin / inscription directe</td>
+            <td><span class="pill pill-green">Oui</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-gray">SUSPENDED</span></td>
+            <td>Suspendu manuellement par un admin</td>
+            <td>Action admin (décision humaine)</td>
+            <td><span class="pill pill-red">Non</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-red">REJECTED</span></td>
+            <td>Inscription refusée</td>
+            <td>Action admin</td>
+            <td><span class="pill pill-red">Non</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-red">LOCKED</span></td>
+            <td>Verrouillé automatiquement après 6 tentatives échouées (3+3)</td>
+            <td>Système automatique</td>
+            <td><span class="pill pill-red">Non — support requis</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 1.6b Page Sécurité admin -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">🖥️ Page Sécurité admin — Surveillance & déblocage</div>
+    <div class="card-body">
+      <p style="font-size:13px;color:#4b5563;margin-bottom:12px">
+        La page <strong>/admin/securite</strong> (accessible à tous les SYSTEM_ADMIN) liste en temps réel tous les comptes avec activité suspecte.
+        Elle s'auto-rafraîchit toutes les <strong>30 secondes</strong> de façon silencieuse (sans flash de chargement).
+      </p>
+      <div class="card-grid">
+        <div style="background:#f0f4f8;border-radius:12px;padding:16px">
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">Comptes affichés</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Comptes avec <code>login_failed_count &gt; 0</code></li>
+            <li>Comptes avec verrouillage temporaire actif</li>
+            <li>Comptes avec statut <code>LOCKED</code></li>
+          </ul>
+        </div>
+        <div style="background:#f0f4f8;border-radius:12px;padding:16px">
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">Informations affichées</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Nombre de tentatives échouées</li>
+            <li>Heure de fin de suspension (si temp lock)</li>
+            <li>Dernière adresse IP utilisée</li>
+            <li>Type de verrouillage (temp / permanent)</li>
+          </ul>
+        </div>
+        <div style="background:#f0f4f8;border-radius:12px;padding:16px">
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">Action disponible</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Bouton "Débloquer" → statut <code>ACTIVE</code></li>
+            <li>Remet <code>login_failed_count</code> à 0</li>
+            <li>Efface <code>login_locked_until</code></li>
+            <li>Effet immédiat (le client n'a pas à attendre la fin du timer)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.7 Rate limiting -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">⏱️ Limitation de taux (Rate limiting)</div>
+    <div class="card-body">
+      <table>
+        <thead><tr><th>Endpoint</th><th>Limite</th></tr></thead>
+        <tbody>
+          <tr><td>POST /api/auth/login</td><td><span class="pill pill-amber">10 requêtes / minute / IP</span></td></tr>
+          <tr><td>POST /api/auth/2fa/verify</td><td><span class="pill pill-amber">5 requêtes / minute / IP</span></td></tr>
+          <tr><td>POST /api/auth/2fa/resend</td><td><span class="pill pill-amber">3 requêtes / minute / IP</span></td></tr>
+          <tr><td>POST /api/auth/register</td><td><span class="pill pill-amber">5 requêtes / minute / IP</span></td></tr>
+          <tr><td>POST /api/auth/forgot-password/*</td><td><span class="pill pill-amber">5 requêtes / minute / IP</span></td></tr>
+          <tr><td>Anti-spam OTP (2FA)</td><td><span class="pill pill-blue">1 code toutes les 30 secondes / compte</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 1.8 Audit -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">📜 Traçabilité et journaux immuables</div>
+    <div class="card-body">
+      <div class="card-grid">
+        <div>
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">Journal d'audit financier</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Toutes les approbations / refus de recharges</li>
+            <li>Tous les ajouts / suppressions de charges infra</li>
+            <li>IP de l'opérateur à chaque action</li>
+            <li>Non modifiable — immuable</li>
+            <li>Accessible : SYSTEM_ADMIN uniquement</li>
+          </ul>
+        </div>
+        <div>
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">Audit OTP</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Tous les codes générés (2FA + vérif. numéro)</li>
+            <li>Statut : utilisé / expiré / encore valide</li>
+            <li>Nombre de tentatives par code</li>
+            <li>Utile si un utilisateur n'a pas reçu son SMS</li>
+            <li>Accessible : propriétaire uniquement</li>
+          </ul>
+        </div>
+        <div>
+          <p style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:8px">Journaux système</p>
+          <ul style="font-size:13px;color:#4b5563;padding-left:16px;display:flex;flex-direction:column;gap:4px">
+            <li>Inscriptions, connexions, modifications</li>
+            <li>Actions admin (création, suppression comptes)</li>
+            <li>Filtrable par rôle, action, période</li>
+            <li>Accessible : SYSTEM_ADMIN + OPS_ADMIN</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.9 Maintenance -->
+  <div class="card">
+    <div class="card-title">🔧 Mode maintenance</div>
+    <div class="card-body">
+      <div class="flow" style="margin-bottom:16px">
+        <div class="flow-step">Admin active la maintenance</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step amber">Broadcast email + push (+ SMS optionnel)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step red">Tous les utilisateurs voient la page maintenance</div>
+      </div>
+      <div class="flow">
+        <div class="flow-step green">Admin remet en ligne</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step green">Broadcast "retour en ligne" avec message optionnel</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step green">Accès rétabli pour tous</div>
+      </div>
+      <div class="alert alert-blue" style="margin-top:12px">
+        <span>ℹ️</span>
+        <span>Le message de retour peut inclure : ce qui a été fait, les nouvelles fonctionnalités, et les éventuelles instructions spéciales (ex. réinstaller l'application). Seul le <strong>propriétaire</strong> peut activer ou désactiver le mode maintenance.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     2. KPIs FINANCIERS
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#f5f3ff">📊</div>
+    Indicateurs financiers (KPIs)
+  </div>
+
+  <div class="alert alert-blue" style="margin-bottom:20px">
+    <span>ℹ️</span>
+    <span>Tous les indicateurs sont filtrables par période (jour, semaine, mois, année, ou plage personnalisée). Les montants sont affichés en <strong>FCFA</strong>, avec conversions automatiques en USD et EUR.</span>
+  </div>
+
+  <!-- Row 1 -->
+  <h3 style="font-size:14px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Ligne 1 — Revenus & Coûts</h3>
+  <div class="kpi-grid" style="margin-bottom:28px">
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#dcfce7">📈</div>
+      <div class="kpi-number" style="color:#15803d">X FCFA</div>
+      <div class="kpi-label">Revenus recharges</div>
+      <div class="kpi-formula">= Σ montants_validés (recharges approuvées)</div>
+      <div class="kpi-desc">
+        L'argent réel entré dans la trésorerie. Ce sont les recharges clients validées par l'agent finance. C'est le <strong>chiffre d'affaires brut</strong> d'Eolis Connect.
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#dbeafe">💰</div>
+      <div class="kpi-number" style="color:#1d4ed8">X FCFA</div>
+      <div class="kpi-label">Prix client (crédits consommés)</div>
+      <div class="kpi-formula">= Σ credits_cost (tous les usages IA)</div>
+      <div class="kpi-desc">
+        Ce que les clients ont "dépensé" en crédits pour utiliser l'IA (traitement de dossiers, lecture de BL, etc.). <strong>1 crédit = 1 FCFA</strong> côté client.
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#fee2e2">🤖</div>
+      <div class="kpi-number" style="color:#b91c1c">X FCFA</div>
+      <div class="kpi-label">Coûts IA (OpenAI)</div>
+      <div class="kpi-formula">= Σ cost_fcfa (tous les usages OpenAI)</div>
+      <div class="kpi-desc">
+        Ce qu'Eolis a réellement payé à OpenAI (tokens utilisés × prix OpenAI × taux USD/FCFA). C'est le <strong>coût de revient réel</strong> de l'IA.
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#fef3c7">🏗️</div>
+      <div class="kpi-number" style="color:#92400e">X FCFA</div>
+      <div class="kpi-label">Charges infra</div>
+      <div class="kpi-formula">= Σ charges saisies manuellement</div>
+      <div class="kpi-desc">
+        Coûts fixes d'hébergement saisis manuellement par l'agent finance : Vercel, Railway, Cloudflare, nom de domaine, etc.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Row 2 -->
+  <h3 style="font-size:14px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Ligne 2 — Rentabilité</h3>
+  <div class="kpi-grid" style="margin-bottom:28px">
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#eff6ff">⚡</div>
+      <div class="kpi-number" style="color:#1d4ed8">X FCFA</div>
+      <div class="kpi-label">Bénéfice sur usages IA</div>
+      <div class="kpi-formula">= Crédits consommés − Coûts OpenAI</div>
+      <div class="kpi-desc">
+        La marge pure sur l'IA. Si positif → le prix par crédit est supérieur au coût OpenAI réel → rentable. Si négatif → l'IA est vendue en dessous de son coût de revient.
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#ecfdf5">📊</div>
+      <div class="kpi-number" style="color:#15803d">X FCFA</div>
+      <div class="kpi-label">Bénéfice brut</div>
+      <div class="kpi-formula">= Revenus recharges − Coûts IA</div>
+      <div class="kpi-desc">
+        Bénéfice après soustraction du coût IA uniquement, sans l'infra. Donne une idée de la rentabilité "cœur de métier" avant les charges fixes.
+      </div>
+    </div>
+
+    <div class="kpi-card" style="border-color:#c4b5fd">
+      <div class="kpi-icon" style="background:#f5f3ff">🏆</div>
+      <div class="kpi-number" style="color:#5b21b6">X FCFA</div>
+      <div class="kpi-label">Bénéfice net (+ marge %)</div>
+      <div class="kpi-formula">= Revenus − Coûts IA − Charges infra</div>
+      <div class="kpi-desc">
+        <strong>Le résultat final</strong> — ce qui reste vraiment dans la poche d'Eolis après toutes les charges. La marge nette (%) = bénéfice net ÷ revenus × 100.
+        <br><br>
+        <span class="pill pill-green">✅ Alerte verte si marge &gt; 50%</span>
+        <br style="margin:4px 0">
+        <span class="pill pill-red">🚨 Alerte rouge si bénéfice négatif</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Pyramid summary -->
+  <div class="card">
+    <div class="card-title">🧮 Logique de calcul — Vue d'ensemble</div>
+    <div class="card-body">
+      <div style="background:#f9fafb;border-radius:12px;padding:20px;font-family:monospace;font-size:13px;line-height:2">
+        <span style="color:#15803d;font-weight:700">REVENUS</span> = Σ recharges validées (argent entré)<br>
+        <span style="color:#b91c1c;font-weight:700">COÛT IA</span> = Σ paiements OpenAI (coût réel tokens)<br>
+        <span style="color:#92400e;font-weight:700">INFRA</span> = Σ charges fixes (Vercel, Railway…)<br>
+        ──────────────────────────────────────<br>
+        <span style="color:#1d4ed8;font-weight:700">MARGE IA</span> = crédits clients − coût OpenAI<br>
+        <span style="color:#15803d;font-weight:700">BÉNÉFICE BRUT</span> = REVENUS − COÛT IA<br>
+        <span style="color:#5b21b6;font-weight:700">BÉNÉFICE NET</span> = REVENUS − COÛT IA − INFRA
+      </div>
+      <div style="margin-top:16px;font-size:13px;color:#4b5563">
+        <strong>Résumé :</strong> Les clients rechargent → ils consomment des crédits pour l'IA → Eolis paye OpenAI → Eolis paye l'infra → ce qui reste = bénéfice net.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     3. GRAPHIQUES
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#fef3c7">📉</div>
+    Graphiques analytiques
+  </div>
+
+  <div class="chart-desc">
+    <div class="chart-icon-big">📊</div>
+    <div>
+      <h3>Évolution mensuelle — Revenus, Coûts & Bénéfice net</h3>
+      <p>Graphique en barres groupées montrant mois par mois : les revenus de recharges (vert), les coûts IA + infra (rouge), et le bénéfice net résultant (violet).</p>
+      <div class="axes">
+        <span>Axe X : Mois (YYYY-MM)</span>
+        <span>Axe Y : FCFA</span>
+        <span>Source : P&L mensuel</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-desc">
+    <div class="chart-icon-big">🥧</div>
+    <div>
+      <h3>Répartition des coûts</h3>
+      <p>Graphique en donut montrant la proportion entre les coûts IA (OpenAI) et les charges infra (hébergement, domaine, etc.) sur la période sélectionnée.</p>
+      <div class="axes">
+        <span>Segment 1 : Coûts IA (rouge)</span>
+        <span>Segment 2 : Infra (orange)</span>
+        <span>Centre : Total FCFA</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-desc">
+    <div class="chart-icon-big">📈</div>
+    <div>
+      <h3>Crédits consommés vs Coûts OpenAI</h3>
+      <p>Graphique en lignes comparant ce que les clients paient en crédits (ligne bleue) vs ce qu'Eolis paye réellement à OpenAI (ligne rouge). L'écart entre les deux courbes représente la marge IA.</p>
+      <div class="axes">
+        <span>Ligne bleue : Prix client (crédits)</span>
+        <span>Ligne rouge : Coût OpenAI réel</span>
+        <span>Zone verte : Marge IA</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-desc">
+    <div class="chart-icon-big">👥</div>
+    <div>
+      <h3>Nouveaux clients par mois</h3>
+      <p>Barres simples montrant le nombre de nouveaux clients inscrits par mois. Affiché à titre informatif — chaque nouveau client reçoit 100 crédits gratuits, dont le coût réel (OpenAI) est déjà inclus dans les Coûts IA.</p>
+      <div class="axes">
+        <span>Axe X : Mois</span>
+        <span>Axe Y : Nombre de clients</span>
+        <span>Info : 100 crédits offerts / client</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Illustrative bar chart -->
+  <div class="bar-chart">
+    <h3>Exemple de visualisation — P&L mensuel (données illustratives)</h3>
+    <div class="bars">
+      <div class="bar-col">
+        <div class="bar-wrap"><div class="bar" style="height:60%;background:#10b981;opacity:.8"></div></div>
+        <div class="bar-label">Jan</div>
+      </div>
+      <div class="bar-col">
+        <div class="bar-wrap"><div class="bar" style="height:75%;background:#10b981;opacity:.8"></div></div>
+        <div class="bar-label">Fév</div>
+      </div>
+      <div class="bar-col">
+        <div class="bar-wrap"><div class="bar" style="height:85%;background:#10b981;opacity:.8"></div></div>
+        <div class="bar-label">Mar</div>
+      </div>
+      <div class="bar-col">
+        <div class="bar-wrap"><div class="bar" style="height:70%;background:#10b981;opacity:.8"></div></div>
+        <div class="bar-label">Avr</div>
+      </div>
+      <div class="bar-col">
+        <div class="bar-wrap"><div class="bar" style="height:90%;background:#10b981;opacity:.8"></div></div>
+        <div class="bar-label">Mai</div>
+      </div>
+      <div class="bar-col">
+        <div class="bar-wrap"><div class="bar" style="height:80%;background:#10b981;opacity:.8"></div></div>
+        <div class="bar-label">Jun</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Revenus</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Coûts totaux</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> Bénéfice net</div>
+    </div>
+  </div>
+
+  <!-- Alertes automatiques -->
+  <div class="card">
+    <div class="card-title">🔔 Alertes automatiques du dashboard</div>
+    <div class="card-body">
+      <p style="font-size:13px;color:#4b5563;margin-bottom:12px">Le tableau de bord analyse automatiquement les KPIs et affiche des alertes contextuelles :</p>
+      <div class="alert alert-blue"><span>💬</span><span><strong>Info</strong> — X demande(s) de recharge en attente, montant total à valider</span></div>
+      <div class="alert alert-red"><span>🚨</span><span><strong>Danger</strong> — Bénéfice net négatif sur la période sélectionnée</span></div>
+      <div class="alert alert-amber"><span>⚠️</span><span><strong>Avertissement</strong> — Charges infra élevées : &gt;30% des revenus</span></div>
+      <div class="alert alert-green"><span>✅</span><span><strong>Excellent</strong> — Marge nette &gt;50% — performance remarquable</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════
+     4. SYNTHÈSE
+══════════════════════════════════════════════════════ -->
+<section>
+  <div class="section-title">
+    <div class="section-icon" style="background:#ecfdf5">✅</div>
+    Synthèse
+  </div>
+  <div class="card-grid">
+    <div class="card" style="border-left:4px solid #10b981">
+      <div class="card-title">🔐 Sécurité multicouche</div>
+      <div class="card-body" style="font-size:13px">
+        Brute-force 3+3 sur tous les points d'auth (mot de passe + OTP 2FA + vérif. tél. + mdp oublié), 2FA SMS obligatoire (Staff), step-up auth, rate limiting IP, JWT, audit immuable, protection propriétaire, statut LOCKED, maintenance contrôlée, page Sécurité admin auto-refresh 30 s.
+      </div>
+    </div>
+    <div class="card" style="border-left:4px solid #4A8FC4">
+      <div class="card-title">📊 Finance en temps réel</div>
+      <div class="card-body" style="font-size:13px">
+        7 KPIs calculés dynamiquement, filtrables par période, affichés en FCFA / USD / EUR. P&L mensuel automatique avec alertes intelligentes.
+      </div>
+    </div>
+    <div class="card" style="border-left:4px solid #7c3aed">
+      <div class="card-title">📜 Traçabilité complète</div>
+      <div class="card-body" style="font-size:13px">
+        Journal financier immuable, audit OTP, journaux système, IP tracée à chaque action sensible. Tout est enregistré, rien n'est effaçable.
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  © 2026 Eolis Connect · Documentation générée automatiquement · Confidentiel
+</footer>
+
+</body>
+</html>
