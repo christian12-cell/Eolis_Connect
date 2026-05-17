@@ -222,6 +222,21 @@ def verify_2fa(request: Request, body: dict, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer", "user": UserResponse.model_validate(user).model_dump(by_alias=True)}
 
 
+@router.get("/lock-status")
+def lock_status(username: str, db: Session = Depends(get_db)):
+    """Public lightweight check — tells the client if a temp lock has been lifted."""
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return {"status": "available"}
+    if user.status == "LOCKED":
+        return {"status": "locked"}
+    now = datetime.utcnow()
+    if user.login_locked_until and user.login_locked_until > now:
+        secs = int((user.login_locked_until - now).total_seconds())
+        return {"status": "temp_locked", "secondsRemaining": secs}
+    return {"status": "available"}
+
+
 @router.post("/2fa/resend")
 @limiter.limit("3/minute")
 def resend_2fa(request: Request, body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):

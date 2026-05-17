@@ -53,6 +53,8 @@ export default function LoginPage({ params }: LoginPageProps) {
   useEffect(() => {
     if (errorType !== 'temp_locked' || lockSecondsLeft <= 0) return
     if (lockCountdownRef.current) clearInterval(lockCountdownRef.current)
+
+    // Real-time countdown
     lockCountdownRef.current = setInterval(() => {
       setLockSecondsLeft(s => {
         if (s <= 1) {
@@ -64,7 +66,27 @@ export default function LoginPage({ params }: LoginPageProps) {
         return s - 1
       })
     }, 1000)
-    return () => { if (lockCountdownRef.current) clearInterval(lockCountdownRef.current) }
+
+    // Poll server every 10s — if admin unlocks early, clear the screen immediately
+    const pollRef = setInterval(async () => {
+      if (!username) return
+      try {
+        const r = await fetch(apiUrl(`/api/auth/lock-status?username=${encodeURIComponent(username)}`))
+        const d = await r.json().catch(() => ({}))
+        if (d.status === 'available') {
+          clearInterval(lockCountdownRef.current!)
+          clearInterval(pollRef)
+          setErrorType(null)
+          setError('')
+          setLockSecondsLeft(0)
+        }
+      } catch {}
+    }, 10_000)
+
+    return () => {
+      if (lockCountdownRef.current) clearInterval(lockCountdownRef.current)
+      clearInterval(pollRef)
+    }
   }, [errorType])
 
   useEffect(() => {
