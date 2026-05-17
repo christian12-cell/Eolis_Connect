@@ -204,6 +204,23 @@ Format : `[Date] — Type — Description`
 - **Page Classement** : répond à "qui est le meilleur ?" — trié par score composite, badges awards, pas de détail individuel.
 - **Page Performance** : répond à "quelles sont les stats ?" — trié alphabétiquement, score composite visible en colonne, détail individuel (charts, SLA, commentaires clients).
 
+#### Page Aide client (`(client)/aide/page.tsx`)
+- **Mail support ajouté** : `support@eolisconnect.online` affiché sous le texte "contactez le support", cliquable (lien `mailto:` → ouvre le client mail directement).
+
+### Backend — `eolis-api`
+
+#### Compte SYSTEM_ADMIN (`main.py`)
+- **Email corrigé** : `christian.denmeko@eoliscameroun.com` → `admin@eolisconnect.online` dans la fonction `_ensure_system_admin()`.
+- **DB mise à jour directement** via script Python SQLAlchemy sur Neon (le compte existait déjà, le changement de code seul ne suffisait pas).
+
+### Documentation
+
+#### `GUIDE_DEVELOPPEUR.html`
+- **Section WebSocket** (nouvelle) : protocole WS vs HTTP, `ws_manager.py` commenté ligne par ligne, hook React `useTicketWS.ts`, flow complet d'un message, présence, ping/pong, reconnexion automatique.
+- **Section Score composite /100** (nouvelle) : formule 4 critères, conversion /100, redistribution si critère absent, SLA cibles, exemple chiffré avec theresa agent.
+- **Section Classement vs Performance** (nouvelle) : tableau comparatif, pourquoi le tri alphabétique, synchronisation des deux fonctions `computeAgentStats`/`computeStats`, coloration vert/rouge, hoisting de `teamComposite`.
+- **Section Accès cloud enrichie** (`#cloud-access`) : ajout option TablePlus (interface visuelle recommandée), script Python direct pour modifier la DB depuis le terminal, requêtes SQL complètes (voir users, modifier email/rôle, cleaner tickets de test, cleaner tout sauf staff).
+
 ### Documentation
 
 #### `GUIDE_DEVELOPPEUR.html`
