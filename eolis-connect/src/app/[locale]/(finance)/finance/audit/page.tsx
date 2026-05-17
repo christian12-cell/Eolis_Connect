@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { apiFetch, getUser } from '@/lib/api-client'
+import { PeriodFilter, DateRange } from '@/components/ui/PeriodFilter'
 import {
   Shield, Loader2, CheckCircle, XCircle, Plus, Trash2, AlertCircle,
   ShieldAlert, ShieldCheck, Search, ChevronLeft, ChevronRight,
@@ -26,16 +27,6 @@ const ACTION_META: Record<string, { icon: React.ReactNode; color: string; label_
   CREDIT_DIRECT_ADMIN_REJECT:  { icon: <ShieldAlert size={14} />,   color: 'text-red-500 bg-red-50',         label_fr: 'Refusé direct admin',   label_en: 'Direct admin rejection' },
 }
 
-type Period = 'all' | 'day' | 'week' | 'month' | 'year'
-
-const PERIOD_LABELS: Record<Period, { fr: string; en: string }> = {
-  all:   { fr: 'Tout',          en: 'All'   },
-  day:   { fr: 'Aujourd\'hui',  en: 'Today' },
-  week:  { fr: 'Semaine',       en: 'Week'  },
-  month: { fr: 'Mois',          en: 'Month' },
-  year:  { fr: 'Année',         en: 'Year'  },
-}
-
 export default function AuditPage({ params }: { params: Promise<{ locale: string }> }) {
   const router = useRouter()
   const [locale, setLocale] = useState('fr')
@@ -46,11 +37,9 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
   const [page, setPage]     = useState(1)
   const [loading, setLoading] = useState(true)
 
-  const [searchInput, setSearchInput] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [period, setPeriod]           = useState<Period>('all')
-  const [fromDate, setFromDate]       = useState('')
-  const [toDate, setToDate]           = useState('')
+  const [searchInput, setSearchInput]   = useState('')
+  const [searchQuery, setSearchQuery]   = useState('')
+  const [dateRange, setDateRange]       = useState<DateRange | null>(null)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -72,10 +61,9 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
   const fetchLogs = useCallback(() => {
     setLoading(true)
     const qs = new URLSearchParams()
-    if (searchQuery)       qs.set('search', searchQuery)
-    if (period !== 'all')  qs.set('period', period)
-    if (fromDate)          qs.set('from', fromDate)
-    if (toDate)            qs.set('to', toDate)
+    if (searchQuery)    qs.set('search', searchQuery)
+    if (dateRange?.from) qs.set('from', dateRange.from)
+    if (dateRange?.to)   qs.set('to', dateRange.to)
     qs.set('page', String(page))
     qs.set('page_size', '50')
     apiFetch(`/api/finance/audit-log?${qs}`)
@@ -87,7 +75,7 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [searchQuery, period, fromDate, toDate, page])
+  }, [searchQuery, dateRange, page])
 
   useEffect(() => {
     if (!user) return
@@ -96,10 +84,8 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
 
   const isFr = locale === 'fr'
 
-  function changePeriod(p: Period) {
-    setPeriod(p)
-    setFromDate('')
-    setToDate('')
+  function handlePeriodChange(range: DateRange | null) {
+    setDateRange(range)
     setPage(1)
   }
 
@@ -120,62 +106,18 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
-          <div className="relative">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
               type="text"
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               placeholder={isFr ? 'Rechercher par action, détail, IP, utilisateur…' : 'Search by action, detail, IP, user…'}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
+              className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
             />
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            {(['all', 'day', 'week', 'month', 'year'] as Period[]).map(p => (
-              <button
-                key={p}
-                onClick={() => changePeriod(p)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  period === p && !fromDate && !toDate
-                    ? 'bg-[#1B3A5C] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {isFr ? PERIOD_LABELS[p].fr : PERIOD_LABELS[p].en}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 whitespace-nowrap">{isFr ? 'Du' : 'From'}</span>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={e => { setFromDate(e.target.value); setPeriod('all'); setPage(1) }}
-                className="px-3 py-1.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 whitespace-nowrap">{isFr ? 'au' : 'to'}</span>
-              <input
-                type="date"
-                value={toDate}
-                onChange={e => { setToDate(e.target.value); setPeriod('all'); setPage(1) }}
-                className="px-3 py-1.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
-              />
-            </div>
-            {(fromDate || toDate) && (
-              <button
-                onClick={() => { setFromDate(''); setToDate(''); setPage(1) }}
-                className="text-xs text-gray-400 hover:text-gray-600 underline"
-              >
-                {isFr ? 'Effacer' : 'Clear'}
-              </button>
-            )}
-          </div>
+          <PeriodFilter onChange={handlePeriodChange} isFr={isFr} />
         </div>
 
         {/* Results */}
@@ -187,7 +129,7 @@ export default function AuditPage({ params }: { params: Promise<{ locale: string
           <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
             <Shield size={32} className="text-gray-200 mx-auto mb-3" />
             <p className="text-gray-400 text-sm">
-              {isFr ? 'Aucune action enregistrée pour ces critères.' : 'No actions match these criteria.'}
+              {isFr ? 'Aucune action enregistrée pour cette période.' : 'No actions recorded for this period.'}
             </p>
           </div>
         ) : (
