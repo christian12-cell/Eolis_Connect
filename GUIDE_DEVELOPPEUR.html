@@ -1949,32 +1949,75 @@ notifs = db.<span class="f">query</span>(Notification)
   <h2>☁️ Accéder aux services cloud — Neon, Railway, Vercel, S3</h2>
 
   <h3>🗄️ Neon — Voir et modifier la base de données</h3>
-  <p>Neon est ton PostgreSQL dans le cloud. Tu peux lire/écrire des données directement depuis le navigateur.</p>
+  <p>Neon est ton PostgreSQL dans le cloud. Deux façons d'y accéder :</p>
+
+  <h4>Option A — Via le navigateur (rapide, sans install)</h4>
   <div class="flow" style="flex-direction:column;align-items:flex-start;gap:6px;">
     <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">1</div><div style="font-size:.88rem;padding-top:6px;"><strong>Va sur</strong> <code>neon.tech</code> → connecte-toi avec ton compte</div></div>
     <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">2</div><div style="font-size:.88rem;padding-top:6px;">Clique sur ton projet <strong>Eolis</strong> → dans le menu gauche clique <strong>"SQL Editor"</strong></div></div>
     <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">3</div><div style="font-size:.88rem;padding-top:6px;">Tu peux écrire du SQL directement et l'exécuter avec <kbd>Ctrl+Enter</kbd></div></div>
   </div>
-  <pre><span class="c">-- Voir tous les utilisateurs</span>
-<span class="k">SELECT</span> username, role, status, created_at <span class="k">FROM</span> users;
 
-<span class="c">-- Vider les tickets de test (GARDER les utilisateurs)</span>
+  <h4>Option B — TablePlus (recommandé — interface visuelle)</h4>
+  <p>TablePlus est un outil desktop gratuit qui te laisse voir toutes tes tables, cliquer sur les lignes, éditer, supprimer visuellement — comme Excel mais pour une vraie base de données.</p>
+  <div class="flow" style="flex-direction:column;align-items:flex-start;gap:6px;">
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">1</div><div style="font-size:.88rem;padding-top:6px;">Télécharge <strong>TablePlus</strong> sur <code>tableplus.com</code> (gratuit)</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">2</div><div style="font-size:.88rem;padding-top:6px;">Nouvelle connexion → type <strong>PostgreSQL</strong></div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">3</div><div style="font-size:.88rem;padding-top:6px;">Dans le champ URL, colle directement la <code>DATABASE_URL</code> qui est dans Railway → Variables</div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start;"><div class="flow-step" style="flex-shrink:0;">4</div><div style="font-size:.88rem;padding-top:6px;">Clique <strong>Connect</strong> → tu vois toutes tes tables dans la barre gauche</div></div>
+  </div>
+
+  <h4>Requêtes SQL utiles</h4>
+  <pre><span class="c">-- Voir tous les utilisateurs et leur rôle</span>
+<span class="k">SELECT</span> first_name, last_name, email, role, status, created_at <span class="k">FROM</span> users <span class="k">ORDER BY</span> created_at <span class="k">DESC</span>;
+
+<span class="c">-- Modifier l'email d'un utilisateur spécifique</span>
+<span class="k">UPDATE</span> users <span class="k">SET</span> email=<span class="s">'nouveau@mail.com'</span> <span class="k">WHERE</span> id=<span class="s">'uuid-ici'</span>;
+
+<span class="c">-- Changer le rôle d'un utilisateur</span>
+<span class="k">UPDATE</span> users <span class="k">SET</span> role=<span class="s">'AGENT'</span> <span class="k">WHERE</span> email=<span class="s">'quelquun@mail.com'</span>;
+
+<span class="c">-- Vider les tickets de test (garde les utilisateurs)</span>
 <span class="k">DELETE FROM</span> messages;
 <span class="k">DELETE FROM</span> attachments;
 <span class="k">DELETE FROM</span> notifications;
 <span class="k">DELETE FROM</span> tickets;
 
+<span class="c">-- Tout cleaner sauf les comptes staff (garde AGENT, OPS_ADMIN, SYSTEM_ADMIN)</span>
+<span class="k">DELETE FROM</span> messages;
+<span class="k">DELETE FROM</span> attachments;
+<span class="k">DELETE FROM</span> notifications;
+<span class="k">DELETE FROM</span> tickets;
+<span class="k">DELETE FROM</span> users <span class="k">WHERE</span> role = <span class="s">'CLIENT'</span>;
+
 <span class="c">-- Remettre à zéro les crédits d'un client</span>
 <span class="k">UPDATE</span> credit_balances <span class="k">SET</span> credits_total=100, credits_used=0
 <span class="k">WHERE</span> client_id = (<span class="k">SELECT</span> id <span class="k">FROM</span> users <span class="k">WHERE</span> username=<span class="s">'Thomas.KAMGA'</span>);
+
+<span class="c">-- Voir les SYSTEM_ADMIN existants</span>
+<span class="k">SELECT</span> id, first_name, last_name, email <span class="k">FROM</span> users <span class="k">WHERE</span> role=<span class="s">'SYSTEM_ADMIN'</span>;
 
 <span class="c">-- Voir l'espace utilisé par chaque table</span>
 <span class="k">SELECT</span> relname <span class="k">AS</span> table, pg_size_pretty(pg_total_relation_size(relid)) <span class="k">AS</span> size
 <span class="k">FROM</span> pg_catalog.pg_statio_user_tables
 <span class="k">ORDER BY</span> pg_total_relation_size(relid) <span class="k">DESC</span>;</pre>
+
+  <h4>Option C — Script Python direct (depuis ton PC)</h4>
+  <p>Utile quand tu veux modifier la DB depuis ton terminal sans ouvrir le navigateur :</p>
+  <pre><span class="c"># Dans le dossier eolis-api</span>
+.venv/Scripts/python -c <span class="s">"
+from sqlalchemy import create_engine, text
+url = 'DATABASE_URL_ICI'
+engine = create_engine(url)
+with engine.connect() as conn:
+    result = conn.execute(text(\"UPDATE users SET email='nouveau@mail.com' WHERE id='uuid'\"))
+    conn.commit()
+    print('rows updated:', result.rowcount)
+"</span></pre>
+
   <div class="alert alert-warn">
     <span class="alert-icon">⚠️</span>
-    <div class="alert-body"><strong>Neon a un "branching"</strong> — tu peux créer une branche de dev séparée de la prod pour tester sans risque. Dans le menu gauche → "Branches" → "New branch".</div>
+    <div class="alert-body"><strong>Neon a un "branching"</strong> — tu peux créer une branche de dev séparée de la prod pour tester sans risque. Dans le menu gauche → "Branches" → "New branch". Très utile avant un gros nettoyage.</div>
   </div>
 
   <h3>⚙️ Railway — Voir les logs et accéder au backend</h3>
