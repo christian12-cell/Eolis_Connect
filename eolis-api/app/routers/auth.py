@@ -133,8 +133,9 @@ def login(request: Request, body: LoginRequest, background_tasks: BackgroundTask
                 db.commit()
                 raise HTTPException(status_code=423, detail="temporarily_locked:900")
 
+        remaining = 3 - user.login_failed_count
         db.commit()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="wrong_password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"wrong_password:{remaining}")
 
     # Success — reset counters
     user.login_failed_count = 0

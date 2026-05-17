@@ -155,8 +155,14 @@ export default function LoginPage({ params }: LoginPageProps) {
 
       if (detail === 'not_found') {
         setError(text.userNotFound); setErrorType('username')
-      } else if (detail === 'wrong_password') {
-        setError(text.wrongPassword); setErrorType('password')
+      } else if (detail?.startsWith('wrong_password')) {
+        const remaining = detail.includes(':') ? parseInt(detail.split(':')[1]) : null
+        const msg = remaining !== null
+          ? (locale === 'fr'
+              ? `Mot de passe incorrect. Il vous reste ${remaining} tentative${remaining > 1 ? 's' : ''} avant suspension temporaire.`
+              : `Wrong password. You have ${remaining} attempt${remaining > 1 ? 's' : ''} left before temporary suspension.`)
+          : text.wrongPassword
+        setError(msg); setErrorType('password')
       } else if (detail === 'blocked') {
         setError(text.blockedMessage); setErrorType('blocked')
       } else if (detail === 'account_locked') {
