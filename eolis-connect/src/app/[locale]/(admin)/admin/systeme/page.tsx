@@ -437,8 +437,8 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
         </form>
       </section>
 
-      {/* Maintenance */}
-      <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 max-w-4xl">
+      {/* Maintenance — visible uniquement pour le compte propriétaire */}
+      {user.username === 'Christian.DENMEKO' && <section className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 max-w-4xl">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${maintenance?.active ? 'bg-amber-50' : 'bg-emerald-50'}`}>
@@ -536,7 +536,7 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
             </button>
           </form>
         )}
-      </section>
+      </section>}
     </DashboardLayout>
   )
 }

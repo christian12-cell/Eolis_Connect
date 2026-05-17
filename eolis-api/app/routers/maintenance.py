@@ -7,6 +7,8 @@ from ..database import get_db
 from ..models import User, MaintenanceSetting
 from ..deps import require_roles
 
+OWNER_USERNAME = "Christian.DENMEKO"
+
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 
 SINGLETON_ID = "singleton"
@@ -52,11 +54,17 @@ class DeactivateBody(BaseModel):
     send_sms:   bool = False
 
 
+def _require_owner(current_user: User):
+    if current_user.username != OWNER_USERNAME:
+        raise HTTPException(status_code=403, detail="owner_only")
+
+
 @router.get("")
 def get_settings(
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
+    _require_owner(current_user)
     row = _get_or_create(db)
     return {
         "active":          row.active,
@@ -73,6 +81,7 @@ def activate(
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
+    _require_owner(current_user)
     row = _get_or_create(db)
     row.active = True
     row.message = body.message
@@ -98,6 +107,7 @@ def deactivate(
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
+    _require_owner(current_user)
     row = _get_or_create(db)
     row.active = False
     row.updated_at = datetime.utcnow()
