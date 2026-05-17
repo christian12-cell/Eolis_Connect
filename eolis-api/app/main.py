@@ -272,6 +272,26 @@ def startup():
                 high_only BOOLEAN NOT NULL DEFAULT FALSE
             )
         """))
+        # Brute-force protection columns (added 2026-05)
+        conn.execute(text(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS login_failed_count INTEGER NOT NULL DEFAULT 0"
+        ))
+        conn.execute(text(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS login_locked_until TIMESTAMP"
+        ))
+        conn.execute(text(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS login_last_ip VARCHAR(50)"
+        ))
+        # Maintenance mode table (added 2026-05)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS maintenance_settings (
+                id VARCHAR(36) PRIMARY KEY,
+                active BOOLEAN NOT NULL DEFAULT FALSE,
+                message TEXT,
+                estimated_return TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
         conn.commit()
 
     _ensure_system_admin()
