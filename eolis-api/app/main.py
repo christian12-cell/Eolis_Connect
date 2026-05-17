@@ -9,7 +9,7 @@ from sqlalchemy import text
 from .config import settings
 from .database import engine
 from .models import Base
-from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config, ws, whisper, credits, finance, push, maintenance
+from .routers import auth, tickets, messages, notifications, users, faq, ratings, admin_logs, otp, attachments, bl, sessions, ai_usage, admin_config, ws, whisper, credits, finance, push, maintenance, otp_audit
 
 app = FastAPI(title="Eolis Connect API", version="1.0.0")
 app.state.limiter = limiter
@@ -55,6 +55,7 @@ app.include_router(credits.router, prefix="/api")
 app.include_router(finance.router, prefix="/api")
 app.include_router(push.router, prefix="/api")
 app.include_router(maintenance.router, prefix="/api")
+app.include_router(otp_audit.router, prefix="/api")
 app.include_router(ws.router)  # WebSocket — no /api prefix, path is /ws/ticket/{id}
 
 

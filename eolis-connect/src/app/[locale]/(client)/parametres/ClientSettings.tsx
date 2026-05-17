@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Lock, Globe, CheckCircle, AlertCircle, Phone, RefreshCw, Eye, EyeOff, Bell } from 'lucide-react'
 import { apiFetch, apiUrl, getUser, saveSession, getToken } from '@/lib/api-client'
@@ -136,6 +136,8 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
   const [phoneVerified, setPhoneVerified] = useState(initialPhoneVerified)
   const [otpSent, setOtpSent] = useState(false)
   const [otpCode, setOtpCode] = useState('')
+  const [otpCountdown, setOtpCountdown] = useState(0)
+  const otpCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpError, setOtpError] = useState('')
   const [otpResent, setOtpResent] = useState(false)
@@ -206,6 +208,17 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
     otpExpired: isFr ? 'Code expiré ou invalide.' : 'Code expired or invalid.',
   }
 
+  function startOtpCountdown() {
+    if (otpCountdownRef.current) clearInterval(otpCountdownRef.current)
+    setOtpCountdown(30)
+    otpCountdownRef.current = setInterval(() => {
+      setOtpCountdown(c => {
+        if (c <= 1) { clearInterval(otpCountdownRef.current!); return 0 }
+        return c - 1
+      })
+    }, 1000)
+  }
+
   async function sendOtp() {
     await fetch(apiUrl('/api/auth/otp/send'), {
       method: 'POST',
@@ -215,12 +228,11 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
     setOtpSent(true)
     setOtpError('')
     setOtpCode('')
+    startOtpCountdown()
   }
 
   async function resendOtp() {
     await sendOtp()
-    setOtpResent(true)
-    setTimeout(() => setOtpResent(false), 3000)
   }
 
   async function verifyOtp(e: React.FormEvent) {
@@ -421,10 +433,21 @@ export default function ClientSettings({ locale, userId, username, initialFirstN
                         </button>
                       </form>
                       {otpError && <p className="text-xs text-red-500">{otpError}</p>}
-                      <button type="button" onClick={resendOtp} className="flex items-center gap-1 text-xs text-[#4A8FC4] hover:underline">
+                      <button type="button" onClick={resendOtp} disabled={otpCountdown > 0}
+                        className="flex items-center gap-1 text-xs text-[#4A8FC4] hover:underline disabled:opacity-40 disabled:cursor-not-allowed">
                         <RefreshCw size={10} />
-                        {otpResent ? t.codeSent : t.resend}
+                        {otpCountdown > 0
+                          ? (isFr ? `Renvoyer (${otpCountdown}s)` : `Resend (${otpCountdown}s)`)
+                          : t.resend}
                       </button>
+                      {otpCountdown === 0 && (
+                        <p className="text-[10px] text-gray-400">
+                          {isFr ? 'Code non reçu ? ' : 'Code not received? '}
+                          <a href="mailto:support@eolisconnect.online" className="text-[#4A8FC4] underline">
+                            support@eolisconnect.online
+                          </a>
+                        </p>
+                      )}
                     </>
                   )}
                 </div>

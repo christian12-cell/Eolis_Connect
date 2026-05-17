@@ -34,7 +34,7 @@ export default function LoginPage({ params }: LoginPageProps) {
 
   function startCountdown() {
     if (countdownRef.current) clearInterval(countdownRef.current)
-    setCountdown(60)
+    setCountdown(30)
     countdownRef.current = setInterval(() => {
       setCountdown(c => {
         if (c <= 1) { clearInterval(countdownRef.current!); return 0 }
@@ -327,6 +327,15 @@ export default function LoginPage({ params }: LoginPageProps) {
                   ? (locale === 'fr' ? `Renvoyer le code (${countdown}s)` : `Resend code (${countdown}s)`)
                   : (locale === 'fr' ? 'Renvoyer le code' : 'Resend code')}
               </button>
+
+              {countdown === 0 && (
+                <p className="text-center text-xs text-gray-400">
+                  {locale === 'fr' ? 'Code non reçu ? ' : 'Code not received? '}
+                  <a href="mailto:support@eolisconnect.online" className="text-[#4A8FC4] underline font-medium">
+                    support@eolisconnect.online
+                  </a>
+                </p>
+              )}
 
               <button type="button" onClick={() => { setStep('credentials'); setOtpCode(''); setError('') }}
                 className="w-full text-sm text-gray-400 hover:text-gray-600 mt-1">

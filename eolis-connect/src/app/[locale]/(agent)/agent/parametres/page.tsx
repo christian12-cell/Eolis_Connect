@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Save, Lock, User, CheckCircle, AlertCircle, Phone, RefreshCw, Globe, Eye, EyeOff, Bell } from 'lucide-react'
@@ -96,6 +96,8 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
   const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   const [otpSent, setOtpSent]       = useState(false)
+  const [otpCountdown, setOtpCountdown] = useState(0)
+  const otpCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [otpCode, setOtpCode]       = useState('')
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpError, setOtpError]     = useState('')
@@ -182,6 +184,17 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
     pwWeak:        isFr ? 'Minimum 8 caractères.' : 'Minimum 8 characters.',
   }
 
+  function startOtpCountdown() {
+    if (otpCountdownRef.current) clearInterval(otpCountdownRef.current)
+    setOtpCountdown(30)
+    otpCountdownRef.current = setInterval(() => {
+      setOtpCountdown(c => {
+        if (c <= 1) { clearInterval(otpCountdownRef.current!); return 0 }
+        return c - 1
+      })
+    }, 1000)
+  }
+
   async function sendOtp() {
     await fetch(apiUrl('/api/auth/otp/send'), {
       method: 'POST',
@@ -191,12 +204,11 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
     setOtpSent(true)
     setOtpError('')
     setOtpCode('')
+    startOtpCountdown()
   }
 
   async function resendOtp() {
     await sendOtp()
-    setOtpResent(true)
-    setTimeout(() => setOtpResent(false), 3000)
   }
 
   async function verifyOtp(e: React.FormEvent) {
@@ -368,10 +380,21 @@ export default function AgentParametresPage({ params }: { params: Promise<{ loca
                       </button>
                     </form>
                     {otpError && <p className="text-xs text-red-500">{otpError}</p>}
-                    <button type="button" onClick={resendOtp}
-                      className="flex items-center gap-1 text-xs text-[#4A8FC4] hover:underline">
-                      <RefreshCw size={10} /> {otpResent ? t.codeSent : t.resend}
+                    <button type="button" onClick={resendOtp} disabled={otpCountdown > 0}
+                      className="flex items-center gap-1 text-xs text-[#4A8FC4] hover:underline disabled:opacity-40 disabled:cursor-not-allowed">
+                      <RefreshCw size={10} />
+                      {otpCountdown > 0
+                        ? (isFr ? `Renvoyer le code (${otpCountdown}s)` : `Resend code (${otpCountdown}s)`)
+                        : t.resend}
                     </button>
+                    {otpCountdown === 0 && (
+                      <p className="text-[10px] text-gray-400">
+                        {isFr ? 'Code non reçu ? ' : 'Code not received? '}
+                        <a href="mailto:support@eolisconnect.online" className="text-[#4A8FC4] underline">
+                          support@eolisconnect.online
+                        </a>
+                      </p>
+                    )}
                   </>
                 )}
               </div>

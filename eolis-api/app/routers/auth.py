@@ -195,7 +195,7 @@ def resend_2fa(request: Request, body: dict, background_tasks: BackgroundTasks, 
         OtpCode.phone == f"2fa:{user_id}",
         OtpCode.used  == False,
         OtpCode.expires_at > datetime.utcnow(),
-        OtpCode.created_at > datetime.utcnow() - timedelta(seconds=60),
+        OtpCode.created_at > datetime.utcnow() - timedelta(seconds=30),
     ).first()
     if recent:
         raise HTTPException(status_code=429, detail="too_soon")
