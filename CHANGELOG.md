@@ -207,6 +207,23 @@ Format : `[Date] — Type — Description`
 #### Page Aide client (`(client)/aide/page.tsx`)
 - **Mail support ajouté** : `support@eolisconnect.online` affiché sous le texte "contactez le support", cliquable (lien `mailto:` → ouvre le client mail directement).
 
+#### Page Aide agent + Finance (`(agent)/agent/aide/page.tsx`, `(finance)/finance/aide/page.tsx`)
+- **Mail support ajouté** sur les deux pages : `support@eolisconnect.online` cliquable.
+
+#### Guide déblocage notifications — Page Profil client (`(client)/parametres/page.tsx`)
+- **Section Notifications push ajoutée** dans la vraie page Profil client (la page `ClientSettings.tsx` n'est pas utilisée par les clients mobiles).
+- **Guide 8 devices** : Android Chrome, Samsung Internet, Firefox, iPhone Safari, PC Chrome, Firefox, Edge, Mac Safari.
+- **Auto-détection** du navigateur/appareil via `navigator.userAgent` → device pré-sélectionné.
+- **Accordion "❓ Problème avec les notifications ?"** toujours visible, fermé par défaut. S'ouvre automatiquement si `pushPermission === 'denied'`.
+- Alerte rouge affichée dans l'accordion si bloqué.
+
+#### Guide déblocage notifications — Page Paramètres agent/OPS (`(agent)/agent/parametres/page.tsx`)
+- Même guide 8 devices avec PC-first dans la grille (agents principalement sur ordinateur).
+- `pushPermission` et `selectedDevice` states ajoutés (absents avant).
+- Toggle masqué si `denied` (inutile de proposer d'activer quand c'est bloqué OS-side).
+- Accordion "❓ Problème avec les notifications ?" identique, auto-ouvert si bloqué.
+- Page partagée par AGENT, OPS_ADMIN, SYSTEM_ADMIN, FINANCE_AGENT.
+
 ### Backend — `eolis-api`
 
 #### Compte SYSTEM_ADMIN (`main.py`)
