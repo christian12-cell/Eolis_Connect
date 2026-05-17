@@ -178,6 +178,44 @@ def verify_2fa(request: Request, body: dict, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer", "user": UserResponse.model_validate(user).model_dump(by_alias=True)}
 
 
+@router.post("/2fa/resend")
+@limiter.limit("3/minute")
+def resend_2fa(request: Request, body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    pre_token = body.get("pre_token", "")
+    user_id   = _verify_pre_auth(pre_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="invalid_pre_token")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.phone:
+        raise HTTPException(status_code=404, detail="user_not_found")
+
+    # Anti-spam: block if a code was already sent within the last 60 s
+    recent = db.query(OtpCode).filter(
+        OtpCode.phone == f"2fa:{user_id}",
+        OtpCode.used  == False,
+        OtpCode.expires_at > datetime.utcnow(),
+        OtpCode.created_at > datetime.utcnow() - timedelta(seconds=60),
+    ).first()
+    if recent:
+        raise HTTPException(status_code=429, detail="too_soon")
+
+    # Invalidate old OTPs and create a fresh one
+    db.query(OtpCode).filter(OtpCode.phone == f"2fa:{user_id}", OtpCode.used == False).delete()
+    code = f"{_random.randint(100000, 999999)}"
+    otp  = OtpCode(
+        user_id=user.id,
+        phone=f"2fa:{user.id}",
+        code=code,
+        expires_at=datetime.utcnow() + timedelta(minutes=10),
+    )
+    db.add(otp)
+    db.commit()
+    background_tasks.add_task(sms_otp, user.phone, code)
+
+    return {"pre_token": _sign_pre_auth(user.id)}
+
+
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 def register(request: Request, body: RegisterRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):

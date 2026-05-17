@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -26,8 +26,27 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [preToken, setPreToken]   = useState('')
   const [maskedPhone, setMaskedPhone] = useState('')
   const [otpCode, setOtpCode]     = useState('')
+  const [countdown, setCountdown] = useState(0)
+  const [resending, setResending] = useState(false)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
+
+  function startCountdown() {
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    setCountdown(60)
+    countdownRef.current = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { clearInterval(countdownRef.current!); return 0 }
+        return c - 1
+      })
+    }, 1000)
+  }
+
+  useEffect(() => {
+    if (step === '2fa') startCountdown()
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
+  }, [step])
 
   useEffect(() => {
     fetch(apiUrl('/api/maintenance/status'))
@@ -160,6 +179,35 @@ export default function LoginPage({ params }: LoginPageProps) {
     setLoading(false)
   }
 
+  async function handleResend2FA() {
+    setResending(true)
+    setError('')
+    try {
+      const res = await fetch(apiUrl('/api/auth/2fa/resend'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pre_token: preToken }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPreToken(data.pre_token)
+        setOtpCode('')
+        startCountdown()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        if (err.detail === 'too_soon')
+          setError(locale === 'fr' ? 'Attendez avant de renvoyer un code.' : 'Please wait before requesting a new code.')
+        else if (err.detail === 'invalid_pre_token')
+          setError(locale === 'fr' ? 'Session expirée. Reconnectez-vous.' : 'Session expired. Please log in again.')
+        else
+          setError(locale === 'fr' ? 'Échec du renvoi. Réessayez.' : 'Failed to resend. Please try again.')
+      }
+    } catch {
+      setError(locale === 'fr' ? 'Échec du renvoi. Réessayez.' : 'Failed to resend. Please try again.')
+    }
+    setResending(false)
+  }
+
   async function handle2FA(e: React.FormEvent) {
     e.preventDefault()
     if (otpCode.length !== 6) return
@@ -264,6 +312,20 @@ export default function LoginPage({ params }: LoginPageProps) {
                 {loading
                   ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {locale === 'fr' ? 'Vérification...' : 'Verifying...'}</>
                   : <>{locale === 'fr' ? 'Valider le code' : 'Verify code'}</>}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResend2FA}
+                disabled={countdown > 0 || resending}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {resending ? (
+                  <span className="w-3.5 h-3.5 border-2 border-gray-400/30 border-t-gray-500 rounded-full animate-spin" />
+                ) : null}
+                {countdown > 0
+                  ? (locale === 'fr' ? `Renvoyer le code (${countdown}s)` : `Resend code (${countdown}s)`)
+                  : (locale === 'fr' ? 'Renvoyer le code' : 'Resend code')}
               </button>
 
               <button type="button" onClick={() => { setStep('credentials'); setOtpCode(''); setError('') }}
