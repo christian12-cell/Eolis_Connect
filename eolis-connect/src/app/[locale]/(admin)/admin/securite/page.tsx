@@ -35,8 +35,8 @@ export default function SecuritePage({ params }: { params: Promise<{ locale: str
     setUser(u)
   }, [locale])
 
-  const fetchData = useCallback(() => {
-    setLoading(true)
+  const fetchData = useCallback((silent = false) => {
+    if (!silent) setLoading(true)
     apiFetch('/api/users/admin/security')
       .then(r => r.json())
       .then(d => { setEntries(Array.isArray(d) ? d : []); setLoading(false) })
@@ -50,7 +50,7 @@ export default function SecuritePage({ params }: { params: Promise<{ locale: str
     setCountdown(30)
     if (autoRef.current)  clearInterval(autoRef.current)
     if (countRef.current) clearInterval(countRef.current)
-    autoRef.current  = setInterval(() => { fetchData(); setCountdown(30) }, 30_000)
+    autoRef.current  = setInterval(() => { fetchData(true); setCountdown(30) }, 30_000)
     countRef.current = setInterval(() => setCountdown(c => c <= 1 ? 30 : c - 1), 1_000)
     return () => {
       if (autoRef.current)  clearInterval(autoRef.current)
@@ -108,7 +108,7 @@ export default function SecuritePage({ params }: { params: Promise<{ locale: str
               </svg>
               <span className="absolute text-[9px] font-bold text-gray-500 tabular-nums">{countdown}</span>
             </div>
-            <button onClick={() => { fetchData(); setCountdown(30) }}
+            <button onClick={() => { fetchData(true); setCountdown(30) }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-colors">
               <RefreshCw size={13} /> {isFr ? 'Actualiser' : 'Refresh'}
             </button>
