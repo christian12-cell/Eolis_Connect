@@ -56,6 +56,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: { fr: str
   ACTIVE:    { bg: 'bg-emerald-100',text: 'text-emerald-700',label: { fr: 'Actif',      en: 'Active'    } },
   SUSPENDED: { bg: 'bg-gray-100',   text: 'text-gray-600',   label: { fr: 'Suspendu',  en: 'Suspended' } },
   REJECTED:  { bg: 'bg-red-100',    text: 'text-red-600',    label: { fr: 'Refusé',    en: 'Rejected'  } },
+  LOCKED:    { bg: 'bg-red-100',    text: 'text-red-700',    label: { fr: 'Bloqué',    en: 'Locked'    } },
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

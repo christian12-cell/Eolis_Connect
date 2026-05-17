@@ -31,6 +31,7 @@ OWNER_USERNAME = "Christian.DENMEKO"
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
+    otp_code: str | None = None
 
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
@@ -83,13 +84,86 @@ def update_me(body: UserUpdateRequest, current_user: User = Depends(get_current_
     return current_user
 
 
+@router.post("/me/password/request-otp")
+def request_password_otp(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Send an OTP to the user's phone before allowing a password change."""
+    if not current_user.phone:
+        return {"ok": True, "skipped": True}
+    from ..models import OtpCode as OtpCodeModel
+    import random as _rand
+    key = f"pwchange:{current_user.id}"
+    db.query(OtpCodeModel).filter(OtpCodeModel.phone == key, OtpCodeModel.used == False).update({"used": True})
+    code = str(_rand.randint(100000, 999999))
+    db.add(OtpCodeModel(user_id=current_user.id, phone=key, code=code,
+                        expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)))
+    db.commit()
+    from ..sms_service import send_sms
+    background_tasks.add_task(send_sms, current_user.phone,
+        f"Eolis Connect\nCode de confirmation changement de mot de passe : {code}\nValable 10 min.")
+    return {"ok": True, "skipped": False}
+
+
 @router.patch("/me/password")
 def change_my_password(body: PasswordChangeRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not verify_password(body.current_password, current_user.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="wrong_current_password")
+    # Step-up OTP check (only if user has a phone)
+    if current_user.phone:
+        if not body.otp_code:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="otp_required")
+        from ..models import OtpCode as OtpCodeModel
+        key = f"pwchange:{current_user.id}"
+        otp = db.query(OtpCodeModel).filter(
+            OtpCodeModel.phone == key,
+            OtpCodeModel.used == False,
+            OtpCodeModel.expires_at > datetime.now(timezone.utc).replace(tzinfo=None),
+        ).order_by(OtpCodeModel.created_at.desc()).first()
+        if not otp:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="otp_expired")
+        otp.attempts += 1
+        if otp.attempts > 5:
+            db.commit()
+            raise HTTPException(status_code=429, detail="otp_too_many_attempts")
+        if otp.code != body.otp_code.strip():
+            db.commit()
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="otp_wrong")
+        otp.used = True
     current_user.password_hash = hash_password(body.new_password)
     db.commit()
     return {"ok": True}
+
+
+@router.get("/admin/security")
+def get_security_overview(
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    """Locked and failing accounts — SYSTEM_ADMIN only."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    users = db.query(User).filter(
+        (User.status == "LOCKED") |
+        (User.login_locked_until != None) |
+        (User.login_failed_count > 0)
+    ).order_by(User.updated_at.desc()).all()
+    return [
+        {
+            "id":               u.id,
+            "username":         u.username,
+            "firstName":        u.first_name,
+            "lastName":         u.last_name,
+            "role":             u.role,
+            "status":           u.status,
+            "loginFailedCount": u.login_failed_count or 0,
+            "loginLockedUntil": u.login_locked_until.isoformat() + "Z" if u.login_locked_until else None,
+            "isTempLocked":     bool(u.login_locked_until and u.login_locked_until > now),
+            "loginLastIp":      u.login_last_ip,
+        }
+        for u in users
+    ]
 
 
 @router.post("/admin/test-sms")
@@ -140,6 +214,10 @@ def update_user(
     for field, value in updates.items():
         if field in allowed:
             setattr(user, field, value)
+    # Reset lockout counters when admin reactivates an account
+    if updates.get('status') == 'ACTIVE':
+        user.login_failed_count = 0
+        user.login_locked_until = None
     db.commit()
     db.refresh(user)
     _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()

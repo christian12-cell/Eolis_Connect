@@ -21,8 +21,11 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20), default="PENDING")
     language: Mapped[str] = mapped_column(String(5), default="fr")
-    last_login_at:  Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_login_at:    Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_active_at:   Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    login_failed_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    login_locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    login_last_ip:    Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

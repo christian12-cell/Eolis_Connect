@@ -123,6 +123,11 @@ export default function ParametresPage({ params }: { params: Promise<{ locale: s
   const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false })
   const [pwSaving, setPwSaving] = useState(false)
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [pwOtpSent, setPwOtpSent]       = useState(false)
+  const [pwOtpCode, setPwOtpCode]       = useState('')
+  const [pwOtpCountdown, setPwOtpCountdown] = useState(0)
+  const [pwOtpSkipped, setPwOtpSkipped] = useState(false)
+  const pwOtpCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Push notifications
   const [pushEnabled, setPushEnabled]       = useState(false)
@@ -264,6 +269,22 @@ export default function ParametresPage({ params }: { params: Promise<{ locale: s
     }
   }
 
+  function startPwOtpCountdown() {
+    if (pwOtpCountdownRef.current) clearInterval(pwOtpCountdownRef.current)
+    setPwOtpCountdown(30)
+    pwOtpCountdownRef.current = setInterval(() => {
+      setPwOtpCountdown(c => { if (c <= 1) { clearInterval(pwOtpCountdownRef.current!); return 0 } return c - 1 })
+    }, 1000)
+  }
+
+  async function requestPwOtp() {
+    setPwMsg(null)
+    const r = await apiFetch('/api/users/me/password/request-otp', { method: 'POST' })
+    const d = await r.json().catch(() => ({}))
+    if (d.skipped) { setPwOtpSkipped(true); setPwOtpSent(true) }
+    else { setPwOtpSent(true); startPwOtpCountdown() }
+  }
+
   async function changePassword() {
     if (pwSaving) return
     setPwMsg(null)
@@ -276,11 +297,14 @@ export default function ParametresPage({ params }: { params: Promise<{ locale: s
     if (newPw.length < 6) {
       setPwMsg({ ok: false, text: isFr ? 'Minimum 6 caractères.' : 'Minimum 6 characters.' }); return
     }
+    if (!pwOtpSkipped && !pwOtpCode) {
+      setPwMsg({ ok: false, text: isFr ? 'Entrez le code de vérification.' : 'Enter the verification code.' }); return
+    }
     setPwSaving(true)
     try {
       const r = await apiFetch('/api/users/me/password', {
         method: 'PATCH',
-        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw, otpCode: pwOtpSkipped ? undefined : pwOtpCode }),
       })
       if (r.ok) {
         setPwMsg({ ok: true, text: isFr ? 'Mot de passe modifié !' : 'Password changed!' })
@@ -534,10 +558,31 @@ export default function ParametresPage({ params }: { params: Promise<{ locale: s
             {pwMsg.text}
           </p>
         )}
-        <button onClick={changePassword} disabled={pwSaving}
+        {!pwOtpSent ? (
+          <button onClick={requestPwOtp}
+            className="w-full mt-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors">
+            <Phone size={14} /> {isFr ? 'Envoyer un code de vérification' : 'Send verification code'}
+          </button>
+        ) : !pwOtpSkipped && (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs text-gray-500">{isFr ? 'Code envoyé par SMS — saisissez-le ci-dessous' : 'Code sent by SMS — enter it below'}</p>
+            <div className="flex gap-2">
+              <input type="text" inputMode="numeric" maxLength={6} value={pwOtpCode}
+                onChange={e => setPwOtpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="_ _ _ _ _ _"
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-center font-mono text-sm tracking-widest focus:outline-none focus:border-[#1B3A5C]" />
+            </div>
+            <button onClick={requestPwOtp} disabled={pwOtpCountdown > 0}
+              className="flex items-center gap-1 text-xs text-[#4A8FC4] disabled:opacity-40 disabled:cursor-not-allowed">
+              <RefreshCw size={10} />
+              {pwOtpCountdown > 0 ? (isFr ? `Renvoyer (${pwOtpCountdown}s)` : `Resend (${pwOtpCountdown}s)`) : (isFr ? 'Renvoyer le code' : 'Resend code')}
+            </button>
+          </div>
+        )}
+        <button onClick={changePassword} disabled={pwSaving || (!pwOtpSkipped && pwOtpSent && pwOtpCode.length < 6) || !pwOtpSent}
           className="w-full mt-4 py-2.5 rounded-xl bg-[#1B3A5C] text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
           <Lock size={14} />
-          {pwSaving ? '...' : (isFr ? 'Changer le mot de passe' : 'Change password')}
+          {pwSaving ? '...' : (isFr ? 'Confirmer le changement' : 'Confirm change')}
         </button>
       </div>
 

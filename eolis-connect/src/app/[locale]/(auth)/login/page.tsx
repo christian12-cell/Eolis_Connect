@@ -19,7 +19,8 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
-  const [errorType, setErrorType] = useState<'username' | 'password' | 'blocked' | 'generic' | null>(null)
+  const [errorType, setErrorType] = useState<'username' | 'password' | 'blocked' | 'generic' | 'temp_locked' | 'locked' | null>(null)
+  const [lockSecondsLeft, setLockSecondsLeft] = useState(0)
   const [isOffline, setIsOffline] = useState(false)
   // 2FA state
   const [step, setStep]           = useState<'credentials' | '2fa'>('credentials')
@@ -153,17 +154,23 @@ export default function LoginPage({ params }: LoginPageProps) {
       const detail = err.detail ?? ''
 
       if (detail === 'not_found') {
-        setError(text.userNotFound)
-        setErrorType('username')
+        setError(text.userNotFound); setErrorType('username')
       } else if (detail === 'wrong_password') {
-        setError(text.wrongPassword)
-        setErrorType('password')
+        setError(text.wrongPassword); setErrorType('password')
       } else if (detail === 'blocked') {
-        setError(text.blockedMessage)
-        setErrorType('blocked')
+        setError(text.blockedMessage); setErrorType('blocked')
+      } else if (detail === 'account_locked') {
+        setErrorType('locked')
+        setError(locale === 'fr'
+          ? 'Votre compte a été bloqué suite à plusieurs tentatives incorrectes.'
+          : 'Your account has been locked due to multiple failed attempts.')
+      } else if (detail?.startsWith('temporarily_locked:')) {
+        const secs = parseInt(detail.split(':')[1] ?? '900')
+        setLockSecondsLeft(secs)
+        setErrorType('temp_locked')
+        setError('')
       } else {
-        setError(text.genericError)
-        setErrorType('generic')
+        setError(text.genericError); setErrorType('generic')
       }
     } catch {
       if (!navigator.onLine) {
@@ -301,9 +308,29 @@ export default function LoginPage({ params }: LoginPageProps) {
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 rounded-xl px-4 py-3">
-                  <AlertCircle size={16} className="flex-shrink-0" />
-                  <span>{error}</span>
+                <div className={`flex items-start gap-2 text-sm rounded-xl px-4 py-3 ${errorType === 'locked' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-red-50 text-red-500'}`}>
+                  <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span>{error}</span>
+                    {errorType === 'locked' && (
+                      <p className="text-xs mt-1">
+                        {locale === 'fr' ? 'Contactez le support : ' : 'Contact support: '}
+                        <a href="mailto:support@eolisconnect.online" className="underline font-medium">support@eolisconnect.online</a>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {errorType === 'temp_locked' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm">
+                  <p className="font-semibold">
+                    {locale === 'fr' ? 'Compte temporairement suspendu' : 'Account temporarily suspended'}
+                  </p>
+                  <p className="text-xs mt-1">
+                    {locale === 'fr'
+                      ? `Trop de tentatives incorrectes. Réessayez dans ${Math.ceil(lockSecondsLeft / 60)} min.`
+                      : `Too many failed attempts. Try again in ${Math.ceil(lockSecondsLeft / 60)} min.`}
+                  </p>
                 </div>
               )}
 

@@ -70,7 +70,7 @@ def generate_username(first_name: str, last_name: str) -> str:
 
 
 # Roles that require 2FA at login
-_2FA_ROLES = {"FINANCE_AGENT", "SYSTEM_ADMIN"}
+_2FA_ROLES = {"FINANCE_AGENT", "SYSTEM_ADMIN", "OPS_ADMIN"}
 
 def _sign_pre_auth(user_id: str) -> str:
     """Short-lived token valid only for 2FA verification (10 min)."""
@@ -93,10 +93,53 @@ def login(request: Request, body: LoginRequest, background_tasks: BackgroundTask
     user = db.query(User).filter(User.username == body.username).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found")
+
+    # Permanent lock
+    if user.status == "LOCKED":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="account_locked")
     if user.status in ("REJECTED", "SUSPENDED"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="blocked")
+
+    now = datetime.utcnow()
+
+    # Temporary lock still active
+    if user.login_locked_until and user.login_locked_until > now:
+        secs = int((user.login_locked_until - now).total_seconds())
+        raise HTTPException(status_code=423, detail=f"temporarily_locked:{secs}")
+
+    # Store IP for audit
+    fwd = request.headers.get("x-forwarded-for")
+    ip  = fwd.split(",")[0].strip() if fwd else (str(request.client.host) if request.client else None)
+
     if not verify_password(body.password, user.password_hash):
+        # Detect round (had a previous temp lock that has now expired?)
+        had_prev_lock = user.login_locked_until is not None
+
+        user.login_failed_count = (user.login_failed_count or 0) + 1
+        user.login_last_ip = ip
+
+        if user.login_failed_count >= 3:
+            if had_prev_lock:
+                # Round 2 — permanent lock
+                user.status = "LOCKED"
+                user.login_failed_count = 0
+                user.login_locked_until = None
+                db.commit()
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="account_locked")
+            else:
+                # Round 1 — 15 min temp lock
+                user.login_locked_until = now + timedelta(minutes=15)
+                user.login_failed_count = 0
+                db.commit()
+                raise HTTPException(status_code=423, detail="temporarily_locked:900")
+
+        db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="wrong_password")
+
+    # Success — reset counters
+    user.login_failed_count = 0
+    user.login_locked_until = None
+    user.login_last_ip = ip
 
     # 2FA required for sensitive roles
     if user.role in _2FA_ROLES:
