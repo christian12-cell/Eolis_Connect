@@ -166,6 +166,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   const [expandedStrip, setExpandedStrip]   = useState<string | null>(null)
   const [scoreTooltip, setScoreTooltip]     = useState<{ agent: any; x: number; y: number } | null>(null)
   const [awardsGuideOpen, setAwardsGuideOpen] = useState(false)
+  const [criteriaOpen, setCriteriaOpen]       = useState(false)
   const [equite, setEquite] = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
@@ -506,6 +507,87 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
             </p>
           ))}
         </div>
+      </div>
+
+      {/* ── Comprendre les critères du score (accordion) ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 card-shadow mb-5 overflow-hidden">
+        <button
+          onClick={() => setCriteriaOpen(o => !o)}
+          className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-gray-50 transition-colors"
+        >
+          <span className="text-sm font-bold text-[#1B3A5C] flex items-center gap-2">
+            📐 {isFr ? 'Comprendre les critères du score' : 'Understanding score criteria'}
+          </span>
+          <ChevronDown size={15} className={`text-gray-400 transition-transform duration-200 ${criteriaOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {criteriaOpen && (
+          <div className="border-t border-gray-100 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[#1B3A5C] text-white text-xs uppercase tracking-wide">
+                  <th className="px-4 py-3 text-left w-36">{isFr ? 'Critère' : 'Criterion'}</th>
+                  <th className="px-4 py-3 text-left">{isFr ? 'Ce qu\'il mesure' : 'What it measures'}</th>
+                  <th className="px-4 py-3 text-left">{isFr ? 'Formule' : 'Formula'}</th>
+                  <th className="px-4 py-3 text-left">{isFr ? 'Si hors délai / données manquantes' : 'If over deadline / missing data'}</th>
+                  <th className="px-4 py-3 text-left">{isFr ? 'Exemple' : 'Example'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-xs">
+                {([
+                  {
+                    icon: '⭐', label: isFr ? 'Satisfaction (25%)' : 'Satisfaction (25%)',
+                    what: isFr ? 'Note moyenne laissée par les clients sur les dossiers clôturés (/5)' : 'Average rating left by clients on closed tickets (/5)',
+                    formula: '(note / 5) × 100',
+                    edge: isFr ? 'Aucun ticket noté → critère ignoré, son poids 25% est redistribué aux 3 autres' : 'No rated ticket → criterion ignored, 25% weight redistributed to the other 3',
+                    example: isFr ? '4.5/5 → 90/100 · 5/5 → 100/100' : '4.5/5 → 90/100 · 5/5 → 100/100',
+                    cls: 'text-amber-700',
+                  },
+                  {
+                    icon: '🏁', label: isFr ? 'Vitesse résolution (25%)' : 'Resolution speed (25%)',
+                    what: isFr ? 'À quelle vitesse le dossier est résolu, relativement à la cible SLA de son urgence' : 'How fast the ticket is resolved, relative to its urgency SLA target',
+                    formula: isFr ? '100 − (temps / cibleSLA) × 100  ·  par urgence, puis moyenne pondérée' : '100 − (time / SLA target) × 100  ·  per urgency, then weighted avg',
+                    edge: isFr ? 'Temps > cible SLA → score = 0 pour cette urgence (le SLA% est aussi impacté)' : 'Time > SLA target → score = 0 for that urgency (SLA% is also impacted)',
+                    example: isFr ? 'HIGH 3h cible : 30min → 83/100 · 2h → 33/100 · 4h → 0/100' : 'HIGH target 3h: 30min → 83/100 · 2h → 33/100 · 4h → 0/100',
+                    cls: 'text-blue-700',
+                  },
+                  {
+                    icon: '🎯', label: 'SLA % (30%)',
+                    what: isFr ? 'Taux de dossiers résolus dans le délai cible — question binaire : dans les délais ou pas ?' : 'Rate of tickets resolved within target — binary question: on time or not?',
+                    formula: isFr ? '(tickets dans délai / total tickets) × 100' : '(on-time tickets / total tickets) × 100',
+                    edge: isFr ? 'Aucun dossier → critère ignoré. Un dossier hors délai compte comme ❌ et fait baisser ce taux' : 'No tickets → criterion ignored. An overdue ticket counts as ❌ and lowers the rate',
+                    example: isFr ? '5 tickets, 4 dans les délais → 80/100 · 5/5 → 100/100' : '5 tickets, 4 on time → 80/100 · 5/5 → 100/100',
+                    cls: 'text-emerald-700',
+                  },
+                  {
+                    icon: '⚡', label: isFr ? '1ère réponse (20%)' : '1st response (20%)',
+                    what: isFr ? 'Temps avant le 1er message de l\'agent — même logique que la vitesse mais sur la réactivité initiale' : 'Time before agent\'s first message — same logic as speed but on initial responsiveness',
+                    formula: isFr ? '100 − (1ère réponse / (cibleSLA ÷ 3)) × 100  ·  par urgence, puis moyenne pondérée' : '100 − (1st response / (SLA target ÷ 3)) × 100  ·  per urgency, then weighted avg',
+                    edge: isFr ? 'Réponse > cible÷3 → score = 0 pour cette urgence. Aucune réponse → critère ignoré' : 'Response > target÷3 → score = 0 for that urgency. No response → criterion ignored',
+                    example: isFr ? 'HIGH cible 1h : 10min → 83/100 · 50min → 17/100 · 1h10 → 0/100' : 'HIGH target 1h: 10min → 83/100 · 50min → 17/100 · 1h10 → 0/100',
+                    cls: 'text-purple-700',
+                  },
+                ] as { icon: string; label: string; what: string; formula: string; edge: string; example: string; cls: string }[]).map((row, i) => (
+                  <tr key={row.icon} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                    <td className={`px-4 py-3 font-bold whitespace-nowrap ${row.cls}`}>{row.icon} {row.label}</td>
+                    <td className="px-4 py-3 text-gray-700 leading-relaxed max-w-xs">{row.what}</td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-gray-800 bg-gray-50 whitespace-nowrap">{row.formula}</td>
+                    <td className="px-4 py-3 text-gray-600 leading-relaxed max-w-xs">{row.edge}</td>
+                    <td className="px-4 py-3 text-gray-500 leading-relaxed whitespace-nowrap">{row.example}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-[#EDF1F7]">
+                  <td colSpan={5} className="px-4 py-2.5 text-xs text-gray-500 italic">
+                    {isFr
+                      ? '* SLA % et Vitesse résolution mesurent deux choses différentes : le SLA répond à "as-tu respecté le délai ?" (oui/non), la Vitesse répond à "à quelle vitesse ?" (0→100). Un agent peut avoir 100% SLA et une vitesse faible s\'il résout systématiquement juste avant la deadline.'
+                      : '* SLA % and Resolution speed measure different things: SLA answers "did you meet the deadline?" (yes/no), Speed answers "how fast?" (0→100). An agent can have 100% SLA and low speed if they always resolve just before the deadline.'}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* ── Guide des distinctions (accordion) ── */}
