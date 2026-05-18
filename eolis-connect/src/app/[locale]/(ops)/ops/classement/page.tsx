@@ -481,8 +481,8 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                 icon: '⚡', label: isFr ? '1ère réponse' : '1st response', pct: '20%',
                 cls: 'bg-purple-100 text-purple-800 border-purple-200',
                 title: isFr
-                  ? 'Par urgence : 100-(1ère réponse / (cible/3))×100, puis moyenne pondérée. Cibles : HIGH 1h · MEDIUM ~1h40 · LOW ~3h20'
-                  : 'Per urgency: 100-(1st response / (target/3))×100, then weighted avg. Targets: HIGH 1h · MEDIUM ~1h40 · LOW ~3h20',
+                  ? 'Par urgence : 100-(1ère réponse / Cr)×100, puis moyenne pondérée. Cr (cible réactivité) = HIGH 1h · MEDIUM ~1h40 · LOW ~3h20'
+                  : 'Per urgency: 100-(1st response / Cr)×100, then weighted avg. Cr (responsiveness target) = HIGH 1h · MEDIUM ~1h40 · LOW ~3h20',
               },
             ] as { icon: string; label: string; pct: string; cls: string; title: string }[]).map(c => (
               <span key={c.label} title={c.title} className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border cursor-help ${c.cls}`}>
@@ -500,7 +500,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
             { icon: '⭐', formula: isFr ? '(note/5) × 100' : '(rating/5) × 100' },
             { icon: '🏁', formula: isFr ? '100 − (temps/cibleSLA) × 100  ·  par urgence' : '100 − (time/SLA target) × 100  ·  per urgency' },
             { icon: '🎯', formula: isFr ? 'tickets dans délai / total × 100' : 'on-time tickets / total × 100' },
-            { icon: '⚡', formula: isFr ? '100 − (réponse/(cible÷3)) × 100  ·  par urgence' : '100 − (response/(target÷3)) × 100  ·  per urgency' },
+            { icon: '⚡', formula: isFr ? '100 − (réponse/Cr) × 100  ·  par urgence  ·  Cr = HIGH 1h · MED 1h40 · LOW 3h20' : '100 − (response/Cr) × 100  ·  per urgency  ·  Cr = HIGH 1h · MED 1h40 · LOW 3h20' },
           ]).map(r => (
             <p key={r.icon} className="text-[10px] text-gray-500 leading-tight">
               <span className="mr-1">{r.icon}</span>{r.formula}
@@ -552,18 +552,28 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                   },
                   {
                     icon: '🎯', label: 'SLA % (30%)',
-                    what: isFr ? 'Taux de dossiers résolus dans le délai cible — question binaire : dans les délais ou pas ?' : 'Rate of tickets resolved within target — binary question: on time or not?',
-                    formula: isFr ? '(tickets dans délai / total tickets) × 100' : '(on-time tickets / total tickets) × 100',
-                    edge: isFr ? 'Aucun dossier → critère ignoré. Un dossier hors délai compte comme ❌ et fait baisser ce taux' : 'No tickets → criterion ignored. An overdue ticket counts as ❌ and lowers the rate',
-                    example: isFr ? '5 tickets, 4 dans les délais → 80/100 · 5/5 → 100/100' : '5 tickets, 4 on time → 80/100 · 5/5 → 100/100',
+                    what: isFr
+                      ? 'Taux de dossiers résolus dans le délai cible. Chaque ticket est évalué individuellement (✅ ou ❌), puis le score = % de tickets ✅ sur le total.'
+                      : 'Rate of tickets resolved within the target deadline. Each ticket is evaluated individually (✅ or ❌), then score = % of ✅ tickets over total.',
+                    formula: isFr ? '(tickets ✅ dans délai / total tickets) × 100' : '(✅ on-time tickets / total tickets) × 100',
+                    edge: isFr
+                      ? 'Aucun dossier → critère ignoré. Chaque dossier hors délai fait baisser le taux progressivement (ex: 4/5 → 80, 3/5 → 60)'
+                      : 'No tickets → criterion ignored. Each overdue ticket lowers the rate gradually (e.g. 4/5 → 80, 3/5 → 60)',
+                    example: isFr ? '5/5 dans délai → 100/100 · 4/5 → 80/100 · 0/5 → 0/100' : '5/5 on time → 100/100 · 4/5 → 80/100 · 0/5 → 0/100',
                     cls: 'text-emerald-700',
                   },
                   {
                     icon: '⚡', label: isFr ? '1ère réponse (20%)' : '1st response (20%)',
-                    what: isFr ? 'Temps avant le 1er message de l\'agent — même logique que la vitesse mais sur la réactivité initiale' : 'Time before agent\'s first message — same logic as speed but on initial responsiveness',
-                    formula: isFr ? '100 − (1ère réponse / (cibleSLA ÷ 3)) × 100  ·  par urgence, puis moyenne pondérée' : '100 − (1st response / (SLA target ÷ 3)) × 100  ·  per urgency, then weighted avg',
-                    edge: isFr ? 'Réponse > cible÷3 → score = 0 pour cette urgence. Aucune réponse → critère ignoré' : 'Response > target÷3 → score = 0 for that urgency. No response → criterion ignored',
-                    example: isFr ? 'HIGH cible 1h : 10min → 83/100 · 50min → 17/100 · 1h10 → 0/100' : 'HIGH target 1h: 10min → 83/100 · 50min → 17/100 · 1h10 → 0/100',
+                    what: isFr
+                      ? 'Temps avant le 1er message de l\'agent. Même logique que la vitesse de résolution, avec une cible de réactivité Cr définie par urgence.'
+                      : 'Time before the agent\'s first message. Same logic as resolution speed, with a responsiveness target Cr defined per urgency.',
+                    formula: isFr
+                      ? '100 − (1ère réponse / Cr) × 100  ·  par urgence, puis moyenne pondérée\nCr = HIGH : 1h · MEDIUM : ~1h40 · LOW : ~3h20'
+                      : '100 − (1st response / Cr) × 100  ·  per urgency, then weighted avg\nCr = HIGH: 1h · MEDIUM: ~1h40 · LOW: ~3h20',
+                    edge: isFr
+                      ? 'Réponse > Cr → score = 0 pour cette urgence. Aucune réponse enregistrée → critère ignoré, poids redistribué'
+                      : 'Response > Cr → score = 0 for that urgency. No response recorded → criterion ignored, weight redistributed',
+                    example: isFr ? 'HIGH (Cr = 1h) : 10min → 83/100 · 50min → 17/100 · 1h10 → 0/100' : 'HIGH (Cr = 1h): 10min → 83/100 · 50min → 17/100 · 1h10 → 0/100',
                     cls: 'text-purple-700',
                   },
                 ] as { icon: string; label: string; what: string; formula: string; edge: string; example: string; cls: string }[]).map((row, i) => (
@@ -987,7 +997,7 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
           },
           {
             icon: '⚡', label: isFr ? '1ère réponse'  : '1st response',   score: a.firstRScore, w: 20,
-            formula: isFr ? 'par urgence vs cible÷3' : 'per urgency vs target÷3',
+            formula: isFr ? 'par urgence vs Cr (HIGH 1h · MED 1h40 · LOW 3h20)' : 'per urgency vs Cr (HIGH 1h · MED 1h40 · LOW 3h20)',
           },
         ]
         const top  = Math.max(8, scoreTooltip.y - 210)
