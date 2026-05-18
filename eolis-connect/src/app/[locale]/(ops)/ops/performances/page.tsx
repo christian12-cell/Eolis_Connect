@@ -334,13 +334,36 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
       .filter(t => t.satisfactionRating?.comment)
       .map(t => ({ comment: t.satisfactionRating.comment, score: t.satisfactionRating.score, ref: t.ref, date: t.updatedAt ?? t.closedAt }))
 
-    const satScore    = avgSat      !== null ? (avgSat / 5) * 100 : null
-    const speedScore  = avgRes      !== null ? Math.max(0, 100 - (avgRes    / SLA_CAP) * 100) : null
-    const slaScore    = slaGlobal   !== null ? slaGlobal : null
-    const firstRScore = avgFirstR   !== null ? Math.max(0, 100 - (avgFirstR / SLA_CAP) * 100) : null
+    // Speed score: 100-(temps/cible)×100 par urgence, pondéré par nombre de tickets
+    const speedParts = (['HIGH','MEDIUM','LOW'] as const).map(u => {
+      const uts = treated.filter(t => t.urgency === u && (t.closedAt ?? t.updatedAt))
+      const ts  = uts.map(t => (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000)
+        .filter(h => !isNaN(h) && isFinite(h) && h >= 0)
+      if (!ts.length) return null
+      const avg = ts.reduce((a, b) => a + b, 0) / ts.length
+      return { score: Math.max(0, 100 - (avg / SLA_HOURS[u]) * 100), n: ts.length }
+    }).filter(Boolean) as { score: number; n: number }[]
+    const speedN     = speedParts.reduce((s, p) => s + p.n, 0)
+    const speedScore = speedN > 0 ? speedParts.reduce((s, p) => s + p.score * p.n, 0) / speedN : null
+
+    // First response score: 100-(réponse/(cible/3))×100 par urgence, pondéré par nombre de tickets
+    const firstRParts = (['HIGH','MEDIUM','LOW'] as const).map(u => {
+      const ts = assigned.filter(t => t.urgency === u).map(getFirstResponseH).filter(h => h !== null) as number[]
+      if (!ts.length) return null
+      const avg = ts.reduce((a, b) => a + b, 0) / ts.length
+      return { score: Math.max(0, 100 - (avg / (SLA_HOURS[u] / 3)) * 100), n: ts.length }
+    }).filter(Boolean) as { score: number; n: number }[]
+    const firstRN     = firstRParts.reduce((s, p) => s + p.n, 0)
+    const firstRScore = firstRN > 0 ? firstRParts.reduce((s, p) => s + p.score * p.n, 0) / firstRN : null
+
+    const satScore = avgSat    !== null ? (avgSat / 5) * 100 : null
+    const slaScore = slaGlobal !== null ? slaGlobal          : null
+
     const cparts = ([
-      { score: satScore, weight: 0.25 }, { score: speedScore, weight: 0.25 },
-      { score: slaScore, weight: 0.30 }, { score: firstRScore, weight: 0.20 },
+      { score: satScore,    weight: 0.25 },
+      { score: speedScore,  weight: 0.25 },
+      { score: slaScore,    weight: 0.30 },
+      { score: firstRScore, weight: 0.20 },
     ] as { score: number | null; weight: number }[]).filter(c => c.score !== null) as { score: number; weight: number }[]
     const cTotal = cparts.reduce((s, c) => s + c.weight, 0)
     const composite = cparts.length > 0

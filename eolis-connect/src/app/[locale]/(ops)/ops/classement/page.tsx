@@ -107,12 +107,33 @@ function computeAgentStats(agentId: string, closedSrc: any[], allTickets: any[])
   const okSla    = slaRows.reduce((s, r) => s + r.ok, 0)
   const slaGlobal = totalSla ? Math.round(okSla / totalSla * 100) : null
 
-  // composite 0-100 : satisfaction (25%) + vitesse résolution (25%) + SLA % (30%) + 1ère réponse (20%)
-  // Si une composante est absente, son poids est redistribué proportionnellement aux autres
-  const satScore    = avgSat    !== null ? (avgSat / 5) * 100 : null
-  const speedScore  = avgTime   !== null ? Math.max(0, 100 - (avgTime   / SLA_CAP) * 100) : null
-  const slaScore    = slaGlobal !== null ? slaGlobal : null
-  const firstRScore = avgFirstR !== null ? Math.max(0, 100 - (avgFirstR / SLA_CAP) * 100) : null
+  // Speed score: 100-(temps/cible)×100 par urgence, pondéré par nombre de tickets
+  // Cibles: HIGH 3h, MEDIUM 5h, LOW 10h — si urgence absente, exclue automatiquement
+  const speedParts = (['HIGH','MEDIUM','LOW'] as const).map(u => {
+    const uts = treated.filter(t => t.urgency === u && (t.closedAt ?? t.updatedAt))
+    const ts  = uts.map(t => (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000)
+      .filter(h => !isNaN(h) && isFinite(h) && h >= 0)
+    if (!ts.length) return null
+    const avg = ts.reduce((a, b) => a + b, 0) / ts.length
+    return { score: Math.max(0, 100 - (avg / SLA_HOURS[u]) * 100), n: ts.length }
+  }).filter(Boolean) as { score: number; n: number }[]
+  const speedN     = speedParts.reduce((s, p) => s + p.n, 0)
+  const speedScore = speedN > 0 ? speedParts.reduce((s, p) => s + p.score * p.n, 0) / speedN : null
+
+  // First response score: 100-(réponse/(cible/3))×100 par urgence, pondéré par nombre de tickets
+  // Cibles 1ère réponse: HIGH 1h, MEDIUM ~1h40, LOW ~3h20 (= SLA/3)
+  const agentTickets = allTickets.filter(t => t.agentId === agentId)
+  const firstRParts  = (['HIGH','MEDIUM','LOW'] as const).map(u => {
+    const ts = agentTickets.filter(t => t.urgency === u).map(getFirstResponseH).filter(h => h !== null) as number[]
+    if (!ts.length) return null
+    const avg = ts.reduce((a, b) => a + b, 0) / ts.length
+    return { score: Math.max(0, 100 - (avg / (SLA_HOURS[u] / 3)) * 100), n: ts.length }
+  }).filter(Boolean) as { score: number; n: number }[]
+  const firstRN     = firstRParts.reduce((s, p) => s + p.n, 0)
+  const firstRScore = firstRN > 0 ? firstRParts.reduce((s, p) => s + p.score * p.n, 0) / firstRN : null
+
+  const satScore = avgSat    !== null ? (avgSat / 5) * 100 : null
+  const slaScore = slaGlobal !== null ? slaGlobal          : null
 
   const components = ([
     { score: satScore,    weight: 0.25 },
@@ -126,7 +147,7 @@ function computeAgentStats(agentId: string, closedSrc: any[], allTickets: any[])
     ? +(components.reduce((s, c) => s + c.score * (c.weight / totalWeight), 0)).toFixed(2)
     : null
 
-  return { count: treated.length, avgSat, avgTime, avgFirstR, slaGlobal, composite }
+  return { count: treated.length, avgSat, avgTime, avgFirstR, slaGlobal, composite, satScore, speedScore, slaScore, firstRScore }
 }
 
 export default function ClassementPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -429,24 +450,61 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
       )}
 
       {/* ── Encart formule du score ── */}
-      <div className="bg-[#EDF1F7] border border-[#1B3A5C]/10 rounded-2xl px-4 py-3 mb-5 flex flex-wrap items-center gap-3">
-        <span className="text-[#1B3A5C] text-sm font-bold flex-shrink-0">
-          ℹ️ {isFr ? 'Score calculé sur 4 critères' : 'Score based on 4 criteria'}
-        </span>
-        <div className="flex flex-wrap items-center gap-2">
-          {([
-            { icon: '⭐', label: isFr ? 'Satisfaction' : 'Satisfaction', pct: '25%', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
-            { icon: '🏁', label: isFr ? 'Vitesse résolution' : 'Resolution speed', pct: '25%', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
-            { icon: '🎯', label: 'SLA %', pct: '30%', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-            { icon: '⚡', label: isFr ? '1ère réponse' : '1st response', pct: '20%', cls: 'bg-purple-100 text-purple-800 border-purple-200' },
-          ] as { icon: string; label: string; pct: string; cls: string }[]).map(c => (
-            <span key={c.label} className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border ${c.cls}`}>
-              {c.icon} {c.label} <span className="font-normal opacity-60">{c.pct}</span>
-            </span>
-          ))}
-          <span className="text-xs text-gray-400 italic">
-            {isFr ? '· critère absent → poids redistribué aux autres' : '· missing criterion → weight redistributed'}
+      <div className="bg-[#EDF1F7] border border-[#1B3A5C]/10 rounded-2xl px-4 py-3 mb-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-[#1B3A5C] text-sm font-bold flex-shrink-0">
+            ℹ️ {isFr ? 'Score calculé sur 4 critères' : 'Score based on 4 criteria'}
           </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {([
+              {
+                icon: '⭐', label: isFr ? 'Satisfaction' : 'Satisfaction', pct: '25%',
+                cls: 'bg-amber-100 text-amber-800 border-amber-200',
+                title: isFr ? '(note moyenne / 5) × 100 — ex: 4.5/5 → 90/100' : '(avg rating / 5) × 100 — e.g. 4.5/5 → 90/100',
+              },
+              {
+                icon: '🏁', label: isFr ? 'Vitesse résolution' : 'Resolution speed', pct: '25%',
+                cls: 'bg-blue-100 text-blue-800 border-blue-200',
+                title: isFr
+                  ? 'Par urgence : 100-(temps moyen / cible SLA)×100, puis moyenne pondérée. Cibles : HIGH 3h · MEDIUM 5h · LOW 10h'
+                  : 'Per urgency: 100-(avg time / SLA target)×100, then weighted avg. Targets: HIGH 3h · MEDIUM 5h · LOW 10h',
+              },
+              {
+                icon: '🎯', label: 'SLA %', pct: '30%',
+                cls: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                title: isFr
+                  ? '(tickets résolus dans le délai cible / total tickets) × 100. Cibles : HIGH <3h · MEDIUM <5h · LOW <10h'
+                  : '(tickets resolved within target / total tickets) × 100. Targets: HIGH <3h · MEDIUM <5h · LOW <10h',
+              },
+              {
+                icon: '⚡', label: isFr ? '1ère réponse' : '1st response', pct: '20%',
+                cls: 'bg-purple-100 text-purple-800 border-purple-200',
+                title: isFr
+                  ? 'Par urgence : 100-(1ère réponse / (cible/3))×100, puis moyenne pondérée. Cibles : HIGH 1h · MEDIUM ~1h40 · LOW ~3h20'
+                  : 'Per urgency: 100-(1st response / (target/3))×100, then weighted avg. Targets: HIGH 1h · MEDIUM ~1h40 · LOW ~3h20',
+              },
+            ] as { icon: string; label: string; pct: string; cls: string; title: string }[]).map(c => (
+              <span key={c.label} title={c.title} className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border cursor-help ${c.cls}`}>
+                {c.icon} {c.label} <span className="font-normal opacity-60">{c.pct}</span>
+              </span>
+            ))}
+            <span className="text-xs text-gray-400 italic">
+              {isFr ? '· critère absent → poids redistribué aux autres' : '· missing criterion → weight redistributed'}
+            </span>
+          </div>
+        </div>
+        {/* Légende formules */}
+        <div className="mt-2.5 pt-2.5 border-t border-[#1B3A5C]/10 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1">
+          {([
+            { icon: '⭐', formula: isFr ? '(note/5) × 100' : '(rating/5) × 100' },
+            { icon: '🏁', formula: isFr ? '100 − (temps/cibleSLA) × 100  ·  par urgence' : '100 − (time/SLA target) × 100  ·  per urgency' },
+            { icon: '🎯', formula: isFr ? 'tickets dans délai / total × 100' : 'on-time tickets / total × 100' },
+            { icon: '⚡', formula: isFr ? '100 − (réponse/(cible÷3)) × 100  ·  par urgence' : '100 − (response/(target÷3)) × 100  ·  per urgency' },
+          ]).map(r => (
+            <p key={r.icon} className="text-[10px] text-gray-500 leading-tight">
+              <span className="mr-1">{r.icon}</span>{r.formula}
+            </p>
+          ))}
         </div>
       </div>
 
@@ -505,12 +563,12 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                     icon: '🏁',
                     name: isFr ? 'Résolution' : 'Resolution',
                     meaning: isFr
-                      ? 'Clôture ses dossiers plus vite que tous les autres agents'
-                      : 'Closes tickets faster than any other agent',
+                      ? 'Clôture ses dossiers plus vite que tous les autres agents, relativement aux cibles SLA de chaque urgence'
+                      : 'Closes tickets fastest relative to each urgency SLA target',
                     criterion: isFr
-                      ? 'Agent avec le délai moyen de résolution le plus bas (temps entre création du dossier et sa clôture).'
-                      : 'Agent with the lowest average resolution time (from ticket creation to closure).',
-                    scoreLink: isFr ? 'Critère score 25% — vitesse de résolution' : 'Score criterion 25% — resolution speed',
+                      ? 'Agent avec le score de vitesse le plus élevé. Score = 100−(temps/cible SLA)×100 par urgence, puis moyenne pondérée par le nombre de tickets. Cibles : HIGH 3h, MEDIUM 5h, LOW 10h.'
+                      : 'Agent with the highest speed score. Score = 100−(time/SLA target)×100 per urgency, then weighted avg by ticket count. Targets: HIGH 3h, MEDIUM 5h, LOW 10h.',
+                    scoreLink: isFr ? 'Critère score 25% — vitesse de résolution (relative aux cibles SLA par urgence)' : 'Score criterion 25% — resolution speed (relative to SLA targets per urgency)',
                     linkColor: 'text-blue-600',
                   },
                   {
@@ -529,12 +587,12 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
                     icon: '⚡',
                     name: isFr ? 'Rapidité' : 'Speed',
                     meaning: isFr
-                      ? 'Répond le plus rapidement quand un nouveau dossier arrive'
-                      : 'Responds fastest when a new ticket arrives',
+                      ? 'Répond le plus rapidement quand un nouveau dossier arrive, relativement aux cibles de réponse de chaque urgence'
+                      : 'Responds fastest relative to each urgency response target',
                     criterion: isFr
-                      ? 'Agent avec le temps moyen de 1ère réponse le plus bas (entre la création du dossier et son premier message).'
-                      : 'Agent with the lowest average first response time (from ticket creation to first agent message).',
-                    scoreLink: isFr ? 'Critère score 20% — réactivité initiale' : 'Score criterion 20% — initial responsiveness',
+                      ? 'Agent avec le score de 1ère réponse le plus élevé. Score = 100−(réponse/(cible÷3))×100 par urgence, puis moyenne pondérée. Cibles 1ère réponse : HIGH 1h, MEDIUM ~1h40, LOW ~3h20 (= SLA÷3).'
+                      : 'Agent with the highest 1st response score. Score = 100−(response/(target÷3))×100 per urgency, then weighted avg. Response targets: HIGH 1h, MEDIUM ~1h40, LOW ~3h20 (= SLA÷3).',
+                    scoreLink: isFr ? 'Critère score 20% — réactivité initiale (relative aux cibles par urgence)' : 'Score criterion 20% — initial responsiveness (relative to per-urgency targets)',
                     linkColor: 'text-purple-600',
                   },
                 ] as { icon: string; name: string; meaning: string; criterion: string; scoreLink: string; linkColor: string }[]).map((row, i) => (
@@ -832,43 +890,59 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
       {/* Tooltip score composite — fixed, hors du contexte overflow du tableau */}
       {scoreTooltip && (() => {
         const a = scoreTooltip.agent
-        const sat    = a.avgSat    !== null ? +(a.avgSat / 5 * 100).toFixed(1)                            : null
-        const speed  = a.avgTime   !== null ? +Math.max(0, 100 - a.avgTime   / SLA_CAP * 100).toFixed(1) : null
-        const sla    = a.slaGlobal !== null ? +a.slaGlobal.toFixed(1)                                     : null
-        const firstR = a.avgFirstR !== null ? +Math.max(0, 100 - a.avgFirstR / SLA_CAP * 100).toFixed(1) : null
         const rows = [
-          { icon: '⭐', label: isFr ? 'Satisfaction'   : 'Satisfaction',  score: sat,    w: 25 },
-          { icon: '🏁', label: isFr ? 'Vitesse résol.' : 'Resol. speed',  score: speed,  w: 25 },
-          { icon: '🎯', label: 'SLA %',                                    score: sla,    w: 30 },
-          { icon: '⚡', label: isFr ? '1ère réponse'  : '1st response',   score: firstR, w: 20 },
+          {
+            icon: '⭐', label: isFr ? 'Satisfaction'   : 'Satisfaction',  score: a.satScore,    w: 25,
+            formula: isFr ? '(note/5)×100' : '(rating/5)×100',
+          },
+          {
+            icon: '🏁', label: isFr ? 'Vitesse résol.' : 'Resol. speed',  score: a.speedScore,  w: 25,
+            formula: isFr ? 'par urgence vs cible SLA' : 'per urgency vs SLA target',
+          },
+          {
+            icon: '🎯', label: 'SLA %',                                    score: a.slaScore,    w: 30,
+            formula: isFr ? 'dans délai / total × 100' : 'on-time / total × 100',
+          },
+          {
+            icon: '⚡', label: isFr ? '1ère réponse'  : '1st response',   score: a.firstRScore, w: 20,
+            formula: isFr ? 'par urgence vs cible÷3' : 'per urgency vs target÷3',
+          },
         ]
-        const top  = Math.max(8, scoreTooltip.y - 180)
-        const left = Math.max(8, scoreTooltip.x - 240)
+        const top  = Math.max(8, scoreTooltip.y - 210)
+        const left = Math.max(8, scoreTooltip.x - 260)
         return (
           <div
             style={{ position: 'fixed', top, left, zIndex: 9999, pointerEvents: 'none' }}
-            className="w-60 bg-[#1B3A5C] text-white rounded-xl p-3 shadow-2xl"
+            className="w-64 bg-[#1B3A5C] text-white rounded-xl p-3 shadow-2xl"
           >
             <p className="text-[10px] font-bold uppercase tracking-wide text-blue-200 mb-2.5">
               {isFr ? 'Décomposition du score' : 'Score breakdown'}
             </p>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {rows.map(r => (
-                <div key={r.label} className="flex items-center justify-between">
-                  <span className="text-[11px] text-blue-100">{r.icon} {r.label}</span>
-                  <div className="flex items-center gap-2">
-                    {r.score !== null
-                      ? <span className="text-[11px] font-bold text-white">{r.score}<span className="text-blue-300 font-normal">/100</span></span>
-                      : <span className="text-[10px] text-blue-400 italic">{isFr ? 'ignoré' : 'ignored'}</span>
-                    }
-                    <span className="text-[10px] text-blue-300 w-7 text-right">{r.w}%</span>
+                <div key={r.label}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-blue-100">{r.icon} {r.label}</span>
+                    <div className="flex items-center gap-2">
+                      {r.score !== null
+                        ? <span className="text-[11px] font-bold text-white">{r.score.toFixed(1)}<span className="text-blue-300 font-normal">/100</span></span>
+                        : <span className="text-[10px] text-blue-400 italic">{isFr ? 'ignoré' : 'ignored'}</span>
+                      }
+                      <span className="text-[10px] text-blue-300 w-7 text-right">{r.w}%</span>
+                    </div>
                   </div>
+                  <p className="text-[9px] text-blue-400/70 leading-tight pl-4">{r.formula}</p>
                 </div>
               ))}
             </div>
-            <div className="border-t border-white/20 mt-3 pt-2.5 flex justify-between items-center">
-              <span className="text-[11px] text-blue-200">Composite</span>
-              <span className="text-sm font-black text-white">{a.composite?.toFixed(2)}<span className="text-blue-300 font-normal text-xs">/100</span></span>
+            <div className="border-t border-white/20 mt-3 pt-2 space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-blue-200">Composite</span>
+                <span className="text-sm font-black text-white">{a.composite?.toFixed(2)}<span className="text-blue-300 font-normal text-xs">/100</span></span>
+              </div>
+              <p className="text-[9px] text-blue-400/60 leading-tight">
+                {isFr ? 'Cibles SLA · HIGH <3h · MEDIUM <5h · LOW <10h' : 'SLA targets · HIGH <3h · MEDIUM <5h · LOW <10h'}
+              </p>
             </div>
           </div>
         )
