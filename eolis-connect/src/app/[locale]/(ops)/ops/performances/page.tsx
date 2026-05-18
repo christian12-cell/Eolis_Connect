@@ -36,7 +36,7 @@ function getFirstResponseH(ticket: any): number | null {
   const first = msgs.find(m => !CLIENT_SIDE.includes(m.senderType))
   if (!first) return null
   const h = (new Date(first.createdAt).getTime() - new Date(ticket.createdAt).getTime()) / 3600000
-  return isNaN(h) || !isFinite(h) ? null : +h.toFixed(2)
+  return isNaN(h) || !isFinite(h) || h < 0 ? null : +h.toFixed(2)
 }
 
 function getMsgCount(ticket: any): number {
@@ -294,16 +294,16 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   function computeStats(agentId: string, src: any[]) {
     const treated = src.filter(t => t.agentId === agentId)
     const scores  = treated.filter(t => t.satisfactionRating?.score).map(t => t.satisfactionRating.score)
-    const avgSat  = scores.length ? +(scores.reduce((a: number, b: number) => a + b, 0) / scores.length).toFixed(1) : null
+    const avgSat  = scores.length ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length : null
 
     const resTimes = treated.filter(t => t.closedAt ?? t.updatedAt)
       .map(t => (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000)
-      .filter(h => !isNaN(h) && isFinite(h))
-    const avgRes = resTimes.length ? +(resTimes.reduce((a, b) => a + b, 0) / resTimes.length).toFixed(1) : null
+      .filter(h => !isNaN(h) && isFinite(h) && h >= 0)
+    const avgRes = resTimes.length ? resTimes.reduce((a, b) => a + b, 0) / resTimes.length : null
 
     const assigned    = tickets.filter(t => t.agentId === agentId)
     const firstRespT  = assigned.map(getFirstResponseH).filter(h => h !== null) as number[]
-    const avgFirstR   = firstRespT.length ? +(firstRespT.reduce((a, b) => a + b, 0) / firstRespT.length).toFixed(1) : null
+    const avgFirstR   = firstRespT.length ? firstRespT.reduce((a, b) => a + b, 0) / firstRespT.length : null
 
     const msgCounts = assigned.map(getMsgCount)
     const avgMsgs   = msgCounts.length ? +(msgCounts.reduce((a, b) => a + b, 0) / msgCounts.length).toFixed(1) : null
@@ -585,7 +585,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
               diff={selPrevStats ? selStats.count - selPrevStats.count : null}
               diffLabel={selPrevStats ? `${selStats.count - selPrevStats.count > 0 ? '+' : ''}${selStats.count - selPrevStats.count} ${L.vsPrev}` : undefined} />
             <KpiCard label={L.kpi.sat}
-              value={selStats.avgSat !== null ? `${selStats.avgSat}/5` : L.noData}
+              value={selStats.avgSat !== null ? `${selStats.avgSat.toFixed(1)}/5` : L.noData}
               sub={teamStats.avgSat !== null ? `${L.vsTeam}: ${teamStats.avgSat}/5` : undefined}
               icon={<Star size={16}/>} color="amber"
               diff={selStats.avgSat !== null && teamStats.avgSat !== null ? +(selStats.avgSat - teamStats.avgSat) : null}
@@ -727,7 +727,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                         </td>
                         <td className="px-3 py-3 text-right font-bold text-gray-900">{s.count}</td>
                         <td className={`px-3 py-3 text-right font-semibold ${satColor}`}>
-                          {s.avgSat !== null ? `${s.avgSat}/5` : '—'}
+                          {s.avgSat !== null ? `${s.avgSat.toFixed(1)}/5` : '—'}
                         </td>
                         <td className="px-3 py-3 text-right text-gray-600">{fmtH(s.avgRes)}</td>
                         <td className="px-3 py-3 text-right text-gray-600">{fmtH(s.avgFirstR)}</td>
