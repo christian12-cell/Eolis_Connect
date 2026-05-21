@@ -42,6 +42,11 @@ export default function LoginPage({ params }: LoginPageProps) {
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
+  useEffect(() => {
+    const prefill = sessionStorage.getItem('eolis_prefill_username')
+    if (prefill) { setUsername(prefill); sessionStorage.removeItem('eolis_prefill_username') }
+  }, [])
+
   function startCountdown() {
     if (countdownRef.current) clearInterval(countdownRef.current)
     setCountdown(30)

@@ -416,6 +416,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
 
             {otpVerified ? (
               <Link href={`/${locale}/login`}
+                onClick={() => sessionStorage.setItem('eolis_prefill_username', createdUsername)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold bg-[#1B3A5C] text-white hover:bg-[#152d47] transition-colors">
                 {text.goLogin}
               </Link>
