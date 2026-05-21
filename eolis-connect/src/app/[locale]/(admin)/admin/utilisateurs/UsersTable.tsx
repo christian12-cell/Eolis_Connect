@@ -333,15 +333,27 @@ export default function UsersTable({ users, locale, total, page, pageSize, curre
   const [editUser, setEditUser]       = useState<User | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
   const [deleting, setDeleting]       = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const totalPages = Math.ceil(total / pageSize)
 
   async function confirmDelete() {
     if (!deleteTarget) return
     setDeleting(true)
-    await apiFetch(`/api/users/${deleteTarget.id}`, { method: 'DELETE' })
-    setDeleting(false)
-    setDeleteTarget(null)
-    onRefresh?.()
+    setDeleteError('')
+    try {
+      const res = await apiFetch(`/api/users/${deleteTarget.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setDeleteError(d.detail ?? (isFr ? 'Erreur lors de la suppression.' : 'Deletion failed.'))
+        return
+      }
+      setDeleteTarget(null)
+      onRefresh?.()
+    } catch {
+      setDeleteError(isFr ? 'Erreur réseau. Réessayez.' : 'Network error. Please retry.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const t = {
@@ -492,9 +504,12 @@ export default function UsersTable({ users, locale, total, page, pageSize, curre
                 <p className="text-xs text-gray-400 font-mono">{deleteTarget.username}</p>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-5">{t.delConfirmBody}</p>
+            <p className="text-sm text-gray-600 mb-4">{t.delConfirmBody}</p>
+            {deleteError && (
+              <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4">⚠️ {deleteError}</p>
+            )}
             <div className="flex gap-3">
-              <button onClick={() => setDeleteTarget(null)}
+              <button onClick={() => { setDeleteTarget(null); setDeleteError('') }}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 font-semibold hover:bg-gray-50 transition-colors">
                 {t.cancel}
               </button>
