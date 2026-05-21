@@ -1,7 +1,5 @@
 import time
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import resend
 from .config import settings
 
 # Logo hosted on Imgur — replace with your own CDN URL for production
@@ -10,19 +8,17 @@ SUPPORT_EMAIL = "support@eolisconnect.online"
 
 
 def _send(to: str, subject: str, html: str, retries: int = 3, backoff: float = 5.0):
-    if not settings.MAIL_ENABLED or not settings.MAIL_LOGIN or not settings.MAIL_NOREPLY_PASSWORD:
+    if not settings.MAIL_ENABLED or not settings.RESEND_API_KEY or not settings.MAIL_NOREPLY_FROM:
         return
+    resend.api_key = settings.RESEND_API_KEY
     for attempt in range(1, retries + 1):
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"]    = f"Eolis Connect <{settings.MAIL_NOREPLY_FROM}>"
-            msg["To"]      = to
-            msg.attach(MIMEText(html, "html", "utf-8"))
-            with smtplib.SMTP_SSL(settings.MAIL_SERVER, 465, timeout=30) as smtp:
-                smtp.ehlo()
-                smtp.login(settings.MAIL_LOGIN, settings.MAIL_NOREPLY_PASSWORD)
-                smtp.sendmail(settings.MAIL_NOREPLY_FROM, [to], msg.as_string())
+            resend.Emails.send({
+                "from": f"Eolis Connect <{settings.MAIL_NOREPLY_FROM}>",
+                "to": [to],
+                "subject": subject,
+                "html": html,
+            })
             print(f"[email] Sent to {to}")
             return
         except Exception as exc:
