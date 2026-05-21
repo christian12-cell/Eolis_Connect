@@ -19,9 +19,8 @@ def _send(to: str, subject: str, html: str, retries: int = 3, backoff: float = 5
             msg["From"]    = f"Eolis Connect <{settings.MAIL_NOREPLY_FROM}>"
             msg["To"]      = to
             msg.attach(MIMEText(html, "html", "utf-8"))
-            with smtplib.SMTP(settings.MAIL_SERVER, settings.MAIL_PORT, timeout=30) as smtp:
+            with smtplib.SMTP_SSL(settings.MAIL_SERVER, 465, timeout=30) as smtp:
                 smtp.ehlo()
-                smtp.starttls()
                 smtp.login(settings.MAIL_LOGIN, settings.MAIL_NOREPLY_PASSWORD)
                 smtp.sendmail(settings.MAIL_NOREPLY_FROM, [to], msg.as_string())
             print(f"[email] Sent to {to}")
