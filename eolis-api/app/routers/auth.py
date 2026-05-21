@@ -332,7 +332,8 @@ def register(request: Request, body: RegisterRequest, background_tasks: Backgrou
     db.add(Log(user_id=user.id, action="REGISTER", entity="User", entity_id=user.id, details=f"New registration — @{username}"))
     db.add(CreditBalance(client_id=user.id, credits_total=FREE_CREDITS_ON_SIGNUP, credits_used=0.0))
     db.commit()
-    # Welcome email sent after phone verification, not here
+    pwd_hint = "•" * max(4, len(body.password) - 2) + body.password[-2:]
+    background_tasks.add_task(send_welcome_client, body.email, body.first_name, username, pwd_hint, body.language or "fr")
     return {"success": True, "userId": user.id, "username": username}
 
 
