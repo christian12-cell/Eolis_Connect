@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Mic, Loader2, WifiOff, LockKeyhole } from 'lucide-react'
+import { Mic, Loader2, WifiOff, LockKeyhole, Square } from 'lucide-react'
 import { getToken } from '@/lib/api-client'
 
 interface Props {
@@ -38,6 +38,7 @@ export function VoiceRecorder({
   const analyserRef      = useRef<AnalyserNode | null>(null)
   const audioCtxRef      = useRef<AudioContext | null>(null)
   const animFrameRef     = useRef<number>(0)
+  const wakeLockRef      = useRef<WakeLockSentinel | null>(null)
 
   useEffect(() => {
     setSupported(typeof MediaRecorder !== 'undefined' && !!getSupportedMimeType())
@@ -104,10 +105,24 @@ export function VoiceRecorder({
 
   // ── Recording ────────────────────────────────────────────────────────────────
 
+  async function acquireWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+      }
+    } catch {}
+  }
+
+  function releaseWakeLock() {
+    wakeLockRef.current?.release().catch(() => {})
+    wakeLockRef.current = null
+  }
+
   async function startRecording() {
     if (recState !== 'idle') return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      await acquireWakeLock()
       const mimeType = getSupportedMimeType()
       mimeTypeRef.current = mimeType
       const mr = new MediaRecorder(stream, mimeType ? { mimeType } : {})
@@ -116,6 +131,7 @@ export function VoiceRecorder({
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
         stopWaveform()
+        releaseWakeLock()
         setRecState('transcribing')
         try {
           const blobType = mimeTypeRef.current || 'audio/webm'
@@ -151,6 +167,7 @@ export function VoiceRecorder({
   function stopRecording() {
     mediaRecorderRef.current?.stop()
     mediaRecorderRef.current = null
+    releaseWakeLock()
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -167,13 +184,18 @@ export function VoiceRecorder({
   if (recState === 'recording') {
     return (
       <button type="button" onClick={stopRecording}
-        className={`flex items-center gap-1 ${className}`}
-        title="Arrêter l'enregistrement">
-        <div className="flex items-center gap-[2px]" style={{ height: '28px' }}>
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 active:bg-red-100 transition-colors">
+        {/* Waveform */}
+        <div className="flex items-center gap-[2px]" style={{ height: '20px' }}>
           {bars.map((h, i) => (
             <div key={i} className="w-[2px] bg-red-500 rounded-full"
-              style={{ height: `${h}px`, transition: 'height 0.05s linear' }} />
+              style={{ height: `${Math.min(h, 20)}px`, transition: 'height 0.05s linear' }} />
           ))}
+        </div>
+        {/* Stop icon + label toujours visibles */}
+        <div className="flex items-center gap-1 text-red-500 flex-shrink-0">
+          <Square size={12} className="fill-red-500" />
+          <span className="text-xs font-bold">Arrêter</span>
         </div>
       </button>
     )
