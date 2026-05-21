@@ -26,6 +26,7 @@ class User(Base):
     login_failed_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     login_locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     login_last_ip:    Mapped[str | None] = mapped_column(String(50), nullable=True)
+    pwd_hint: Mapped[str | None] = mapped_column(String(30), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

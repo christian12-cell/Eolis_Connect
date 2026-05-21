@@ -299,6 +299,10 @@ def startup():
         conn.execute(text(
             "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS subject VARCHAR(100)"
         ))
+        # Temporary pwd hint for welcome email (added 2026-05)
+        conn.execute(text(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS pwd_hint VARCHAR(30)"
+        ))
         conn.commit()
 
     _ensure_system_admin()

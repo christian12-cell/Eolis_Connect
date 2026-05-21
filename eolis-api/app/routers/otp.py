@@ -6,6 +6,7 @@ from ..database import get_db
 from ..models import User, OtpCode
 from ..schemas import OtpSendRequest, OtpVerifyRequest
 from ..sms_service import sms_otp, _e164
+from ..email_service import send_welcome_client
 from typing import Optional
 
 router = APIRouter(prefix="/auth/otp", tags=["otp"])
@@ -118,7 +119,13 @@ def verify_otp(body: OtpVerifyRequest, background_tasks: BackgroundTasks, db: Se
         user.phone_verified = True
         user.login_failed_count = 0
         user.login_locked_until = None
-    db.commit()
+    if first_verification and user and user.role == "CLIENT":
+        hint = user.pwd_hint or ""
+        user.pwd_hint = None
+        db.commit()
+        background_tasks.add_task(send_welcome_client, user.email, user.first_name, user.username, hint, user.language or "fr")
+    else:
+        db.commit()
 
     return {"verified": True}
 
@@ -193,6 +200,12 @@ def phone_verify_confirm(body: dict, background_tasks: BackgroundTasks, db: Sess
     user.phone_verified = True
     user.login_failed_count = 0
     user.login_locked_until = None
-    db.commit()
+    if first_verification and user.role == "CLIENT":
+        hint = user.pwd_hint or ""
+        user.pwd_hint = None
+        db.commit()
+        background_tasks.add_task(send_welcome_client, user.email, user.first_name, user.username, hint, user.language or "fr")
+    else:
+        db.commit()
 
     return {"verified": True}
