@@ -142,6 +142,11 @@ def login(request: Request, body: LoginRequest, background_tasks: BackgroundTask
     user.login_locked_until = None
     user.login_last_ip = ip
 
+    # Block CLIENT login if phone not verified
+    if user.role == "CLIENT" and not user.phone_verified:
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="phone_not_verified")
+
     # 2FA required for sensitive roles
     if user.role in _2FA_ROLES:
         if not user.phone:
@@ -327,9 +332,7 @@ def register(request: Request, body: RegisterRequest, background_tasks: Backgrou
     db.add(Log(user_id=user.id, action="REGISTER", entity="User", entity_id=user.id, details=f"New registration — @{username}"))
     db.add(CreditBalance(client_id=user.id, credits_total=FREE_CREDITS_ON_SIGNUP, credits_used=0.0))
     db.commit()
-    pwd_hint = "●" * max(4, len(body.password) - 2) + body.password[-2:]
-    background_tasks.add_task(send_welcome_client, user.email, user.first_name, username, pwd_hint, user.language or "fr")
-    # Welcome SMS is sent after OTP verification, not here
+    # Welcome email sent after phone verification, not here
     return {"success": True, "userId": user.id, "username": username}
 
 

@@ -19,7 +19,7 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
-  const [errorType, setErrorType] = useState<'username' | 'password' | 'blocked' | 'generic' | 'temp_locked' | 'locked' | null>(null)
+  const [errorType, setErrorType] = useState<'username' | 'password' | 'blocked' | 'generic' | 'temp_locked' | 'locked' | 'phone_not_verified' | null>(null)
   const [lockSecondsLeft, setLockSecondsLeft] = useState(0)
   const lockCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [isOffline, setIsOffline] = useState(false)
@@ -197,6 +197,8 @@ export default function LoginPage({ params }: LoginPageProps) {
               : `Wrong password. You have ${remaining} attempt${remaining > 1 ? 's' : ''} left before temporary suspension.`)
           : text.wrongPassword
         setError(msg); setErrorType('password')
+      } else if (detail === 'phone_not_verified') {
+        setErrorType('phone_not_verified')
       } else if (detail === 'blocked') {
         setError(text.blockedMessage); setErrorType('blocked')
       } else if (detail === 'account_locked') {
@@ -454,6 +456,31 @@ export default function LoginPage({ params }: LoginPageProps) {
                 support@eolisconnect.online
               </a>
             </div>
+          </div>
+
+        ) : errorType === 'phone_not_verified' ? (
+          <div className="text-center py-4 space-y-5">
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto">
+              <span className="text-3xl">📱</span>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {locale === 'fr' ? 'Téléphone non vérifié' : 'Phone not verified'}
+              </h2>
+              <p className="text-sm text-gray-500 mt-2">
+                {locale === 'fr'
+                  ? 'Votre numéro de téléphone n\'a pas encore été vérifié lors de votre inscription. Veuillez le vérifier pour accéder à votre compte.'
+                  : 'Your phone number was not verified during registration. Please verify it to access your account.'}
+              </p>
+            </div>
+            <Link href={`/${locale}/register`}
+              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#1B3A5C] text-white font-bold text-sm">
+              {locale === 'fr' ? '→ Vérifier mon numéro' : '→ Verify my phone number'}
+            </Link>
+            <button type="button" onClick={() => setErrorType(null)}
+              className="w-full text-sm text-gray-400 hover:text-gray-600">
+              ← {locale === 'fr' ? 'Retour à la connexion' : 'Back to login'}
+            </button>
           </div>
 
         ) : errorType === 'temp_locked' ? (

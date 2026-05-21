@@ -14,6 +14,7 @@ export default function UtilisateursPage({ params }: { params: Promise<{ locale:
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
+  const [unverifiedOnly, setUnverifiedOnly] = useState(false)
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 15
 
@@ -34,8 +35,11 @@ export default function UtilisateursPage({ params }: { params: Promise<{ locale:
     fetchUsers()
   }, [locale])
 
+  const unverifiedCount = allUsers.filter(u => u.role === 'CLIENT' && !u.phoneVerified).length
+
   const filtered = allUsers
     .filter(u => !roleFilter || u.role === roleFilter)
+    .filter(u => !unverifiedOnly || (u.role === 'CLIENT' && !u.phoneVerified))
     .filter(u => {
       if (!search) return true
       const q = search.toLowerCase()
@@ -68,10 +72,24 @@ export default function UtilisateursPage({ params }: { params: Promise<{ locale:
         </div>
       </div>
 
-      <div className="mb-5">
+      <div className="mb-5 flex flex-wrap items-center gap-3">
         <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
           placeholder={t.search}
           className="w-full max-w-sm px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent" />
+        <button
+          onClick={() => { setUnverifiedOnly(v => !v); setPage(1) }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+            unverifiedOnly
+              ? 'bg-amber-500 border-amber-500 text-white'
+              : 'bg-white border-gray-200 text-gray-600 hover:border-amber-400'
+          }`}>
+          📱 {isFr ? 'Tél. non vérifié' : 'Unverified phone'}
+          {unverifiedCount > 0 && (
+            <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${unverifiedOnly ? 'bg-white text-amber-600' : 'bg-amber-100 text-amber-700'}`}>
+              {unverifiedCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <UsersTable

@@ -104,8 +104,8 @@ export default function RegisterPage({ params }: RegisterPageProps) {
       weak: 'Le mot de passe doit contenir au moins 8 caractères.',
       error: 'Une erreur est survenue. Réessayez.',
       emailTaken: 'Cette adresse email est déjà utilisée.',
-      successTitle: 'Compte créé ! Connectez-vous maintenant.',
-      successSub: 'Votre compte est actif. Notez votre nom d\'utilisateur avant de quitter cette page.',
+      successTitle: 'Compte créé !',
+      successSub: 'Notez votre nom d\'utilisateur et vérifiez votre téléphone pour accéder à votre compte.',
       warningOneTime: '⚠️ Cette page ne s\'affichera plus une fois que vous l\'aurez quittée.',
       yourUsername: 'Votre nom d\'utilisateur',
       usernameHint: 'Utilisez ce nom pour vous connecter à la place de votre email.',
@@ -129,8 +129,8 @@ export default function RegisterPage({ params }: RegisterPageProps) {
       weak: 'Password must contain at least 8 characters.',
       error: 'An error occurred. Please try again.',
       emailTaken: 'This email address is already in use.',
-      successTitle: 'Account created! Log in now.',
-      successSub: 'Your account is active. Save your username before leaving this page.',
+      successTitle: 'Account created!',
+      successSub: 'Save your username and verify your phone to access your account.',
       warningOneTime: '⚠️ This page will not be shown again once you leave.',
       yourUsername: 'Your username',
       usernameHint: 'Use this name to log in instead of your email.',
@@ -287,7 +287,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
             <div className="mb-4 p-4 rounded-xl bg-[#1B3A5C]/5 border-2 border-[#1B3A5C]/25">
               <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">{text.yourUsername}</p>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-2xl font-bold text-[#1B3A5C] font-mono tracking-wide break-all">{createdUsername}</p>
+                <p className="text-xl font-bold text-[#1B3A5C] font-mono tracking-wide truncate" title={createdUsername}>{createdUsername}</p>
                 <button onClick={copyUsername}
                   className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${copied ? 'bg-emerald-500 text-white' : 'bg-[#1B3A5C] text-white hover:bg-[#4A8FC4]'}`}>
                   {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -379,6 +379,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
                     <form onSubmit={verifyOtp} className="flex gap-2">
                       <input type="text" inputMode="numeric" maxLength={6} value={otpCode}
                         onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '')); setOtpError('') }}
+                        onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                         placeholder="_ _ _ _ _ _"
                         className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-center font-mono text-lg tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
                       />
