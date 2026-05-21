@@ -326,8 +326,10 @@ def delete_user(
     db.query(BLDocument).filter(BLDocument.client_id == user_id).delete()
     db.query(CreditBalance).filter(CreditBalance.client_id == user_id).delete()
 
-    # Push subscriptions (no ORM model — raw SQL)
+    # Tables without ORM model — raw SQL
     db.execute(text("DELETE FROM push_subscriptions WHERE user_id = :uid"), {"uid": user_id})
+    db.execute(text("DELETE FROM push_preferences WHERE user_id = :uid"), {"uid": user_id})
+    db.execute(text("DELETE FROM financial_audit_logs WHERE user_id = :uid"), {"uid": user_id})
 
     db.query(User).filter(User.id == user_id).delete()
     db.commit()
