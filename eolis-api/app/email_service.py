@@ -1,3 +1,4 @@
+import time
 import resend
 from .config import settings
 
@@ -6,20 +7,25 @@ LOGO_URL = "https://i.imgur.com/TdBWHcp.png"
 SUPPORT_EMAIL = "support@eolisconnect.online"
 
 
-def _send(to: str, subject: str, html: str):
+def _send(to: str, subject: str, html: str, retries: int = 3, backoff: float = 5.0):
     if not settings.MAIL_ENABLED or not settings.RESEND_API_KEY or not settings.MAIL_NOREPLY_FROM:
         return
     resend.api_key = settings.RESEND_API_KEY
-    try:
-        resend.Emails.send({
-            "from": f"Eolis Connect <{settings.MAIL_NOREPLY_FROM}>",
-            "to": [to],
-            "subject": subject,
-            "html": html,
-        })
-        print(f"[email] Sent to {to}")
-    except Exception as exc:
-        print(f"[email] Failed to send to {to}: {exc}")
+    for attempt in range(1, retries + 1):
+        try:
+            resend.Emails.send({
+                "from": f"Eolis Connect <{settings.MAIL_NOREPLY_FROM}>",
+                "to": [to],
+                "subject": subject,
+                "html": html,
+            })
+            print(f"[email] Sent to {to}")
+            return
+        except Exception as exc:
+            print(f"[email] Attempt {attempt}/{retries} failed for {to}: {exc}")
+            if attempt < retries:
+                time.sleep(backoff * attempt)
+    print(f"[email] All {retries} attempts failed for {to}")
 
 
 def _template(content: str, lang: str = "fr") -> str:
