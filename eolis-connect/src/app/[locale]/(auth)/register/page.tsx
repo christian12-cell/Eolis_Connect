@@ -330,7 +330,9 @@ export default function RegisterPage({ params }: RegisterPageProps) {
 
             <div className="mb-4 p-4 rounded-xl bg-gray-50 border border-gray-200">
               <p className="text-xs text-gray-400 mb-1 font-semibold uppercase tracking-wide">{text.yourPassword}</p>
-              <p className="text-lg tracking-widest text-gray-400">{'•'.repeat(10)}</p>
+              <p className="text-lg font-mono font-bold text-[#1B3A5C] tracking-widest">
+                {'•'.repeat(Math.max(4, form.password.length - 2))}{form.password.slice(-2)}
+              </p>
               <p className="text-xs text-gray-400 mt-1">{text.passwordHint}</p>
             </div>
 
