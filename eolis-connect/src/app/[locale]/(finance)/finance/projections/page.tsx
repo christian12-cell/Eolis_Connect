@@ -264,7 +264,7 @@ export default function ProjectionsPage({ params }: { params: Promise<{ locale: 
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{isFr ? 'Objectif bénéfice net (FCFA)' : 'Net profit target (FCFA)'}</label>
                 <input type="number" step="100" value={form.target_net_profit} onChange={e => setForm(f => ({ ...f, target_net_profit: e.target.value }))}
                   placeholder="40 000" className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
-                <p className="text-[10px] text-gray-400 mt-0.5">{isFr ? 'Revenus − Coûts IA − Charges infra' : 'Revenue − AI − Infra'}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{isFr ? 'Revenus − Coûts traitement − Charges infra' : 'Revenue − Processing − Infra'}</p>
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{isFr ? 'Objectif nouveaux clients' : 'New clients target'}</label>

@@ -213,10 +213,10 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                   color: 'bg-blue-50 text-blue-700',
                 },
                 {
-                  label: isFr ? 'Coûts réels OpenAI' : 'Actual OpenAI costs',
+                  label: isFr ? 'Coûts traitement réels' : 'Actual processing costs',
                   fcfa: fmt4(benefits.totalApiCost),
                   usd: toUsd4(benefits.totalApiCost), eur: toEur4(benefits.totalApiCost),
-                  sub: isFr ? 'Ce qu\'Eolis paie réellement' : 'What Eolis actually pays',
+                  sub: isFr ? 'Coût réel des traitements' : 'Actual cost of processing',
                   color: 'bg-red-50 text-red-600',
                 },
                 {
@@ -310,7 +310,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 {
-                  label: isFr ? 'Coût réel OpenAI' : 'Actual OpenAI cost',
+                  label: isFr ? 'Coût traitement réel' : 'Actual processing cost',
                   value: `${fmt4(data.totalFcfa ?? 0)} FCFA`,
                   sub: `$${toUsd4(data.totalFcfa ?? 0)} · €${toEur4(data.totalFcfa ?? 0)}`,
                   icon: <TrendingUp size={18} className="text-violet-600" />,
@@ -391,7 +391,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                 {/* Header legend */}
                 <div className="grid grid-cols-4 gap-2 px-5 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
                   <span>{isFr ? 'Dossier' : 'Ticket'}</span>
-                  <span className="text-right">{isFr ? 'Coût OpenAI' : 'OpenAI cost'}</span>
+                  <span className="text-right">{isFr ? 'Coût traitement' : 'Processing cost'}</span>
                   <span className="text-right">{isFr ? 'Prix client' : 'Client price'}</span>
                   <span className="text-right">{isFr ? 'Bénéfice' : 'Profit'}</span>
                 </div>
@@ -448,7 +448,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                           <div className="bg-gray-50 px-5 py-3 space-y-2 border-t border-gray-100">
                             <div className="grid grid-cols-4 gap-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wide pb-1 border-b border-gray-200">
                               <span>{isFr ? 'Opération' : 'Operation'}</span>
-                              <span className="text-right">{isFr ? 'Coût OpenAI' : 'OpenAI cost'}</span>
+                              <span className="text-right">{isFr ? 'Coût traitement' : 'Processing cost'}</span>
                               <span className="text-right">{isFr ? 'Prix client' : 'Client price'}</span>
                               <span className="text-right">{isFr ? 'Bénéfice' : 'Profit'}</span>
                             </div>
@@ -498,7 +498,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                 </div>
                 <div className="grid grid-cols-4 gap-2 px-5 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
                   <span>{isFr ? 'Client' : 'Client'}</span>
-                  <span className="text-right">{isFr ? 'Coût OpenAI' : 'OpenAI cost'}</span>
+                  <span className="text-right">{isFr ? 'Coût traitement' : 'Processing cost'}</span>
                   <span className="text-right">{isFr ? 'Prix client' : 'Client price'}</span>
                   <span className="text-right">{isFr ? 'Bénéfice' : 'Profit'}</span>
                 </div>
@@ -541,7 +541,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                           <div className="bg-gray-50 px-5 py-3 space-y-2 border-t border-gray-100">
                             <div className="grid grid-cols-4 gap-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wide pb-1 border-b border-gray-200">
                               <span>{isFr ? 'Opération' : 'Operation'}</span>
-                              <span className="text-right">{isFr ? 'Coût OpenAI' : 'OpenAI cost'}</span>
+                              <span className="text-right">{isFr ? 'Coût traitement' : 'Processing cost'}</span>
                               <span className="text-right">{isFr ? 'Prix client' : 'Client price'}</span>
                               <span className="text-right">{isFr ? 'Bénéfice' : 'Profit'}</span>
                             </div>
@@ -584,7 +584,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
               <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
                 <Zap size={32} className="text-gray-200 mx-auto mb-3" />
                 <p className="text-gray-400 text-sm">
-                  {isFr ? 'Aucune opération IA sur cette période.' : 'No AI operations for this period.'}
+                  {isFr ? 'Aucune opération sur cette période.' : 'No operations for this period.'}
                 </p>
               </div>
             )}

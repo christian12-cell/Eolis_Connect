@@ -122,7 +122,7 @@ export default function FinanceDashboardPage({ params }: { params: Promise<{ loc
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard icon={<TrendingUp size={18} className="text-emerald-600" />}  label={isFr ? 'Revenus recharges' : 'Top-up revenue'}         fcfa={data.totalRevenue}          sub={`${data.approvedCount} recharge(s)`}  color="bg-emerald-50" />
               <KpiCard icon={<DollarSign size={18} className="text-blue-600" />}     label={isFr ? 'Prix client (crédits)' : 'Client price (credits)'} fcfa={data.totalCreditsConsumed} sub={`${f2(data.totalCreditsConsumed)} cr.`} color="bg-blue-50" />
-              <KpiCard icon={<TrendingDown size={18} className="text-red-500" />}    label={isFr ? 'Coûts IA (OpenAI)' : 'AI costs (OpenAI)'}         fcfa={data.totalAiCostFcfa}       sub={`$${data.totalAiCostUsd}`}            color="bg-red-50"    precise />
+              <KpiCard icon={<TrendingDown size={18} className="text-red-500" />}    label={isFr ? 'Coûts traitement' : 'Processing costs'}            fcfa={data.totalAiCostFcfa}       sub={`$${data.totalAiCostUsd}`}            color="bg-red-50"    precise />
               <KpiCard icon={<Building2 size={18} className="text-amber-600" />}    label={isFr ? 'Charges infra' : 'Infra costs'}                   fcfa={data.totalInfraFcfa}        sub={`$${f2(data.totalInfraUsd)}`}         color="bg-amber-50" />
             </div>
 
@@ -131,7 +131,7 @@ export default function FinanceDashboardPage({ params }: { params: Promise<{ loc
               <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center gap-3">
                 <Wallet size={16} className="text-blue-500 flex-shrink-0" />
                 <p className="text-xs text-blue-700">
-                  <span className="font-bold">{data.newClientsCount}</span> {isFr ? 'nouveau(x) client(s) inscrit(s) sur la période — 100 crédits offerts chacun. Le coût réel (OpenAI) est déjà inclus dans les Coûts IA.' : 'new client(s) registered in period — 100 free credits each. The real cost (OpenAI) is already included in AI Costs.'}
+                  <span className="font-bold">{data.newClientsCount}</span> {isFr ? 'nouveau(x) client(s) inscrit(s) sur la période — 100 crédits offerts chacun. Le coût de traitement est déjà inclus dans les Coûts traitement.' : 'new client(s) registered in period — 100 free credits each. The processing cost is already included in Processing costs.'}
                 </p>
               </div>
             )}
@@ -150,7 +150,7 @@ export default function FinanceDashboardPage({ params }: { params: Promise<{ loc
                 <p className="text-2xl font-bold text-emerald-600">{f2(data.grossProfit)} <span className="text-sm font-normal text-gray-400">FCFA</span></p>
                 <p className="text-[10px] text-gray-400 font-mono mt-0.5">${toUsd(data.grossProfit)} · €{toEur(data.grossProfit)}</p>
                 <p className="text-xs text-gray-500 mt-1">{isFr ? 'Bénéfice brut' : 'Gross profit'}</p>
-                <p className="text-[10px] text-gray-400">{isFr ? 'revenus − coûts IA' : 'revenue − AI costs'}</p>
+                <p className="text-[10px] text-gray-400">{isFr ? 'revenus − coûts traitement' : 'revenue − processing costs'}</p>
               </div>
               <div className={`bg-white rounded-2xl border p-5 shadow-sm ${data.netProfit >= 0 ? 'border-violet-200' : 'border-red-200'}`}>
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${data.netProfit >= 0 ? 'bg-violet-50' : 'bg-red-50'}`}>

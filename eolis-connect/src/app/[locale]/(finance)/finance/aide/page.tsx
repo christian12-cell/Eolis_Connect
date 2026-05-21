@@ -93,26 +93,26 @@ export default function FinanceAidePage({ params }: { params: Promise<{ locale: 
           <div className="pt-4 space-y-3">
             <p className="text-sm text-gray-600">
               {isFr
-                ? 'Eolis Connect facture ses clients en crédits prépayés. 1 crédit = 1 FCFA. Les clients achètent des crédits puis les consomment pour utiliser l\'IA (extraction BL, dictée vocale). Le coût réel payé à OpenAI est très faible — la différence est le bénéfice d\'Eolis.'
-                : 'Eolis Connect bills clients in prepaid credits. 1 credit = 1 FCFA. Clients buy credits then consume them for AI features (BL extraction, voice dictation). The actual cost paid to OpenAI is very low — the difference is Eolis\'s profit.'}
+                ? 'Eolis Connect facture ses clients en crédits prépayés. 1 crédit = 1 FCFA. Les clients achètent des crédits puis les consomment pour les fonctionnalités avancées (extraction BL, dictée vocale). Le coût réel de traitement est très faible — la différence est le bénéfice d\'Eolis.'
+                : 'Eolis Connect bills clients in prepaid credits. 1 credit = 1 FCFA. Clients buy credits then consume them for advanced features (BL extraction, voice dictation). The actual processing cost is very low — the difference is Eolis\'s profit.'}
             </p>
             <div className="bg-gray-50 rounded-xl p-4 text-xs font-mono text-gray-700 space-y-1">
               <p>Client recharge → 10 000 FCFA encaissés</p>
               <p>Client utilise BL extraction → 50 crédits consommés</p>
-              <p>Eolis paie OpenAI → ~0,60 FCFA</p>
+              <p>Coût traitement → ~0,60 FCFA</p>
               <p className="text-emerald-600 font-bold">Bénéfice sur cet usage → 49,40 FCFA (98,8% marge)</p>
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                 <p className="font-bold text-emerald-700">📄 Extraction BL</p>
                 <p className="text-gray-600 mt-1">Client : 50 crédits (50 FCFA)</p>
-                <p className="text-gray-600">OpenAI : ~0,60 FCFA</p>
+                <p className="text-gray-600">Traitement : ~0,60 FCFA</p>
                 <p className="text-emerald-600 font-bold">Marge : ~98,8%</p>
               </div>
               <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
                 <p className="font-bold text-blue-700">🎙️ Dictée vocale</p>
                 <p className="text-gray-600 mt-1">Client : 10 cr./min</p>
-                <p className="text-gray-600">OpenAI : ~3,60 FCFA/min</p>
+                <p className="text-gray-600">Traitement : ~3,60 FCFA/min</p>
                 <p className="text-blue-600 font-bold">Marge : ~64%</p>
               </div>
             </div>
@@ -128,21 +128,21 @@ export default function FinanceAidePage({ params }: { params: Promise<{ locale: 
               desc={isFr ? 'L\'argent réellement encaissé sur la période. C\'est ton chiffre d\'affaires.' : 'Money actually collected in the period. This is your revenue.'} />
             <Kpi color="border-blue-200 bg-blue-50" label={isFr ? 'Prix client (crédits)' : 'Client price (credits)'}
               formula={isFr ? 'Somme des crédits consommés' : 'Sum of credits consumed'}
-              desc={isFr ? 'Valeur en FCFA de tous les usages IA des clients. Peut différer des revenus si des clients ont des crédits non utilisés.' : 'FCFA value of all client AI usage. May differ from revenue if clients have unused credits.'} />
-            <Kpi color="border-red-200 bg-red-50" label={isFr ? 'Coûts IA (OpenAI)' : 'AI costs (OpenAI)'}
-              formula={isFr ? 'Calculé automatiquement à chaque appel API' : 'Auto-calculated at every API call'}
-              desc={isFr ? 'Ce qu\'Eolis paie réellement à OpenAI. Très faible grâce au modèle par usage.' : 'What Eolis actually pays to OpenAI. Very low thanks to the pay-per-use model.'} />
+              desc={isFr ? 'Valeur en FCFA de tous les usages des clients. Peut différer des revenus si des clients ont des crédits non utilisés.' : 'FCFA value of all client usage. May differ from revenue if clients have unused credits.'} />
+            <Kpi color="border-red-200 bg-red-50" label={isFr ? 'Coûts traitement' : 'Processing costs'}
+              formula={isFr ? 'Calculé automatiquement à chaque opération' : 'Auto-calculated at every operation'}
+              desc={isFr ? 'Ce que coûte réellement chaque opération. Très faible grâce au modèle par usage.' : 'What each operation actually costs. Very low thanks to the pay-per-use model.'} />
             <Kpi color="border-amber-200 bg-amber-50" label={isFr ? 'Charges infra' : 'Infra costs'}
               formula={isFr ? 'Saisie manuelle dans Charges infra' : 'Manually entered in Infra costs'}
               desc={isFr ? 'Vercel, Railway, Neon, AWS S3, Twilio, etc. À saisir chaque mois dans la page Charges infra.' : 'Vercel, Railway, Neon, AWS S3, Twilio, etc. Enter each month in the Infra costs page.'} />
-            <Kpi color="border-blue-200 bg-blue-50" label={isFr ? 'Bénéfice sur usages IA' : 'AI usage profit'}
-              formula="Crédits consommés − Coûts OpenAI"
-              desc={isFr ? 'La marge pure sur l\'IA. C\'est ici que se trouve la vraie rentabilité d\'Eolis.' : 'The pure AI margin. This is where Eolis\'s real profitability lies.'} />
+            <Kpi color="border-blue-200 bg-blue-50" label={isFr ? 'Bénéfice sur usages' : 'Usage profit'}
+              formula={isFr ? 'Crédits consommés − Coûts traitement' : 'Credits consumed − Processing costs'}
+              desc={isFr ? 'La marge pure sur les traitements. C\'est ici que se trouve la vraie rentabilité d\'Eolis.' : 'The pure processing margin. This is where Eolis\'s real profitability lies.'} />
             <Kpi color="border-emerald-200 bg-emerald-50" label={isFr ? 'Bénéfice brut' : 'Gross profit'}
-              formula="Revenus − Coûts IA"
-              desc={isFr ? 'Ce que tu gagnes après OpenAI, avant les charges d\'infrastructure.' : 'What you earn after OpenAI, before infrastructure costs.'} />
+              formula={isFr ? 'Revenus − Coûts traitement' : 'Revenue − Processing costs'}
+              desc={isFr ? 'Ce que tu gagnes après les coûts de traitement, avant les charges d\'infrastructure.' : 'What you earn after processing costs, before infrastructure costs.'} />
             <Kpi color="border-violet-200 bg-violet-50" label={isFr ? 'Bénéfice net ⭐' : 'Net profit ⭐'}
-              formula="Revenus − Coûts IA − Charges infra"
+              formula={isFr ? 'Revenus − Coûts traitement − Charges infra' : 'Revenue − Processing costs − Infra'}
               desc={isFr ? 'Le plus important. Ce qui reste vraiment après TOUT. Vert = rentable. Rouge = à surveiller.' : 'The most important. What truly remains after EVERYTHING. Green = profitable. Red = watch out.'} />
           </div>
         </Section>

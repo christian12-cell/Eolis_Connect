@@ -79,7 +79,7 @@ export default function FinanceCharts({ rows, isFr }: Props) {
 
   const L = {
     revenue:    isFr ? 'Revenus' : 'Revenue',
-    aiCost:     isFr ? 'Coûts IA' : 'AI costs',
+    aiCost:     isFr ? 'Coûts traitement' : 'Processing costs',
     infraCost:  isFr ? 'Charges infra' : 'Infra costs',
     netProfit:  isFr ? 'Bénéfice net' : 'Net profit',
     grossProfit:isFr ? 'Bénéfice brut' : 'Gross profit',

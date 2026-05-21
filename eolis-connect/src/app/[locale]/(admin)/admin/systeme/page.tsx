@@ -235,7 +235,7 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
           {/* USD */}
           <form onSubmit={saveFcfaRate} className="bg-gray-50 rounded-2xl p-4 space-y-3">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">USD → FCFA</p>
-            <p className="text-[11px] text-gray-400">{isFr ? 'Taux opérationnel Eolis — utilisé pour les coûts OpenAI' : 'Eolis operational rate — used for OpenAI costs'}</p>
+            <p className="text-[11px] text-gray-400">{isFr ? 'Taux opérationnel Eolis — utilisé pour le calcul des coûts de traitement' : 'Eolis operational rate — used for processing cost calculation'}</p>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-gray-500">1 $ =</span>
               <input type="number" min="1" step="0.01" value={fcfaRate}

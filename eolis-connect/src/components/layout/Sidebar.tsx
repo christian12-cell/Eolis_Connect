@@ -89,7 +89,7 @@ function getNavItems(locale: string, role: string): NavItem[] {
     return [
       { label: locale === 'fr' ? 'Tableau de bord' : 'Dashboard',         href: `${base}/finance/dashboard`,   icon: <LayoutDashboard size={18} /> },
       { label: locale === 'fr' ? 'Validation crédits' : 'Credit approval', href: `${base}/finance/credits`,    icon: <Wallet size={18} /> },
-      { label: locale === 'fr' ? 'Revenus & IA' : 'Revenue & AI',          href: `${base}/finance/revenus`,    icon: <TrendingUp size={18} /> },
+      { label: locale === 'fr' ? 'Revenus & Traitements' : 'Revenue & Processing', href: `${base}/finance/revenus`, icon: <TrendingUp size={18} /> },
       { label: locale === 'fr' ? 'Charges infra' : 'Infra costs',          href: `${base}/finance/depenses`,   icon: <Building2 size={18} /> },
       { label: locale === 'fr' ? 'Rapport P&L' : 'P&L Report',             href: `${base}/finance/rapport`,    icon: <PieChart size={18} /> },
       { label: locale === 'fr' ? 'Projections' : 'Projections',            href: `${base}/finance/projections`, icon: <TrendingUp size={18} /> },

@@ -1964,8 +1964,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               </p>
               <ul className="space-y-1.5">
                 {(isFr
-                  ? ['PDF ou photo du document', 'Émis par Eagle (Europe Africa Global Line Express)', "Le formulaire sera pré-rempli automatiquement par IA"]
-                  : ['PDF or photo of the document', 'Issued by Eagle (Europe Africa Global Line Express)', 'The form will be auto-filled by AI']
+                  ? ['PDF ou photo du document', 'Émis par Eagle (Europe Africa Global Line Express)', "Le formulaire sera pré-rempli automatiquement"]
+                  : ['PDF or photo of the document', 'Issued by Eagle (Europe Africa Global Line Express)', 'The form will be auto-filled automatically']
                 ).map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm text-blue-100">
                     <div className="w-1.5 h-1.5 rounded-full bg-[#4A8FC4] flex-shrink-0" />
@@ -2020,8 +2020,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 </p>
                 <p className="text-blue-200 text-xs max-w-[240px] leading-relaxed">
                   {isFr
-                    ? "L'extraction IA nécessite une connexion internet. Reconnectez-vous pour uploader un nouveau BL."
-                    : "AI extraction requires an internet connection. Reconnect to upload a new BL."}
+                    ? "L'extraction nécessite une connexion internet. Reconnectez-vous pour uploader un nouveau BL."
+                    : "Extraction requires an internet connection. Reconnect to upload a new BL."}
                 </p>
                 {(prevBLs?.length ?? 0) > 0 && (
                   <button onClick={() => setBlStep('pick')}
@@ -2067,7 +2067,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 </div>
                 <div className="text-center">
                   <p className="text-white font-semibold text-sm mb-1">{isFr ? 'Extraction en cours...' : 'Extracting...'}</p>
-                  <p className="text-blue-200 text-xs">{isFr ? "L'IA analyse votre BL Eagle" : 'AI is analyzing your Eagle BL'}</p>
+                  <p className="text-blue-200 text-xs">{isFr ? "Analyse de votre BL Eagle en cours" : 'Analyzing your Eagle BL'}</p>
                 </div>
               </div>
             )}

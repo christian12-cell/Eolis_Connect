@@ -194,7 +194,7 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label: isFr ? 'Revenus totaux' : 'Total revenue', val: totals.revenue, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <TrendingUp size={18} className="text-emerald-600" /> },
-                { label: isFr ? 'Coûts IA totaux' : 'Total AI costs', val: totals.aiCost, color: 'text-red-500', bg: 'bg-red-50', icon: <TrendingDown size={18} className="text-red-500" />, precise: true },
+                { label: isFr ? 'Coûts traitement totaux' : 'Total processing costs', val: totals.aiCost, color: 'text-red-500', bg: 'bg-red-50', icon: <TrendingDown size={18} className="text-red-500" />, precise: true },
                 { label: isFr ? 'Charges infra' : 'Infra costs', val: totals.infraCost, color: 'text-amber-600', bg: 'bg-amber-50', icon: <TrendingDown size={18} className="text-amber-600" /> },
                 { label: isFr ? 'Bénéfice net total' : 'Total net profit', val: totals.netProfit, color: totals.netProfit >= 0 ? 'text-violet-600' : 'text-red-500', bg: totals.netProfit >= 0 ? 'bg-violet-50' : 'bg-red-50', icon: <PieChart size={18} className={totals.netProfit >= 0 ? 'text-violet-600' : 'text-red-500'} /> },
               ].map(c => (
@@ -221,7 +221,7 @@ export default function FinanceRapportPage({ params }: { params: Promise<{ local
                       <tr className="bg-[#1B3A5C] text-white text-xs">
                         <th className="px-4 py-3 text-left">{isFr ? 'Mois' : 'Month'}</th>
                         <th className="px-3 py-3 text-right">{isFr ? 'Revenus' : 'Revenue'}</th>
-                        <th className="px-3 py-3 text-right">{isFr ? 'Coûts IA' : 'AI costs'}</th>
+                        <th className="px-3 py-3 text-right">{isFr ? 'Traitement' : 'Processing'}</th>
                         <th className="px-3 py-3 text-right">{isFr ? 'Infra' : 'Infra'}</th>
                         <th className="px-3 py-3 text-right">{isFr ? 'Bén. brut' : 'Gross'}</th>
                         <th className="px-3 py-3 text-right">{isFr ? 'Bén. net' : 'Net'}</th>
