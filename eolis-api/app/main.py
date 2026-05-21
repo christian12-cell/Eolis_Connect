@@ -292,6 +292,13 @@ def startup():
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         """))
+        # Ticket mode + subject (added 2026-05)
+        conn.execute(text(
+            "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ticket_mode VARCHAR(20) NOT NULL DEFAULT 'MANUEL'"
+        ))
+        conn.execute(text(
+            "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS subject VARCHAR(100)"
+        ))
         conn.commit()
 
     _ensure_system_admin()

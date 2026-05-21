@@ -53,6 +53,8 @@ class Ticket(Base):
     code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     vessel_data: Mapped[str | None] = mapped_column(Text, nullable=True)
     bl_document_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("bl_documents.id"), nullable=True)
+    ticket_mode: Mapped[str] = mapped_column(String(20), default="MANUEL", server_default="MANUEL")
+    subject: Mapped[str | None] = mapped_column(String(100), nullable=True)
     description: Mapped[str] = mapped_column(Text)
     urgency: Mapped[str] = mapped_column(String(10), default="MEDIUM")
     status: Mapped[str] = mapped_column(String(20), default="PENDING")

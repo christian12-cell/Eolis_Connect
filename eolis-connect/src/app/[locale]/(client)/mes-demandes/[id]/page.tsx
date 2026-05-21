@@ -270,7 +270,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
 
   useEffect(() => { params.then(p => { setLocale(p.locale); setTicketId(p.id) }) }, [params])
   useEffect(() => {
-    setPremiumAccepted(localStorage.getItem('eolis_premium_accepted') === '1')
+    setPremiumAccepted(
+      localStorage.getItem('eolis_premium_accepted') === '1' ||
+      localStorage.getItem('eolis_info_premium_accepted') === '1'
+    )
     setIsOnline(navigator.onLine)
     const on  = () => setIsOnline(true)
     const off = () => setIsOnline(false)
@@ -1558,7 +1561,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                     className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors">
                     <Camera size={20} />
                   </button>
-                  {ticket?.blDocumentId && (
+                  {(ticket?.ticketMode === 'BL_PREMIUM' || ticket?.ticketMode === 'INFO_PREMIUM') && (
                     premiumAccepted
                       ? <VoiceRecorder
                           className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors"

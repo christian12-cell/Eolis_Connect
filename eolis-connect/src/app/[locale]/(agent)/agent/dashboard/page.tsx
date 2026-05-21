@@ -220,9 +220,14 @@ export default function AgentDashboardPage({ params }: { params: Promise<{ local
                     <td className="px-5 py-3"><div className={`w-3 h-3 rounded-full ${urgencyDot[ticket.urgency] ?? 'bg-gray-300'}`} /></td>
                     <td className="px-3 py-3">
                       <span className="font-mono text-xs font-bold text-gray-500">{ticket.ref}</span>
-                      {ticket.blDocumentId && (
+                      {(ticket.ticketMode === 'BL_PREMIUM' || ticket.ticketMode === 'INFO_PREMIUM') && (
                         <span className="ml-1.5 inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
                           ⚡ Premium
+                        </span>
+                      )}
+                      {(ticket.ticketMode === 'INFO_SIMPLE' || ticket.ticketMode === 'INFO_PREMIUM') && (
+                        <span className="ml-1.5 inline-flex items-center gap-0.5 bg-blue-100 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                          💬 Info
                         </span>
                       )}
                     </td>
@@ -236,9 +241,20 @@ export default function AgentDashboardPage({ params }: { params: Promise<{ local
                         {ticket.client?.language === 'en' ? '🇬🇧 EN' : '🇫🇷 FR'}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-gray-600 max-w-32">
-                      <p className="truncate">{ticket.category}</p>
-                      <p className="text-xs text-gray-400 truncate">{ticket.subcategory}</p>
+                    <td className="px-3 py-3 text-gray-600 max-w-40">
+                      {(ticket.ticketMode === 'INFO_SIMPLE' || ticket.ticketMode === 'INFO_PREMIUM') ? (
+                        <p className="truncate text-sm">
+                          {ticket.subject || (() => {
+                            const desc = (ticket.description || '').replace(/^(bonjour|bonsoir|svp|s\.v\.p\.|salut|hello|hi|j['']aimerais|je voudrais|pouvez-vous|pourriez-vous)[,\s]*/i, '').trim()
+                            return desc.slice(0, 60) + (desc.length > 60 ? '…' : '')
+                          })()}
+                        </p>
+                      ) : (
+                        <>
+                          <p className="truncate">{ticket.category}</p>
+                          <p className="text-xs text-gray-400 truncate">{ticket.subcategory}</p>
+                        </>
+                      )}
                     </td>
                     <td className="px-3 py-3"><StatusBadge status={ticket.status} locale={locale} /></td>
                     <td className="px-3 py-3 text-gray-500 text-xs whitespace-nowrap">{timeAgo(ticket.createdAt, locale)}</td>

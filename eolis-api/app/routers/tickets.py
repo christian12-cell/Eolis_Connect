@@ -7,6 +7,7 @@ from ..ws_manager import ws_manager
 from ..schemas import TicketCreateRequest, TicketUpdateRequest, TicketResponse
 from ..deps import get_current_user
 from ..config import settings
+from ..credit_service import check_credits, deduct_credits, get_or_create_balance, CREDITS_INFO_PREMIUM_OPENING
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -36,6 +37,16 @@ def list_tickets(current_user: User = Depends(get_current_user), db: Session = D
 def create_ticket(body: TicketCreateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != "CLIENT":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients only")
+
+    # Modes Info sont toujours LOW urgency
+    urgency = body.urgency
+    if body.ticket_mode in ("INFO_SIMPLE", "INFO_PREMIUM"):
+        urgency = "LOW"
+
+    # INFO_PREMIUM : vérifier et débiter 5 crédits à l'ouverture
+    if body.ticket_mode == "INFO_PREMIUM":
+        check_credits(current_user.id, CREDITS_INFO_PREMIUM_OPENING, db)
+
     ticket = Ticket(
         ref=next_ref(db),
         client_id=current_user.id,
@@ -49,12 +60,34 @@ def create_ticket(body: TicketCreateRequest, current_user: User = Depends(get_cu
         code=body.code,
         vessel_data=body.vessel_data,
         bl_document_id=body.bl_document_id,
+        ticket_mode=body.ticket_mode,
+        subject=body.subject,
         description=body.description,
-        urgency=body.urgency,
+        urgency=urgency,
         status="PENDING",
     )
     db.add(ticket)
     db.flush()
+
+    # Débit effectif 5 cr + enregistrement AIUsage pour INFO_PREMIUM
+    if body.ticket_mode == "INFO_PREMIUM":
+        from ..models import SystemConfig
+        cfg = db.query(SystemConfig).filter(SystemConfig.key == "fcfa_rate").first()
+        fcfa_rate = float(cfg.value) if cfg else 600.0
+        deduct_credits(current_user.id, CREDITS_INFO_PREMIUM_OPENING, db)
+        db.add(AIUsage(
+            client_id=current_user.id,
+            ticket_id=ticket.id,
+            type="info_premium_opening",
+            model="none",
+            input_tokens=0,
+            output_tokens=0,
+            cost_usd=0.0,
+            cost_fcfa=CREDITS_INFO_PREMIUM_OPENING,
+            fcfa_rate=fcfa_rate,
+            credits_cost=CREDITS_INFO_PREMIUM_OPENING,
+        ))
+
     # Link any pending AIUsage record for this BL to the new ticket
     if body.bl_document_id:
         pending = db.query(AIUsage).filter(
@@ -63,6 +96,7 @@ def create_ticket(body: TicketCreateRequest, current_user: User = Depends(get_cu
         ).first()
         if pending:
             pending.ticket_id = ticket.id
+
     db.add(Log(user_id=current_user.id, action="CREATE_TICKET", entity="Ticket", entity_id=ticket.id, details=ticket.ref))
     db.commit()
     db.refresh(ticket)

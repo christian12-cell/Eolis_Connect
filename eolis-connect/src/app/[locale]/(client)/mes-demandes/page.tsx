@@ -255,14 +255,27 @@ export default function MesDemandesPage({ params }: { params: Promise<{ locale: 
               className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3.5 border border-gray-100 active:scale-[0.99] transition-transform">
               <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_DOT[ticket.status] ?? 'bg-gray-300'}`} />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                   <span className="text-[10px] font-mono font-bold text-gray-400">{ticket.ref}</span>
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[ticket.status] ?? 'bg-gray-100 text-gray-500'}`}>
                     {statusLabel[ticket.status] ?? ticket.status}
                   </span>
+                  {(ticket.ticketMode === 'BL_PREMIUM' || ticket.ticketMode === 'INFO_PREMIUM') && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">⚡ Premium</span>
+                  )}
+                  {(ticket.ticketMode === 'INFO_SIMPLE' || ticket.ticketMode === 'INFO_PREMIUM') && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">💬 Info</span>
+                  )}
                 </div>
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {ticket.category}{ticket.subcategory ? ` — ${ticket.subcategory}` : ''}
+                  {(() => {
+                    if (ticket.subject) return ticket.subject
+                    if (ticket.ticketMode === 'INFO_SIMPLE' || ticket.ticketMode === 'INFO_PREMIUM') {
+                      const desc = (ticket.description || '').replace(/^(bonjour|bonsoir|svp|s\.v\.p\.|salut|hello|hi|j['']aimerais|je voudrais|pouvez-vous|pourriez-vous)[,\s]*/i, '').trim()
+                      return desc ? desc.slice(0, 80) + (desc.length > 80 ? '…' : '') : ticket.category
+                    }
+                    return ticket.category + (ticket.subcategory ? ` — ${ticket.subcategory}` : '')
+                  })()}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">{formatDate(ticket.createdAt, locale)}</p>
               </div>

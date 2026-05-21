@@ -261,7 +261,11 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   const [pendingOffline, setPendingOffline]   = useState(false)
   const [pendingHadFiles, setPendingHadFiles] = useState(false)
 
-  const [pageMode, setPageMode]         = useState<null | 'manual' | 'bl'>(null)
+  const [pageMode, setPageMode]         = useState<null | 'manual' | 'bl' | 'info-simple' | 'info-premium'>(null)
+  const [tier, setTier]                 = useState<null | 'simple' | 'premium'>(null)
+  const [infoStep, setInfoStep]         = useState<'form' | 'recap'>('form')
+  const [infoSubject, setInfoSubject]   = useState('')
+  const [showInfoPremiumPopup, setShowInfoPremiumPopup] = useState(false)
   const [blStep, setBlStep]             = useState<'pick' | 'upload' | 'review' | 'category' | 'describe' | 'recap'>('pick')
   const [blScanMode, setBlScanMode]     = useState(false)
   const [blUploading, setBlUploading]   = useState(false)
@@ -752,6 +756,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         code:           isMultiSeparate ? undefined : (form.code.trim() || undefined),
         vesselData,
         blDocumentId:   blDocumentId || undefined,
+        ticketMode:     pageMode === 'bl' ? 'BL_PREMIUM' : 'MANUEL',
         description,
         urgency: getUrgency(finalCategory, finalSubcat),
       }
@@ -801,6 +806,44 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         }
         // Lier les enregistrements voix (description step) au ticket créé
         if (data.id) {
+          apiFetch(`/api/ai-usage/link-to-ticket/${data.id}`, { method: 'POST' }).catch(() => {})
+        }
+        setSuccess({ ref: data.ref ?? '', id: data.id ?? '' })
+      }
+    } catch { /* ignore */ }
+    setSubmitting(false)
+  }
+
+  async function submitInfo() {
+    setSubmitting(true)
+    try {
+      const ticketMode = pageMode === 'info-premium' ? 'INFO_PREMIUM' : 'INFO_SIMPLE'
+      const body: Record<string, unknown> = {
+        category:    isFr ? 'Demande d\'information' : 'Information request',
+        ticketMode,
+        subject:     infoSubject.trim() || undefined,
+        description: form.description,
+        urgency:     'LOW',
+      }
+
+      if (!navigator.onLine) {
+        const storedFiles = await Promise.all(files.map(f => fileToStored(f)))
+        await offlineDb.add({ type: 'CREATE_TICKET', payload: body, files: storedFiles })
+        setPendingHadFiles(storedFiles.length > 0)
+        setPendingOffline(true)
+        setSubmitting(false)
+        return
+      }
+
+      const res = await apiFetch('/api/tickets', { method: 'POST', body: JSON.stringify(body) })
+      if (res.ok) {
+        const data = await res.json()
+        if (files.length > 0) {
+          const fd = new FormData()
+          files.forEach(f => fd.append('files', f))
+          await apiUpload(`/api/tickets/${data.id}/attachments`, fd).catch(() => {})
+        }
+        if (data.id && pageMode === 'info-premium') {
           apiFetch(`/api/ai-usage/link-to-ticket/${data.id}`, { method: 'POST' }).catch(() => {})
         }
         setSuccess({ ref: data.ref ?? '', id: data.id ?? '' })
@@ -1136,114 +1179,640 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
   // ── Mode selection ────────────────────────────────────────────────────────────
 
   if (!pageMode) {
-    const hasEnoughCredits = creditsRemaining === null || creditsRemaining >= 50
-    return (
-      <MobileLayout locale={locale} title={t.title} showBack>
-        <div className="space-y-4 pt-2">
+    const hasEnoughForBL   = creditsRemaining === null || creditsRemaining >= 50
+    const hasEnoughForInfo = creditsRemaining === null || creditsRemaining >= 5
 
-          {/* Solde de crédits */}
-          {creditsRemaining !== null && (
-            <div className={`flex items-center justify-between rounded-2xl px-4 py-3 border ${
-              hasEnoughCredits
-                ? 'bg-white/10 border-white/15'
-                : 'bg-red-500/15 border-red-400/30'
-            }`}>
-              <div className="flex items-center gap-2">
-                <Zap size={15} className={hasEnoughCredits ? 'text-amber-300' : 'text-red-300'} />
-                <p className="text-sm text-white">
-                  {isFr ? 'Solde :' : 'Balance:'}
-                  <span className="font-bold ml-1">{Math.round(creditsRemaining ?? 0)} crédits</span>
-                </p>
-              </div>
-              {!hasEnoughCredits && (
-                <button
-                  onClick={() => router.push(`/${locale}/recharger`)}
-                  className="text-xs font-bold text-red-300 underline">
-                  {isFr ? 'Recharger' : 'Top up'}
-                </button>
-              )}
-            </div>
-          )}
-
-          <p className="text-sm text-blue-100 text-center">
-            {isFr ? 'Comment souhaitez-vous créer votre demande ?' : 'How would you like to create your request?'}
+    const CreditsBar = () => creditsRemaining !== null ? (
+      <div className={`flex items-center justify-between rounded-2xl px-4 py-3 border ${
+        creditsRemaining > 0 ? 'bg-white/10 border-white/15' : 'bg-red-500/15 border-red-400/30'
+      }`}>
+        <div className="flex items-center gap-2">
+          <Zap size={15} className={creditsRemaining > 0 ? 'text-amber-300' : 'text-red-300'} />
+          <p className="text-sm text-white">
+            {isFr ? 'Solde :' : 'Balance:'}
+            <span className="font-bold ml-1">{Math.round(creditsRemaining)} crédits</span>
           </p>
-
-          {/* Mode manuel — gratuit */}
-          <button onClick={() => setPageMode('manual')}
-            className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                <FileText size={24} className="text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-base font-bold text-white mb-1">
-                    {isFr ? 'Saisie manuelle' : 'Manual entry'}
-                  </p>
-                  <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
-                    {isFr ? 'Gratuit' : 'Free'}
-                  </span>
-                </div>
-                <p className="text-sm text-blue-100 leading-relaxed">
-                  {isFr ? 'Remplissez le formulaire étape par étape' : 'Fill in the form step by step'}
-                </p>
-              </div>
-            </div>
+        </div>
+        {creditsRemaining <= 0 && (
+          <button onClick={() => router.push(`/${locale}/recharger`)}
+            className="text-xs font-bold text-red-300 underline">
+            {isFr ? 'Recharger' : 'Top up'}
           </button>
+        )}
+      </div>
+    ) : null
 
-          {/* Mode BL — 50 crédits */}
-          <button onClick={enterBLMode}
-            className={`w-full rounded-2xl p-5 text-left active:scale-[0.99] transition-all ${
-              hasEnoughCredits
-                ? 'bg-white/10 border-2 border-[#4A8FC4]/60'
-                : 'bg-white/5 border-2 border-red-400/40 opacity-80'
-            }`}>
-            <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                hasEnoughCredits ? 'bg-[#4A8FC4]/30' : 'bg-red-500/20'
+    // ── Level 1: Simple vs Premium ──
+    if (tier === null) {
+      return (
+        <MobileLayout locale={locale} title={t.title} showBack>
+          <div className="space-y-4 pt-2">
+            <CreditsBar />
+            <p className="text-sm text-blue-100 text-center">
+              {isFr ? 'Choisissez votre mode de demande' : 'Choose your request mode'}
+            </p>
+
+            {/* Simple */}
+            <button onClick={() => setTier('simple')}
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <FileText size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-base font-bold text-white">{isFr ? 'Simple' : 'Simple'}</p>
+                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+                      {isFr ? 'Gratuit' : 'Free'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'Formulaire manuel avec BL, ou question libre sans document'
+                      : 'Manual form with BL, or free question without document'}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Premium */}
+            <button onClick={() => setTier('premium')}
+              className="w-full bg-white/10 border-2 border-[#4A8FC4]/60 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-[#4A8FC4]/30 flex items-center justify-center flex-shrink-0">
+                  <Zap size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-base font-bold text-white">Premium ⚡</p>
+                    <span className="text-[10px] font-bold text-[#4A8FC4] bg-[#4A8FC4]/20 px-2 py-0.5 rounded-full">
+                      {isFr ? 'À partir de 5 cr' : 'From 5 cr'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'IA · Voice · Sans limite · Priorité agent'
+                      : 'AI · Voice · No limit · Agent priority'}
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
+    // ── Level 2: Simple → Manuel / Info ──
+    if (tier === 'simple') {
+      return (
+        <MobileLayout locale={locale} title={isFr ? 'Mode Simple' : 'Simple Mode'} showBack>
+          <div className="space-y-4 pt-2">
+            <CreditsBar />
+            <p className="text-sm text-blue-100 text-center">
+              {isFr ? 'Quel type de demande ?' : 'What type of request?'}
+            </p>
+
+            {/* Manuel */}
+            <button onClick={() => setPageMode('manual')}
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <FileText size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-base font-bold text-white">{isFr ? 'Manuel' : 'Manual'}</p>
+                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+                      {isFr ? 'Gratuit' : 'Free'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'Formulaire complet avec BL, équipement et logistique'
+                      : 'Full form with BL, equipment and logistics'}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Info Simple */}
+            <button onClick={() => { setPageMode('info-simple'); setInfoStep('form') }}
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Mic size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-base font-bold text-white">{isFr ? 'Demande d\'info' : 'Information request'}</p>
+                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+                      {isFr ? 'Gratuit' : 'Free'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'Une question rapide, sans BL ni équipement'
+                      : 'A quick question, without BL or equipment'}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button onClick={() => setTier(null)}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
+              ← {isFr ? 'Retour' : 'Back'}
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
+    // ── Level 2: Premium → Upload BL / Info Premium ──
+    if (tier === 'premium') {
+      return (
+        <MobileLayout locale={locale} title="Premium ⚡" showBack>
+          <div className="space-y-4 pt-2">
+            <CreditsBar />
+            <p className="text-sm text-blue-100 text-center">
+              {isFr ? 'Quel type de demande Premium ?' : 'What type of Premium request?'}
+            </p>
+
+            {/* Upload BL */}
+            <button onClick={enterBLMode}
+              className={`w-full rounded-2xl p-5 text-left active:scale-[0.99] transition-all ${
+                hasEnoughForBL
+                  ? 'bg-white/10 border-2 border-[#4A8FC4]/60'
+                  : 'bg-white/5 border-2 border-red-400/40 opacity-80'
               }`}>
-                <Upload size={24} className="text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-base font-bold text-white">
-                    {isFr ? 'Upload BL Eagle' : 'Upload Eagle BL'}
-                  </p>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    hasEnoughCredits
-                      ? 'text-[#4A8FC4] bg-[#4A8FC4]/20'
-                      : 'text-red-300 bg-red-400/20'
-                  }`}>
-                    ⚡ 50 crédits
-                  </span>
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  hasEnoughForBL ? 'bg-[#4A8FC4]/30' : 'bg-red-500/20'
+                }`}>
+                  <Upload size={24} className="text-white" />
                 </div>
-                <p className="text-sm text-blue-100 leading-relaxed">
-                  {isFr
-                    ? 'Importez votre Booking Confirmation pour remplissage automatique'
-                    : 'Import your Booking Confirmation for automatic filling'}
-                </p>
-                {!hasEnoughCredits && (
-                  <p className="text-xs text-red-300 font-semibold mt-1.5">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-base font-bold text-white">⚡ {isFr ? 'Upload BL Eagle' : 'Upload Eagle BL'}</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      hasEnoughForBL ? 'text-[#4A8FC4] bg-[#4A8FC4]/20' : 'text-red-300 bg-red-400/20'
+                    }`}>50 crédits</span>
+                  </div>
+                  <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? `Crédits insuffisants — il vous en faut 50, vous en avez ${Math.round(creditsRemaining ?? 0)}`
-                      : `Insufficient credits — need 50, you have ${Math.round(creditsRemaining ?? 0)}`}
+                      ? 'Importez votre Booking Confirmation, l\'IA remplit tout'
+                      : 'Import your Booking Confirmation, AI fills everything'}
                   </p>
-                )}
-                {hasEnoughCredits && creditsRemaining !== null && (
-                  <p className="text-[10px] text-blue-300 mt-1">
+                  {!hasEnoughForBL && (
+                    <p className="text-xs text-red-300 font-semibold mt-1.5">
+                      {isFr
+                        ? `Crédits insuffisants — 50 requis, vous avez ${Math.round(creditsRemaining ?? 0)}`
+                        : `Insufficient credits — need 50, you have ${Math.round(creditsRemaining ?? 0)}`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </button>
+
+            {/* Info Premium */}
+            <button
+              onClick={() => {
+                if (!hasEnoughForInfo) { router.push(`/${locale}/recharger`); return }
+                const accepted = typeof window !== 'undefined' && localStorage.getItem('eolis_info_premium_accepted') === '1'
+                if (!accepted) { setShowInfoPremiumPopup(true); return }
+                setPageMode('info-premium'); setInfoStep('form')
+              }}
+              className={`w-full rounded-2xl p-5 text-left active:scale-[0.99] transition-all ${
+                hasEnoughForInfo
+                  ? 'bg-white/10 border-2 border-[#4A8FC4]/60'
+                  : 'bg-white/5 border-2 border-red-400/40 opacity-80'
+              }`}>
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  hasEnoughForInfo ? 'bg-[#4A8FC4]/30' : 'bg-red-500/20'
+                }`}>
+                  <Mic size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-base font-bold text-white">⚡ {isFr ? 'Demande d\'info' : 'Information request'}</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      hasEnoughForInfo ? 'text-[#4A8FC4] bg-[#4A8FC4]/20' : 'text-red-300 bg-red-400/20'
+                    }`}>5 crédits</span>
+                  </div>
+                  <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? `Il vous restera ${Math.round(creditsRemaining - 50)} crédits après`
-                      : `You will have ${Math.round(creditsRemaining - 50)} credits left after`}
+                      ? 'Question libre, sans limite · Voice · Priorité agent'
+                      : 'Free question, no limit · Voice · Agent priority'}
                   </p>
-                )}
+                  {!hasEnoughForInfo && (
+                    <p className="text-xs text-red-300 font-semibold mt-1.5">
+                      {isFr
+                        ? `Crédits insuffisants — 5 requis, vous avez ${Math.round(creditsRemaining ?? 0)}`
+                        : `Insufficient credits — need 5, you have ${Math.round(creditsRemaining ?? 0)}`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </button>
+
+            <button onClick={() => setTier(null)}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
+              ← {isFr ? 'Retour' : 'Back'}
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+  }
+
+  // ── Info Premium popup ────────────────────────────────────────────────────────
+
+  if (showInfoPremiumPopup) {
+    return (
+      <MobileLayout locale={locale} title={isFr ? 'Nouvelle demande' : 'New request'} showBack>
+        <div className="flex flex-col gap-4 pt-2">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚡</span>
+            <div>
+              <h2 className="text-base font-bold text-white">
+                {isFr ? 'Demande d\'info Premium' : 'Premium Information Request'}
+              </h2>
+              <p className="text-xs text-blue-200 mt-0.5">
+                {isFr ? 'Ce mode débloque des fonctionnalités avancées.' : 'This mode unlocks advanced features.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white/10 border border-white/15 rounded-2xl p-4 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎙️</span>
+              <p className="text-sm font-bold text-white">{isFr ? 'Dictée vocale dans la description' : 'Voice dictation in description'}</p>
+            </div>
+            <p className="text-xs text-blue-300 pl-7">10 crédits / min</p>
+          </div>
+
+          <div className="bg-white/10 border border-white/15 rounded-2xl p-4 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">💬</span>
+              <p className="text-sm font-bold text-white">{isFr ? 'Voice dans le chat du dossier' : 'Voice in the ticket chat'}</p>
+            </div>
+            <p className="text-xs text-blue-300 pl-7">10 crédits / min</p>
+          </div>
+
+          <div className="bg-white/10 border border-white/15 rounded-2xl p-4 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">∞</span>
+              <p className="text-sm font-bold text-white">{isFr ? 'Description sans limite de caractères' : 'Unlimited description length'}</p>
+            </div>
+            <p className="text-xs text-blue-100 pl-7">{isFr ? '→ Exprimez-vous librement' : '→ Express yourself freely'}</p>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+            <p className="text-xs font-bold text-white/60 uppercase tracking-wide mb-2">
+              {isFr ? 'Estimation par dossier' : 'Estimate per request'}
+            </p>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between text-blue-200">
+                <span>{isFr ? 'Ouverture du dossier' : 'Request opening'}</span>
+                <span className="font-mono">5 crédits</span>
+              </div>
+              <div className="flex justify-between text-blue-200">
+                <span>{isFr ? '2 min de dictée' : '2 min dictation'}</span>
+                <span className="font-mono">20 crédits</span>
+              </div>
+              <div className="border-t border-white/10 pt-1 flex justify-between text-white font-bold">
+                <span>{isFr ? 'Total estimé' : 'Estimated total'}</span>
+                <span className="font-mono">25 crédits</span>
               </div>
             </div>
-          </button>
+          </div>
 
+          <div className="bg-[#4A8FC4]/15 border border-[#4A8FC4]/30 rounded-2xl p-3 flex items-start gap-2">
+            <span className="text-[#4A8FC4] flex-shrink-0">⚡</span>
+            <p className="text-xs text-blue-200">
+              {isFr
+                ? 'Ce dossier recevra le badge Premium — vos questions seront traitées en priorité par nos agents.'
+                : 'This request will receive the Premium badge — your questions will be handled with priority by our agents.'}
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" className="w-4 h-4 rounded"
+              onChange={e => {
+                if (e.target.checked) localStorage.setItem('eolis_info_premium_accepted', '1')
+                else localStorage.removeItem('eolis_info_premium_accepted')
+              }} />
+            <span className="text-xs text-blue-200">
+              {isFr ? 'Ne plus afficher ce message' : "Don't show this again"}
+            </span>
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setShowInfoPremiumPopup(false)}
+              className="py-3.5 rounded-2xl border border-white/30 text-white text-sm font-medium">
+              {isFr ? 'Annuler' : 'Cancel'}
+            </button>
+            <button
+              onClick={() => {
+                setShowInfoPremiumPopup(false)
+                setPageMode('info-premium')
+                setInfoStep('form')
+              }}
+              className="py-3.5 rounded-2xl bg-white text-[#1B3A5C] text-sm font-bold">
+              {isFr ? "J'ai compris →" : "I understand →"}
+            </button>
+          </div>
         </div>
       </MobileLayout>
     )
+  }
+
+  // ── Info Simple flow ──────────────────────────────────────────────────────────
+
+  if (pageMode === 'info-simple') {
+    const canInfoSubmit = form.description.trim().length >= 5
+
+    if (infoStep === 'form') {
+      return (
+        <>
+        {showScanner && (
+          <ScannerModal
+            isFr={isFr}
+            onScan={file => {
+              setFiles(prev => [...prev, file])
+              setPreviews(prev => [...prev, 'pdf:' + file.name])
+              setShowScanner(false)
+            }}
+            onClose={() => setShowScanner(false)}
+          />
+        )}
+        <MobileLayout locale={locale} title={isFr ? 'Demande d\'info' : 'Information request'} showBack>
+          <div className="space-y-4">
+            <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
+              <p className="text-sm font-bold text-white mb-0.5">
+                {isFr ? '💬 Posez votre question' : '💬 Ask your question'}
+              </p>
+              <p className="text-xs text-blue-100">
+                {isFr ? 'Sans BL ni équipement — juste votre question.' : 'No BL or equipment — just your question.'}
+              </p>
+            </div>
+
+            {/* Objet optionnel */}
+            <div className="bg-white rounded-2xl p-4">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                {isFr ? 'Objet (optionnel)' : 'Subject (optional)'}
+              </label>
+              <input
+                type="text"
+                value={infoSubject}
+                onChange={e => setInfoSubject(e.target.value.slice(0, 80))}
+                placeholder={isFr ? 'Ex : Délai arrivée navire, Frais douane, Statut livraison...' : 'E.g.: Vessel arrival delay, Customs fees, Delivery status...'}
+                className="w-full text-sm focus:outline-none text-gray-800 placeholder-gray-300"
+              />
+              <p className="text-xs text-gray-300 text-right mt-1">{infoSubject.length}/80</p>
+            </div>
+
+            {/* Description */}
+            <div className="bg-white rounded-2xl p-4">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                {isFr ? 'Votre question' : 'Your question'}<span className="text-red-400 ml-0.5">*</span>
+              </label>
+              <textarea
+                value={form.description}
+                onChange={e => set('description', e.target.value.slice(0, 10000))}
+                placeholder={isFr ? 'Décrivez votre question en détail...' : 'Describe your question in detail...'}
+                rows={6}
+                className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed"
+              />
+              <p className="text-xs text-gray-300 text-right mt-1">{form.description.length}/10000</p>
+            </div>
+
+            {/* Documents */}
+            <div className="bg-white/10 rounded-2xl p-4 border border-white/15 space-y-3">
+              <div>
+                <p className="text-xs font-bold text-white/80 uppercase tracking-wide mb-1">{isFr ? 'Documents (optionnel)' : 'Documents (optional)'}</p>
+                <p className="text-xs text-blue-100">{t.uploadHint}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="relative flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70 cursor-pointer overflow-hidden">
+                  <Upload size={16} /> {t.addFile}
+                  <input type="file" multiple className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    accept="image/*,application/pdf,.doc,.docx"
+                    onChange={e => { addFiles(e.target.files); (e.target as HTMLInputElement).value = '' }} />
+                </label>
+                <button onClick={() => setShowScanner(true)}
+                  className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
+                  <Camera size={16} /> {t.scan}
+                </button>
+              </div>
+              {files.length > 0 && <p className="text-xs text-emerald-300 font-semibold">{files.length} {t.filesAdded}</p>}
+              <FilePreviews prevs={previews} fls={files} onRemove={removeFile} dark />
+            </div>
+
+            <button onClick={() => setInfoStep('recap')} disabled={!canInfoSubmit}
+              className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">
+              {t.next} <ChevronRight size={18} />
+            </button>
+            <button onClick={() => { setPageMode(null); setInfoStep('form') }}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
+              ← {t.back}
+            </button>
+          </div>
+        </MobileLayout>
+        </>
+      )
+    }
+
+    if (infoStep === 'recap') {
+      return (
+        <MobileLayout locale={locale} title={t.recap} showBack>
+          <div className="space-y-3">
+            <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
+              <h2 className="text-base font-bold text-white mb-0.5">{t.recap}</h2>
+              <p className="text-sm text-blue-100">{t.recapSub}</p>
+            </div>
+            {infoSubject && (
+              <RecapSection title={isFr ? 'Objet' : 'Subject'} isOpen={true} onToggle={() => {}}>
+                <div className="pt-3"><p className="text-sm font-bold text-[#1B3A5C]">{infoSubject}</p></div>
+              </RecapSection>
+            )}
+            <RecapSection title={isFr ? 'Question' : 'Question'} isOpen={true} onToggle={() => {}}>
+              <div className="pt-3"><p className="text-sm text-gray-700 leading-relaxed">{form.description}</p></div>
+            </RecapSection>
+            {files.length > 0 && (
+              <RecapSection title={t.documents} isOpen={true} onToggle={() => {}}>
+                <div className="pt-3"><RecapPreviews prevs={previews} fls={files} noDoc={t.noDoc} filesAdded={t.filesAdded} /></div>
+              </RecapSection>
+            )}
+            <div className="flex gap-3 pb-4">
+              <button onClick={() => setInfoStep('form')}
+                className="flex items-center gap-1 px-3 py-3.5 rounded-2xl border-2 border-white/30 text-white font-medium text-sm">
+                <ChevronLeft size={16} /> {t.back}
+              </button>
+              <button onClick={submitInfo} disabled={submitting}
+                className="flex-1 py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                {t.submit}
+              </button>
+            </div>
+          </div>
+        </MobileLayout>
+      )
+    }
+  }
+
+  // ── Info Premium flow ─────────────────────────────────────────────────────────
+
+  if (pageMode === 'info-premium') {
+    const canInfoPremiumSubmit = form.description.trim().length >= 5
+
+    if (infoStep === 'form') {
+      return (
+        <>
+        {showScanner && (
+          <ScannerModal
+            isFr={isFr}
+            onScan={file => {
+              setFiles(prev => [...prev, file])
+              setPreviews(prev => [...prev, 'pdf:' + file.name])
+              setShowScanner(false)
+            }}
+            onClose={() => setShowScanner(false)}
+          />
+        )}
+        <MobileLayout locale={locale} title={isFr ? 'Demande d\'info Premium ⚡' : 'Premium Information ⚡'} showBack>
+          <div className="space-y-4">
+            {/* Bannière info premium */}
+            <div className="bg-[#4A8FC4]/20 border border-[#4A8FC4]/40 rounded-2xl px-4 py-3 flex items-start gap-2">
+              <span className="text-amber-300 flex-shrink-0">⚡</span>
+              <div>
+                <p className="text-xs font-bold text-white">
+                  {isFr ? '5 crédits débités à la création · Voice 10 cr/min' : '5 credits charged at creation · Voice 10 cr/min'}
+                </p>
+                {creditsRemaining !== null && (
+                  <p className="text-[10px] text-blue-300 mt-0.5">
+                    {isFr
+                      ? `Solde après ouverture : ${Math.max(0, Math.round(creditsRemaining - 5))} crédits`
+                      : `Balance after opening: ${Math.max(0, Math.round(creditsRemaining - 5))} credits`}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Objet optionnel */}
+            <div className="bg-white rounded-2xl p-4">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                {isFr ? 'Objet (optionnel)' : 'Subject (optional)'}
+              </label>
+              <input
+                type="text"
+                value={infoSubject}
+                onChange={e => setInfoSubject(e.target.value.slice(0, 80))}
+                placeholder={isFr ? 'Ex : Délai arrivée navire, Frais douane, Statut livraison...' : 'E.g.: Vessel arrival delay, Customs fees, Delivery status...'}
+                className="w-full text-sm focus:outline-none text-gray-800 placeholder-gray-300"
+              />
+              <p className="text-xs text-gray-300 text-right mt-1">{infoSubject.length}/80</p>
+            </div>
+
+            {/* Description sans limite */}
+            <div className="bg-white rounded-2xl p-4">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">
+                {isFr ? 'Votre question' : 'Your question'}<span className="text-red-400 ml-0.5">*</span>
+              </label>
+              <textarea
+                value={form.description}
+                onChange={e => set('description', e.target.value)}
+                placeholder={isFr ? 'Décrivez votre question librement, sans limite...' : 'Describe your question freely, no limit...'}
+                rows={7}
+                className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed"
+              />
+              <div className="flex items-center justify-between mt-1.5">
+                <VoiceRecorder size="sm"
+                  label={isFr ? 'Dicter' : 'Dictate'}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] active:bg-[#1B3A5C] active:text-white transition-colors"
+                  disabledReason={!isOnline ? 'offline' : (creditsRemaining !== null && creditsRemaining <= 0) ? 'no_credits' : null}
+                  onDisabledClick={() => !isOnline ? undefined : router.push(`/${locale}/recharger`)}
+                  onResult={text => set('description', form.description + (form.description ? ' ' : '') + text)}
+                />
+                <p className="text-xs text-gray-300">{form.description.length} {isFr ? 'car.' : 'chars'}</p>
+              </div>
+            </div>
+
+            {/* Documents */}
+            <div className="bg-white/10 rounded-2xl p-4 border border-white/15 space-y-3">
+              <div>
+                <p className="text-xs font-bold text-white/80 uppercase tracking-wide mb-1">{isFr ? 'Documents (optionnel)' : 'Documents (optional)'}</p>
+                <p className="text-xs text-blue-100">{t.uploadHint}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="relative flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70 cursor-pointer overflow-hidden">
+                  <Upload size={16} /> {t.addFile}
+                  <input type="file" multiple className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    accept="image/*,application/pdf,.doc,.docx"
+                    onChange={e => { addFiles(e.target.files); (e.target as HTMLInputElement).value = '' }} />
+                </label>
+                <button onClick={() => setShowScanner(true)}
+                  className="flex items-center justify-center gap-2 border-2 border-dashed border-white/40 rounded-xl py-3 text-white text-xs font-semibold active:opacity-70">
+                  <Camera size={16} /> {t.scan}
+                </button>
+              </div>
+              {files.length > 0 && <p className="text-xs text-emerald-300 font-semibold">{files.length} {t.filesAdded}</p>}
+              <FilePreviews prevs={previews} fls={files} onRemove={removeFile} dark />
+            </div>
+
+            <button onClick={() => setInfoStep('recap')} disabled={!canInfoPremiumSubmit}
+              className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">
+              {t.next} <ChevronRight size={18} />
+            </button>
+            <button onClick={() => { setPageMode(null); setInfoStep('form') }}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
+              ← {t.back}
+            </button>
+          </div>
+        </MobileLayout>
+        </>
+      )
+    }
+
+    if (infoStep === 'recap') {
+      return (
+        <MobileLayout locale={locale} title={t.recap} showBack>
+          <div className="space-y-3">
+            <div className="bg-[#4A8FC4]/20 border border-[#4A8FC4]/40 rounded-2xl px-4 py-3 flex items-center gap-2">
+              <span className="text-amber-300">⚡</span>
+              <p className="text-xs font-bold text-white">
+                {isFr ? '5 crédits seront débités à l\'envoi' : '5 credits will be charged on submit'}
+              </p>
+            </div>
+            {infoSubject && (
+              <RecapSection title={isFr ? 'Objet' : 'Subject'} isOpen={true} onToggle={() => {}}>
+                <div className="pt-3"><p className="text-sm font-bold text-[#1B3A5C]">{infoSubject}</p></div>
+              </RecapSection>
+            )}
+            <RecapSection title={isFr ? 'Question' : 'Question'} isOpen={true} onToggle={() => {}}>
+              <div className="pt-3"><p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{form.description}</p></div>
+            </RecapSection>
+            {files.length > 0 && (
+              <RecapSection title={t.documents} isOpen={true} onToggle={() => {}}>
+                <div className="pt-3"><RecapPreviews prevs={previews} fls={files} noDoc={t.noDoc} filesAdded={t.filesAdded} /></div>
+              </RecapSection>
+            )}
+            <div className="flex gap-3 pb-4">
+              <button onClick={() => setInfoStep('form')}
+                className="flex items-center gap-1 px-3 py-3.5 rounded-2xl border-2 border-white/30 text-white font-medium text-sm">
+                <ChevronLeft size={16} /> {t.back}
+              </button>
+              <button onClick={submitInfo} disabled={submitting}
+                className="flex-1 py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+                {submitting ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                {isFr ? 'Envoyer (5 crédits)' : 'Send (5 credits)'}
+              </button>
+            </div>
+          </div>
+        </MobileLayout>
+      )
+    }
   }
 
   // ── BL flow ───────────────────────────────────────────────────────────────────
@@ -1794,17 +2363,17 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             </div>
             <div className="bg-white rounded-2xl p-4">
               <textarea value={form.description}
-                onChange={e => set('description', e.target.value.slice(0, 10000))}
+                onChange={e => set('description', e.target.value)}
                 placeholder={t.descPlaceholder} rows={6}
                 className="w-full text-sm focus:outline-none resize-none text-gray-800 leading-relaxed" />
-              <div className="flex items-center justify-between mt-1.5">
+              <div className="flex items-center justify-end mt-1.5">
                 {premiumAccepted
                   ? <VoiceRecorder size="sm"
                       label={isFr ? 'Dicter' : 'Dictate'}
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] active:bg-[#1B3A5C] active:text-white transition-colors"
                       disabledReason={!isOnline ? 'offline' : (creditsRemaining !== null && creditsRemaining <= 0) ? 'no_credits' : null}
                       onDisabledClick={() => router.push(`/${locale}/recharger`)}
-                      onResult={text => set('description', (form.description + (form.description ? ' ' : '') + text).slice(0, 10000))}
+                      onResult={text => set('description', form.description + (form.description ? ' ' : '') + text)}
                     />
                   : <button type="button"
                       onClick={() => { setPendingAction('voice'); setShowCostPopup(true) }}
@@ -1813,7 +2382,6 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                       <span>{isFr ? 'Dicter' : 'Dictate'}</span>
                     </button>
                 }
-                <p className="text-xs text-gray-300">{form.description.length}/10000</p>
               </div>
             </div>
             <div className="bg-white/10 rounded-2xl p-4 border border-white/15 space-y-3">

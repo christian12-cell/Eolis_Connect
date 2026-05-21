@@ -140,6 +140,8 @@ class TicketCreateRequest(BaseModel):
     code: Optional[str] = None
     vessel_data: Optional[str] = None
     bl_document_id: Optional[str] = None
+    ticket_mode: str = "MANUEL"
+    subject: Optional[str] = None
     description: str
     urgency: str = "MEDIUM"
 
@@ -179,6 +181,8 @@ class TicketResponse(BaseModel):
     code: Optional[str]
     vessel_data: Optional[str]
     bl_document_id: Optional[str] = None
+    ticket_mode: str = "MANUEL"
+    subject: Optional[str] = None
     description: str
     urgency: str
     status: str
