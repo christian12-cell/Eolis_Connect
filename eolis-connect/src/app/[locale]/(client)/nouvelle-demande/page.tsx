@@ -1263,14 +1263,6 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             </div>
           </div>
 
-          <div className="bg-[#4A8FC4]/15 border border-[#4A8FC4]/30 rounded-2xl p-3 flex items-start gap-2">
-            <span className="text-[#4A8FC4] flex-shrink-0">⚡</span>
-            <p className="text-xs text-blue-200">
-              {isFr
-                ? 'Ce dossier recevra le badge Premium — vos questions seront traitées en priorité par nos agents.'
-                : 'This request will receive the Premium badge — your questions will be handled with priority by our agents.'}
-            </p>
-          </div>
 
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" className="w-4 h-4 rounded"
@@ -1503,8 +1495,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </div>
                   <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? 'Dictée vocale · Texte sans limite · Traitement accéléré'
-                      : 'Voice dictation · Unlimited text · Faster processing'}
+                      ? 'Dictée vocale · Texte sans limite de caractères'
+                      : 'Voice dictation · Unlimited text length'}
                   </p>
                   {!hasEnoughForInfo && (
                     <p className="text-xs text-red-300 font-semibold mt-1.5">
