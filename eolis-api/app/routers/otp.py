@@ -135,3 +135,77 @@ def verify_otp(body: OtpVerifyRequest, background_tasks: BackgroundTasks, db: Se
 def resend_otp(body: OtpSendRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Alias for /send — used for the resend button on the frontend."""
     return send_otp(body, background_tasks, db)
+
+
+@router.post("/phone-verify-init")
+def phone_verify_init(body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Initiate phone verification from login page (phone_not_verified flow)."""
+    username = body.get("username")
+    if not username:
+        raise HTTPException(400, "username_required")
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(404, "not_found")
+    if not user.phone:
+        raise HTTPException(400, "no_phone")
+
+    phone = _normalize(user.phone)
+    db.query(OtpCode).filter(OtpCode.phone == phone, OtpCode.used == False).update({"used": True})
+    code = _generate_code()
+    otp = OtpCode(user_id=user.id, phone=phone, code=code,
+                  expires_at=datetime.utcnow() + timedelta(minutes=OTP_TTL_MINUTES))
+    db.add(otp)
+    db.commit()
+    background_tasks.add_task(sms_otp, phone, code)
+
+    p = user.phone
+    masked = (p[:3] + '*' * max(1, len(p) - 6) + p[-3:]) if len(p) >= 7 else p
+    return {"userId": user.id, "maskedPhone": masked}
+
+
+@router.post("/phone-verify-confirm")
+def phone_verify_confirm(body: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Verify OTP code from login page phone_not_verified flow."""
+    user_id = body.get("userId")
+    code    = body.get("code", "").strip()
+    if not user_id or not code:
+        raise HTTPException(400, "missing_fields")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "not_found")
+    if user.phone_verified:
+        return {"verified": True}
+
+    phone = _normalize(user.phone)
+    otp = (db.query(OtpCode)
+           .filter(OtpCode.phone == phone, OtpCode.used == False,
+                   OtpCode.expires_at > datetime.utcnow())
+           .order_by(OtpCode.created_at.desc()).first())
+
+    if not otp:
+        raise HTTPException(400, "otp_expired")
+
+    otp.attempts += 1
+    if otp.code != code:
+        if otp.attempts >= OTP_MAX_ATTEMPTS:
+            otp.used = True
+            db.commit()
+            raise HTTPException(400, "otp_max_attempts")
+        remaining = OTP_MAX_ATTEMPTS - otp.attempts
+        db.commit()
+        raise HTTPException(400, f"otp_wrong:{remaining}")
+
+    otp.used = True
+    first_verification = not user.phone_verified
+    user.phone_verified = True
+    user.login_failed_count = 0
+    user.login_locked_until = None
+    db.commit()
+
+    if first_verification and user.role == "CLIENT":
+        background_tasks.add_task(
+            send_welcome_client,
+            user.email, user.first_name, user.username, "", user.language or "fr"
+        )
+    return {"verified": True}

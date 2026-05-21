@@ -31,6 +31,14 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [countdown, setCountdown] = useState(0)
   const [resending, setResending] = useState(false)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Phone verify flow (phone_not_verified)
+  const [pvStep, setPvStep]       = useState<'info' | 'otp' | 'done'>('info')
+  const [pvUserId, setPvUserId]   = useState('')
+  const [pvMasked, setPvMasked]   = useState('')
+  const [pvCode, setPvCode]       = useState('')
+  const [pvLoading, setPvLoading] = useState(false)
+  const [pvError, setPvError]     = useState('')
+  const [pvResent, setPvResent]   = useState(false)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -459,25 +467,139 @@ export default function LoginPage({ params }: LoginPageProps) {
           </div>
 
         ) : errorType === 'phone_not_verified' ? (
-          <div className="text-center py-4 space-y-5">
-            <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto">
-              <span className="text-3xl">📱</span>
-            </div>
-            <div>
+          <div className="space-y-5">
+            <div className="text-center">
+              <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">📱</span>
+              </div>
               <h2 className="text-xl font-bold text-gray-900">
                 {locale === 'fr' ? 'Téléphone non vérifié' : 'Phone not verified'}
               </h2>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-gray-500 mt-1">
                 {locale === 'fr'
-                  ? 'Votre numéro de téléphone n\'a pas encore été vérifié lors de votre inscription. Veuillez le vérifier pour accéder à votre compte.'
-                  : 'Your phone number was not verified during registration. Please verify it to access your account.'}
+                  ? 'Vérifiez votre numéro pour accéder à votre compte.'
+                  : 'Verify your phone number to access your account.'}
               </p>
             </div>
-            <Link href={`/${locale}/register`}
-              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#1B3A5C] text-white font-bold text-sm">
-              {locale === 'fr' ? '→ Vérifier mon numéro' : '→ Verify my phone number'}
-            </Link>
-            <button type="button" onClick={() => setErrorType(null)}
+
+            {pvStep === 'done' ? (
+              <div className="space-y-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center">
+                  <p className="text-2xl mb-2">✅</p>
+                  <p className="text-sm font-bold text-emerald-700">
+                    {locale === 'fr' ? 'Numéro vérifié !' : 'Phone verified!'}
+                  </p>
+                  <p className="text-xs text-emerald-600 mt-1">
+                    {locale === 'fr'
+                      ? 'Vous pouvez maintenant vous connecter normalement.'
+                      : 'You can now log in normally.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setErrorType(null); setPvStep('info'); setPvCode(''); setPvUserId(''); setPvMasked('') }}
+                  className="w-full py-3 rounded-xl bg-[#1B3A5C] text-white font-bold text-sm">
+                  {locale === 'fr' ? '→ Se connecter' : '→ Log in'}
+                </button>
+              </div>
+
+            ) : pvStep === 'otp' ? (
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
+                  <p className="text-xs text-blue-700">
+                    {locale === 'fr' ? `Code envoyé au ${pvMasked}` : `Code sent to ${pvMasked}`}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block mb-1.5">
+                    {locale === 'fr' ? 'Code à 6 chiffres' : '6-digit code'}
+                  </label>
+                  <input
+                    type="text" inputMode="numeric" maxLength={6}
+                    value={pvCode} onChange={e => { setPvCode(e.target.value.replace(/\D/g, '')); setPvError('') }}
+                    placeholder="000000" autoFocus
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:border-[#1B3A5C]"
+                  />
+                </div>
+                {pvError && (
+                  <div className="flex gap-2 items-start text-red-600 text-xs bg-red-50 rounded-xl p-3 border border-red-100">
+                    <span>⚠️</span><span>{pvError}</span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  disabled={pvCode.length !== 6 || pvLoading}
+                  onClick={async () => {
+                    setPvLoading(true); setPvError('')
+                    try {
+                      const res = await fetch(apiUrl('/api/auth/otp/phone-verify-confirm'), {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: pvUserId, code: pvCode }),
+                      })
+                      if (res.ok) { setPvStep('done') }
+                      else {
+                        const d = await res.json().catch(() => ({}))
+                        const det = d.detail ?? ''
+                        if (det.startsWith('otp_wrong:')) {
+                          const r = det.split(':')[1]
+                          setPvError(locale === 'fr' ? `Code incorrect. ${r} tentative(s) restante(s).` : `Wrong code. ${r} attempt(s) left.`)
+                        } else if (det === 'otp_max_attempts') {
+                          setPvError(locale === 'fr' ? 'Trop de tentatives. Renvoyez un nouveau code.' : 'Too many attempts. Resend a code.')
+                        } else {
+                          setPvError(locale === 'fr' ? 'Code expiré ou invalide.' : 'Code expired or invalid.')
+                        }
+                      }
+                    } catch { setPvError(locale === 'fr' ? 'Erreur réseau.' : 'Network error.') }
+                    setPvLoading(false)
+                  }}
+                  className="w-full py-3 rounded-xl bg-[#1B3A5C] text-white font-bold text-sm disabled:opacity-50">
+                  {pvLoading ? '...' : locale === 'fr' ? 'Vérifier le code' : 'Verify code'}
+                </button>
+                <button
+                  type="button" disabled={pvResent}
+                  onClick={async () => {
+                    setPvResent(true); setPvError(''); setPvCode('')
+                    await fetch(apiUrl('/api/auth/otp/phone-verify-init'), {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ username }),
+                    }).catch(() => {})
+                    setTimeout(() => setPvResent(false), 5000)
+                  }}
+                  className="w-full text-xs text-[#4A8FC4] hover:underline disabled:opacity-40">
+                  {pvResent ? (locale === 'fr' ? 'Code renvoyé !' : 'Code resent!') : (locale === 'fr' ? 'Renvoyer le code' : 'Resend code')}
+                </button>
+              </div>
+
+            ) : (
+              <button
+                type="button"
+                disabled={pvLoading}
+                onClick={async () => {
+                  setPvLoading(true); setPvError('')
+                  try {
+                    const res = await fetch(apiUrl('/api/auth/otp/phone-verify-init'), {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ username }),
+                    })
+                    if (res.ok) {
+                      const d = await res.json()
+                      setPvUserId(d.userId); setPvMasked(d.maskedPhone); setPvStep('otp')
+                    } else {
+                      setPvError(locale === 'fr' ? 'Erreur lors de l\'envoi du code.' : 'Error sending the code.')
+                    }
+                  } catch { setPvError(locale === 'fr' ? 'Erreur réseau.' : 'Network error.') }
+                  setPvLoading(false)
+                }}
+                className="w-full py-3.5 rounded-xl bg-[#1B3A5C] text-white font-bold text-sm disabled:opacity-50">
+                {pvLoading ? '...' : locale === 'fr' ? '📱 Envoyer un code de vérification' : '📱 Send a verification code'}
+              </button>
+            )}
+
+            {pvError && pvStep === 'info' && (
+              <p className="text-xs text-red-500 text-center">{pvError}</p>
+            )}
+
+            <button type="button"
+              onClick={() => { setErrorType(null); setPvStep('info'); setPvCode(''); setPvUserId(''); setPvMasked(''); setPvError('') }}
               className="w-full text-sm text-gray-400 hover:text-gray-600">
               ← {locale === 'fr' ? 'Retour à la connexion' : 'Back to login'}
             </button>
