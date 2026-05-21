@@ -58,15 +58,6 @@ app.include_router(maintenance.router, prefix="/api")
 app.include_router(otp_audit.router, prefix="/api")
 app.include_router(ws.router)  # WebSocket — no /api prefix, path is /ws/ticket/{id}
 
-@app.get("/api/test-email")
-def test_email():
-    from .email_service import _send
-    try:
-        _send("christiandieuveillebetmbo@gmail.com", "Test Railway → Resend", "<p>Railway peut joindre Resend ✅</p>", retries=1)
-        return {"ok": True}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
-
 
 def _ensure_system_admin():
     """Auto-create SYSTEM_ADMIN if none exists."""
