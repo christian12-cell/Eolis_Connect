@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -66,6 +66,8 @@ export default function RegisterPage({ params }: RegisterPageProps) {
   const [otpVerified, setOtpVerified] = useState(false)
   const [otpError, setOtpError] = useState('')
   const [otpResent, setOtpResent] = useState(false)
+  const [resendCountdown, setResendCountdown] = useState(30)
+  const resendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [phoneValid, setPhoneValid] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
@@ -153,14 +155,25 @@ export default function RegisterPage({ params }: RegisterPageProps) {
 
   function update(key: string, val: string) { setForm(f => ({ ...f, [key]: val })); setError('') }
 
+  function startResendCountdown() {
+    if (resendTimerRef.current) clearInterval(resendTimerRef.current)
+    setResendCountdown(30)
+    resendTimerRef.current = setInterval(() => {
+      setResendCountdown(c => {
+        if (c <= 1) { clearInterval(resendTimerRef.current!); return 0 }
+        return c - 1
+      })
+    }, 1000)
+  }
+
   async function copyUsername() {
     await navigator.clipboard.writeText(createdUsername)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  async function verifyOtp(e: React.FormEvent) {
-    e.preventDefault()
+  async function verifyOtp(e?: React.FormEvent) {
+    e?.preventDefault()
     setOtpLoading(true)
     setOtpError('')
     const res = await fetch(apiUrl('/api/auth/otp/verify'), {
@@ -226,10 +239,9 @@ export default function RegisterPage({ params }: RegisterPageProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: form.phone, userId: createdUserId }),
     }).catch(() => {})
-    setOtpResent(true)
     setOtpError('')
     setOtpCode('')
-    setTimeout(() => setOtpResent(false), 3000)
+    startResendCountdown()
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -251,6 +263,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
       setCreatedUsername(data.username ?? '')
       setCreatedUserId(data.userId ?? '')
       setSuccess(true)
+      startResendCountdown()
       // Send OTP automatically right after account creation
       fetch(apiUrl('/api/auth/otp/send'), {
         method: 'POST',
@@ -378,23 +391,19 @@ export default function RegisterPage({ params }: RegisterPageProps) {
                         </div>
                       </div>
                     )}
-                    <form onSubmit={verifyOtp} className="space-y-2">
-                      <input type="text" inputMode="numeric" maxLength={6} value={otpCode}
-                        onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '')); setOtpError('') }}
-                        onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
-                        placeholder="_ _ _ _ _ _"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-center font-mono text-xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
-                      />
-                      <button type="submit" disabled={otpCode.length < 6 || otpLoading}
-                        className="w-full py-2.5 rounded-xl bg-[#1B3A5C] text-white text-sm font-semibold disabled:opacity-50">
-                        {otpLoading ? '...' : isFr ? 'Vérifier le code' : 'Verify code'}
-                      </button>
-                    </form>
-                    {otpError && <p className="text-xs text-red-500 mt-2">{otpError}</p>}
-                    <button type="button" onClick={resendOtp}
-                      className="mt-2 flex items-center gap-1 text-xs text-[#4A8FC4] hover:underline">
+                    <input type="text" inputMode="numeric" maxLength={6} value={otpCode}
+                      onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '')); setOtpError('') }}
+                      onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
+                      placeholder="_ _ _ _ _ _"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-center font-mono text-xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
+                    />
+                    {otpError && <p className="text-xs text-red-500 mt-1">{otpError}</p>}
+                    <button type="button" onClick={resendOtp} disabled={resendCountdown > 0}
+                      className="mt-1 flex items-center gap-1 text-xs text-[#4A8FC4] hover:underline disabled:opacity-40 disabled:cursor-not-allowed">
                       <RefreshCw size={11} />
-                      {otpResent ? (isFr ? 'Code renvoyé !' : 'Code resent!') : (isFr ? 'Renvoyer le code' : 'Resend code')}
+                      {resendCountdown > 0
+                        ? (isFr ? `Renvoyer le code (${resendCountdown}s)` : `Resend code (${resendCountdown}s)`)
+                        : (isFr ? 'Renvoyer le code' : 'Resend code')}
                     </button>
                   </>
                 ) : (
@@ -405,13 +414,24 @@ export default function RegisterPage({ params }: RegisterPageProps) {
               </div>
             )}
 
-            <Link href={`/${locale}/login`}
-              onClick={e => { if (form.phone && !otpVerified) e.preventDefault() }}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-colors ${form.phone && !otpVerified ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-[#1B3A5C] text-white hover:bg-[#152d47]'}`}>
-              {form.phone && !otpVerified
-                ? (isFr ? '✋ Vérifiez votre téléphone d\'abord' : '✋ Verify your phone first')
-                : text.goLogin}
-            </Link>
+            {otpVerified ? (
+              <Link href={`/${locale}/login`}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold bg-[#1B3A5C] text-white hover:bg-[#152d47] transition-colors">
+                {text.goLogin}
+              </Link>
+            ) : otpCode.length === 6 ? (
+              <button type="button" onClick={() => verifyOtp()} disabled={otpLoading}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold bg-[#1B3A5C] text-white hover:bg-[#152d47] transition-colors disabled:opacity-60">
+                {otpLoading
+                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {isFr ? 'Vérification...' : 'Verifying...'}</>
+                  : (isFr ? 'Vérifier mon numéro' : 'Verify my number')}
+              </button>
+            ) : (
+              <button type="button" disabled
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold bg-gray-200 text-gray-400 cursor-not-allowed">
+                {isFr ? '✋ Vérifiez votre téléphone d\'abord' : '✋ Verify your phone first'}
+              </button>
+            )}
           </div>
         </div>
       </div>
