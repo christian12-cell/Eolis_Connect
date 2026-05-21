@@ -271,7 +271,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
         <Image src="/bg-auth.jpg" alt="" fill className="object-cover" />
         <div className="absolute inset-0 bg-[#0D1F33]/80" />
         <div className="relative z-10 w-full max-w-lg mx-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-6">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 overflow-hidden">
             <div className="flex items-start gap-4 mb-5">
               <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                 <CheckCircle className="w-6 h-6 text-emerald-500" />
@@ -376,16 +376,16 @@ export default function RegisterPage({ params }: RegisterPageProps) {
                         </div>
                       </div>
                     )}
-                    <form onSubmit={verifyOtp} className="flex gap-2">
+                    <form onSubmit={verifyOtp} className="space-y-2">
                       <input type="text" inputMode="numeric" maxLength={6} value={otpCode}
                         onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '')); setOtpError('') }}
                         onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                         placeholder="_ _ _ _ _ _"
-                        className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-center font-mono text-lg tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-center font-mono text-xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-[#4A8FC4] focus:border-transparent"
                       />
                       <button type="submit" disabled={otpCode.length < 6 || otpLoading}
-                        className="px-4 py-2 rounded-xl bg-[#1B3A5C] text-white text-sm font-semibold disabled:opacity-50">
-                        {otpLoading ? '...' : isFr ? 'Vérifier' : 'Verify'}
+                        className="w-full py-2.5 rounded-xl bg-[#1B3A5C] text-white text-sm font-semibold disabled:opacity-50">
+                        {otpLoading ? '...' : isFr ? 'Vérifier le code' : 'Verify code'}
                       </button>
                     </form>
                     {otpError && <p className="text-xs text-red-500 mt-2">{otpError}</p>}
