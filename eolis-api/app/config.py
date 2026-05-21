@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str = ""
     RESEND_API_KEY: str = ""       # clé API Resend (re_xxxx)
 
-    # Legacy SMTP — conservés pour Railway mais plus utilisés
+    # SMTP Zoho
     MAIL_SERVER: str = "smtp.zoho.eu"
     MAIL_PORT: int = 587
     MAIL_LOGIN: str = ""
