@@ -125,7 +125,7 @@ def verify_otp(body: OtpVerifyRequest, background_tasks: BackgroundTasks, db: Se
     if first_verification and user and user.role == "CLIENT":
         background_tasks.add_task(
             send_welcome_client,
-            user.email, user.first_name, user.username, "", user.language or "fr"
+            user.email, user.first_name, user.username, "••••••••••", user.language or "fr"
         )
 
     return {"verified": True}
@@ -206,6 +206,6 @@ def phone_verify_confirm(body: dict, background_tasks: BackgroundTasks, db: Sess
     if first_verification and user.role == "CLIENT":
         background_tasks.add_task(
             send_welcome_client,
-            user.email, user.first_name, user.username, "", user.language or "fr"
+            user.email, user.first_name, user.username, "••••••••••", user.language or "fr"
         )
     return {"verified": True}

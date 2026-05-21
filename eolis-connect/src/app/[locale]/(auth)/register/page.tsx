@@ -267,11 +267,11 @@ export default function RegisterPage({ params }: RegisterPageProps) {
   // ── Success screen ──────────────────────────────────────────────────────────
   if (success) {
     return (
-      <div className="min-h-screen relative flex items-start justify-center p-4 overflow-y-auto">
+      <div className="min-h-screen relative py-8 px-4">
         <Image src="/bg-auth.jpg" alt="" fill className="object-cover" />
         <div className="absolute inset-0 bg-[#0D1F33]/80" />
-        <div className="relative z-10 w-full max-w-lg mt-6 mb-6">
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
+        <div className="relative z-10 w-full max-w-lg mx-auto">
+          <div className="bg-white rounded-2xl shadow-2xl p-6">
             <div className="flex items-start gap-4 mb-5">
               <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                 <CheckCircle className="w-6 h-6 text-emerald-500" />
