@@ -1329,8 +1329,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </p>
                   <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? 'Livraison, conteneur, dossier en cours — avec un BL associé'
-                      : 'Delivery, container, ongoing file — with an associated BL'}
+                      ? 'Vous avez une question sur un colis précis ? Livraison, conteneur bloqué, dossier en cours... et vous disposez du numéro BL ou Booking correspondant.'
+                      : 'You have a question about a specific shipment? Delivery, blocked container, ongoing file... and you have the corresponding BL or Booking number.'}
                   </p>
                 </div>
               </div>
@@ -1348,8 +1348,8 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </p>
                   <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? 'Renseignement, procédure, tarif, statut — sans document BL'
-                      : 'Information, procedure, pricing, status — without BL document'}
+                      ? 'Vous cherchez une information générale : procédure, tarif, délai, réglementation... sans BL associé.'
+                      : 'You\'re looking for general information: procedure, pricing, timeline, regulations... without an associated BL.'}
                   </p>
                 </div>
               </div>
