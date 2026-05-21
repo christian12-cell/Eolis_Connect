@@ -1201,244 +1201,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     </div>
   ) : null
 
-  // ── Mode selection ────────────────────────────────────────────────────────────
-
-  if (!pageMode) {
-    // ── Level 1: J'ai un colis / J'ai une question ──
-    if (tier === null) {
-      return (
-        <MobileLayout locale={locale} title={t.title} showBack>
-          <div className="space-y-4 pt-2">
-            {creditsBar}
-            <p className="text-sm text-blue-100 text-center">
-              {isFr ? 'Quelle est votre situation ?' : 'What is your situation?'}
-            </p>
-
-            {/* J'ai un colis / BL */}
-            <button onClick={() => setTier('simple')}
-              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <Package size={24} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">
-                      {isFr ? '📦 J\'ai un colis / BL' : '📦 I have a shipment / BL'}
-                    </p>
-                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
-                      {isFr ? 'Gratuit' : 'Free'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-blue-100 leading-relaxed">
-                    {isFr
-                      ? 'Livraison, conteneur, dossier en cours — avec un BL associé'
-                      : 'Delivery, container, ongoing file — with an associated BL'}
-                  </p>
-                </div>
-              </div>
-            </button>
-
-            {/* J'ai une question */}
-            <button onClick={() => setTier('premium')}
-              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <MessageCircle size={24} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">
-                      {isFr ? '💬 J\'ai une question' : '💬 I have a question'}
-                    </p>
-                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
-                      {isFr ? 'Gratuit ou ⚡' : 'Free or ⚡'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-blue-100 leading-relaxed">
-                    {isFr
-                      ? 'Renseignement, procédure, tarif, statut — sans document BL'
-                      : 'Information, procedure, pricing, status — without BL document'}
-                  </p>
-                </div>
-              </div>
-            </button>
-          </div>
-        </MobileLayout>
-      )
-    }
-
-    // ── Level 2: Colis → Manuel / Scan Eagle ──
-    if (tier === 'simple') {
-      return (
-        <MobileLayout locale={locale} title={isFr ? 'J\'ai un colis / BL' : 'I have a shipment / BL'} showBack>
-          <div className="space-y-4 pt-2">
-            {creditsBar}
-            <p className="text-sm text-blue-100 text-center">
-              {isFr ? 'Comment souhaitez-vous créer votre demande ?' : 'How would you like to create your request?'}
-            </p>
-
-            {/* Manuel */}
-            <button onClick={() => setPageMode('manual')}
-              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <FileText size={24} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">{isFr ? 'Saisie manuelle' : 'Manual entry'}</p>
-                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
-                      {isFr ? 'Gratuit' : 'Free'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-blue-100 leading-relaxed">
-                    {isFr
-                      ? 'Je renseigne moi-même le BL, le navire et la logistique'
-                      : 'I fill in the BL, vessel and logistics myself'}
-                  </p>
-                </div>
-              </div>
-            </button>
-
-            {/* Scan Eagle BL */}
-            <button onClick={enterBLMode}
-              className={`w-full rounded-2xl p-5 text-left active:scale-[0.99] transition-all ${
-                hasEnoughForBL
-                  ? 'bg-white/10 border-2 border-[#4A8FC4]/60'
-                  : 'bg-white/5 border-2 border-red-400/40 opacity-80'
-              }`}>
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  hasEnoughForBL ? 'bg-[#4A8FC4]/30' : 'bg-red-500/20'
-                }`}>
-                  <Upload size={24} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">⚡ {isFr ? 'Scan Eagle BL' : 'Scan Eagle BL'}</p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      hasEnoughForBL ? 'text-[#4A8FC4] bg-[#4A8FC4]/20' : 'text-red-300 bg-red-400/20'
-                    }`}>50 crédits</span>
-                  </div>
-                  <p className="text-sm text-blue-100 leading-relaxed">
-                    {isFr
-                      ? 'Importez votre Booking Confirmation Eagle — le formulaire se remplit seul'
-                      : 'Import your Eagle Booking Confirmation — the form fills itself'}
-                  </p>
-                  {!hasEnoughForBL && (
-                    <p className="text-xs text-red-300 font-semibold mt-1.5">
-                      {isFr
-                        ? `Crédits insuffisants — 50 requis, vous en avez ${Math.round(creditsRemaining ?? 0)}`
-                        : `Insufficient credits — need 50, you have ${Math.round(creditsRemaining ?? 0)}`}
-                    </p>
-                  )}
-                  {hasEnoughForBL && creditsRemaining !== null && (
-                    <p className="text-[10px] text-blue-300 mt-1">
-                      {isFr
-                        ? `Il vous restera ${Math.round(creditsRemaining - 50)} crédits après`
-                        : `You will have ${Math.round(creditsRemaining - 50)} credits left after`}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </button>
-
-            <button onClick={() => setTier(null)}
-              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
-              ← {isFr ? 'Retour' : 'Back'}
-            </button>
-          </div>
-        </MobileLayout>
-      )
-    }
-
-    // ── Level 2: Question → Standard / Prioritaire ──
-    if (tier === 'premium') {
-      return (
-        <MobileLayout locale={locale} title={isFr ? 'J\'ai une question' : 'I have a question'} showBack>
-          <div className="space-y-4 pt-2">
-            {creditsBar}
-            <p className="text-sm text-blue-100 text-center">
-              {isFr ? 'Quel niveau de service souhaitez-vous ?' : 'What level of service do you want?'}
-            </p>
-
-            {/* Standard */}
-            <button onClick={() => { setPageMode('info-simple'); setInfoStep('form') }}
-              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <MessageCircle size={24} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">{isFr ? 'Standard' : 'Standard'}</p>
-                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
-                      {isFr ? 'Gratuit' : 'Free'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-blue-100 leading-relaxed">
-                    {isFr
-                      ? 'Écrivez votre question, réponse sous 24h'
-                      : 'Write your question, response within 24h'}
-                  </p>
-                </div>
-              </div>
-            </button>
-
-            {/* Prioritaire */}
-            <button
-              onClick={() => {
-                if (!hasEnoughForInfo) { router.push(`/${locale}/recharger`); return }
-                const accepted = typeof window !== 'undefined' && localStorage.getItem('eolis_info_premium_accepted') === '1'
-                if (!accepted) { setShowInfoPremiumPopup(true); return }
-                setPageMode('info-premium'); setInfoStep('form')
-              }}
-              className={`w-full rounded-2xl p-5 text-left active:scale-[0.99] transition-all ${
-                hasEnoughForInfo
-                  ? 'bg-white/10 border-2 border-[#4A8FC4]/60'
-                  : 'bg-white/5 border-2 border-red-400/40 opacity-80'
-              }`}>
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  hasEnoughForInfo ? 'bg-[#4A8FC4]/30' : 'bg-red-500/20'
-                }`}>
-                  <Zap size={24} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">⚡ {isFr ? 'Prioritaire' : 'Priority'}</p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      hasEnoughForInfo ? 'text-[#4A8FC4] bg-[#4A8FC4]/20' : 'text-red-300 bg-red-400/20'
-                    }`}>5 crédits</span>
-                  </div>
-                  <p className="text-sm text-blue-100 leading-relaxed">
-                    {isFr
-                      ? 'Réponse prioritaire · Dictée vocale · Sans limite de texte'
-                      : 'Priority response · Voice dictation · No text limit'}
-                  </p>
-                  {!hasEnoughForInfo && (
-                    <p className="text-xs text-red-300 font-semibold mt-1.5">
-                      {isFr
-                        ? `Crédits insuffisants — 5 requis, vous en avez ${Math.round(creditsRemaining ?? 0)}`
-                        : `Insufficient credits — need 5, you have ${Math.round(creditsRemaining ?? 0)}`}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </button>
-
-            <button onClick={() => setTier(null)}
-              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
-              ← {isFr ? 'Retour' : 'Back'}
-            </button>
-          </div>
-        </MobileLayout>
-      )
-    }
-  }
-
-  // ── Info Premium popup ────────────────────────────────────────────────────────
+  // ── Info Premium popup (AVANT !pageMode pour éviter que !pageMode l'écrase) ──
 
   if (showInfoPremiumPopup) {
     return (
@@ -1539,6 +1302,229 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         </div>
       </MobileLayout>
     )
+  }
+
+  // ── Mode selection ────────────────────────────────────────────────────────────
+
+  if (!pageMode) {
+    // ── Level 1: J'ai un colis / J'ai une question ──
+    if (tier === null) {
+      return (
+        <MobileLayout locale={locale} title={t.title} showBack>
+          <div className="space-y-4 pt-2">
+            {creditsBar}
+            <p className="text-sm text-blue-100 text-center">
+              {isFr ? 'Quelle est votre situation ?' : 'What is your situation?'}
+            </p>
+
+            <button onClick={() => setTier('simple')}
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Package size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-bold text-white mb-1">
+                    {isFr ? '📦 J\'ai un colis / BL' : '📦 I have a shipment / BL'}
+                  </p>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'Livraison, conteneur, dossier en cours — avec un BL associé'
+                      : 'Delivery, container, ongoing file — with an associated BL'}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button onClick={() => setTier('premium')}
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <MessageCircle size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-bold text-white mb-1">
+                    {isFr ? '💬 J\'ai une question' : '💬 I have a question'}
+                  </p>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'Renseignement, procédure, tarif, statut — sans document BL'
+                      : 'Information, procedure, pricing, status — without BL document'}
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
+    // ── Level 2: Colis → Saisie manuelle / Scan Eagle BL ──
+    if (tier === 'simple') {
+      return (
+        <MobileLayout locale={locale} title={isFr ? 'J\'ai un colis / BL' : 'I have a shipment / BL'} showBack>
+          <div className="space-y-4 pt-2">
+            {creditsBar}
+            <p className="text-sm text-blue-100 text-center">
+              {isFr ? 'Comment souhaitez-vous créer votre demande ?' : 'How would you like to create your request?'}
+            </p>
+
+            <button onClick={() => setPageMode('manual')}
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <FileText size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-bold text-white mb-1">{isFr ? 'Saisie manuelle' : 'Manual entry'}</p>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'Je renseigne moi-même le BL, le navire et la logistique'
+                      : 'I fill in the BL, vessel and logistics myself'}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button onClick={enterBLMode}
+              className={`w-full rounded-2xl p-5 text-left active:scale-[0.99] transition-all ${
+                hasEnoughForBL
+                  ? 'bg-white/10 border-2 border-[#4A8FC4]/60'
+                  : 'bg-white/5 border-2 border-red-400/40 opacity-80'
+              }`}>
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  hasEnoughForBL ? 'bg-[#4A8FC4]/30' : 'bg-red-500/20'
+                }`}>
+                  <Upload size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-base font-bold text-white">⚡ Scan Eagle BL</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      hasEnoughForBL ? 'text-[#4A8FC4] bg-[#4A8FC4]/20' : 'text-red-300 bg-red-400/20'
+                    }`}>50 crédits</span>
+                  </div>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'Importez votre Booking Confirmation Eagle — le formulaire se remplit seul'
+                      : 'Import your Eagle Booking Confirmation — the form fills itself'}
+                  </p>
+                  {!hasEnoughForBL && (
+                    <p className="text-xs text-red-300 font-semibold mt-1.5">
+                      {isFr
+                        ? `Crédits insuffisants — 50 requis, vous en avez ${Math.round(creditsRemaining ?? 0)}`
+                        : `Insufficient credits — need 50, you have ${Math.round(creditsRemaining ?? 0)}`}
+                    </p>
+                  )}
+                  {hasEnoughForBL && creditsRemaining !== null && (
+                    <p className="text-[10px] text-blue-300 mt-1">
+                      {isFr
+                        ? `Il vous restera ${Math.round(creditsRemaining - 50)} crédits après`
+                        : `You will have ${Math.round(creditsRemaining - 50)} credits left after`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </button>
+
+            <button onClick={() => setTier(null)}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
+              ← {isFr ? 'Retour' : 'Back'}
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
+    // ── Level 2: Question → Standard / Premium ──
+    if (tier === 'premium') {
+      return (
+        <MobileLayout locale={locale} title={isFr ? 'J\'ai une question' : 'I have a question'} showBack>
+          <div className="space-y-4 pt-2">
+            {creditsBar}
+            <p className="text-sm text-blue-100 text-center">
+              {isFr ? 'Quel type de suivi souhaitez-vous ?' : 'What type of follow-up do you want?'}
+            </p>
+
+            {/* Standard */}
+            <button onClick={() => {
+                set('description', '')
+                setInfoSubject('')
+                setFiles([])
+                setPreviews([])
+                setInfoStep('form')
+                setPageMode('info-simple')
+              }}
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <MessageCircle size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-base font-bold text-white mb-1">{isFr ? 'Standard' : 'Standard'}</p>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr ? 'Écrivez votre question, réponse sous 24h' : 'Write your question, response within 24h'}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Premium ⚡ */}
+            <button
+              onClick={() => {
+                if (!hasEnoughForInfo) { router.push(`/${locale}/recharger`); return }
+                set('description', '')
+                setInfoSubject('')
+                setFiles([])
+                setPreviews([])
+                setInfoStep('form')
+                const accepted = typeof window !== 'undefined' && localStorage.getItem('eolis_info_premium_accepted') === '1'
+                if (!accepted) { setShowInfoPremiumPopup(true); return }
+                setPageMode('info-premium')
+              }}
+              className={`w-full rounded-2xl p-5 text-left active:scale-[0.99] transition-all ${
+                hasEnoughForInfo
+                  ? 'bg-white/10 border-2 border-[#4A8FC4]/60'
+                  : 'bg-white/5 border-2 border-red-400/40 opacity-80'
+              }`}>
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  hasEnoughForInfo ? 'bg-[#4A8FC4]/30' : 'bg-red-500/20'
+                }`}>
+                  <Zap size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-base font-bold text-white">⚡ Premium</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      hasEnoughForInfo ? 'text-[#4A8FC4] bg-[#4A8FC4]/20' : 'text-red-300 bg-red-400/20'
+                    }`}>5 crédits</span>
+                  </div>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'Dictée vocale · Texte sans limite · Traitement accéléré'
+                      : 'Voice dictation · Unlimited text · Faster processing'}
+                  </p>
+                  {!hasEnoughForInfo && (
+                    <p className="text-xs text-red-300 font-semibold mt-1.5">
+                      {isFr
+                        ? `Crédits insuffisants — 5 requis, vous en avez ${Math.round(creditsRemaining ?? 0)}`
+                        : `Insufficient credits — need 5, you have ${Math.round(creditsRemaining ?? 0)}`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </button>
+
+            <button onClick={() => setTier(null)}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
+              ← {isFr ? 'Retour' : 'Back'}
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
   }
 
   // ── Info Simple flow ──────────────────────────────────────────────────────────
@@ -1694,7 +1680,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             onClose={() => setShowScanner(false)}
           />
         )}
-        <MobileLayout locale={locale} title={isFr ? 'Question Prioritaire ⚡' : 'Priority Question ⚡'} showBack>
+        <MobileLayout locale={locale} title={isFr ? 'Question Premium ⚡' : 'Premium Question ⚡'} showBack>
           <div className="space-y-4">
             {/* Bannière info premium */}
             <div className="bg-[#4A8FC4]/20 border border-[#4A8FC4]/40 rounded-2xl px-4 py-3 flex items-start gap-2">
@@ -2591,6 +2577,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             <button onClick={() => setStep('equipement')} disabled={!canStep1}
               className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30 active:scale-[0.99] transition-transform">
               {t.next} <ChevronRight size={18} />
+            </button>
+            <button onClick={() => { setPageMode(null); setStep('categorie') }}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
+              ← {t.back}
             </button>
           </div>
         )}
