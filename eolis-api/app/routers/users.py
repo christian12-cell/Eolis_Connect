@@ -2,6 +2,7 @@ import uuid, secrets
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from ..database import get_db
@@ -324,6 +325,9 @@ def delete_user(
     db.query(CreditRequest).filter(CreditRequest.client_id == user_id).delete()
     db.query(BLDocument).filter(BLDocument.client_id == user_id).delete()
     db.query(CreditBalance).filter(CreditBalance.client_id == user_id).delete()
+
+    # Push subscriptions (no ORM model — raw SQL)
+    db.execute(text("DELETE FROM push_subscriptions WHERE user_id = :uid"), {"uid": user_id})
 
     db.query(User).filter(User.id == user_id).delete()
     db.commit()
