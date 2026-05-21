@@ -299,11 +299,15 @@ def startup():
         conn.execute(text(
             "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS subject VARCHAR(100)"
         ))
-        # Temporary pwd hint for welcome email (added 2026-05)
-        conn.execute(text(
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS pwd_hint VARCHAR(30)"
-        ))
         conn.commit()
+
+    # pwd_hint migration in its own block so a failure doesn't crash startup
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS pwd_hint VARCHAR(30)"))
+            conn.commit()
+    except Exception as e:
+        print(f"[startup] pwd_hint migration skipped: {e}")
 
     _ensure_system_admin()
     print(f"[startup] OPENAI_API_KEY set: {bool(settings.OPENAI_API_KEY)}")

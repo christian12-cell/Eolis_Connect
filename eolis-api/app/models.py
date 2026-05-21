@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import String, Boolean, Integer, DateTime, Text, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, deferred
 from .database import Base
 
 def gen_id() -> str:
@@ -26,7 +26,7 @@ class User(Base):
     login_failed_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     login_locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     login_last_ip:    Mapped[str | None] = mapped_column(String(50), nullable=True)
-    pwd_hint: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    pwd_hint: Mapped[str | None] = deferred(mapped_column(String(30), nullable=True))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
