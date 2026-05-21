@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import {
   Upload, Camera, X, FileText, ChevronRight, ChevronLeft, ChevronDown,
-  Check, Loader2, Star, Plus, Trash2, WifiOff, Mic, Zap,
+  Check, Loader2, Star, Plus, Trash2, WifiOff, Mic, Zap, MessageCircle, Package,
 } from 'lucide-react'
 import { getUser, apiFetch, apiUpload } from '@/lib/api-client'
 import { VoiceRecorder } from '@/components/ui/VoiceRecorder'
@@ -1176,83 +1176,89 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     )
   }
 
+  // ── Mode selection helpers (outside conditionals to avoid React issues) ─────────
+
+  const hasEnoughForBL   = creditsRemaining === null || creditsRemaining >= 50
+  const hasEnoughForInfo = creditsRemaining === null || creditsRemaining >= 5
+
+  const creditsBar = creditsRemaining !== null ? (
+    <div className={`flex items-center justify-between rounded-2xl px-4 py-3 border ${
+      creditsRemaining > 0 ? 'bg-white/10 border-white/15' : 'bg-red-500/15 border-red-400/30'
+    }`}>
+      <div className="flex items-center gap-2">
+        <Zap size={15} className={creditsRemaining > 0 ? 'text-amber-300' : 'text-red-300'} />
+        <p className="text-sm text-white">
+          {isFr ? 'Solde :' : 'Balance:'}
+          <span className="font-bold ml-1">{Math.round(creditsRemaining)} crédits</span>
+        </p>
+      </div>
+      {creditsRemaining <= 0 && (
+        <button onClick={() => router.push(`/${locale}/recharger`)}
+          className="text-xs font-bold text-red-300 underline">
+          {isFr ? 'Recharger' : 'Top up'}
+        </button>
+      )}
+    </div>
+  ) : null
+
   // ── Mode selection ────────────────────────────────────────────────────────────
 
   if (!pageMode) {
-    const hasEnoughForBL   = creditsRemaining === null || creditsRemaining >= 50
-    const hasEnoughForInfo = creditsRemaining === null || creditsRemaining >= 5
-
-    const CreditsBar = () => creditsRemaining !== null ? (
-      <div className={`flex items-center justify-between rounded-2xl px-4 py-3 border ${
-        creditsRemaining > 0 ? 'bg-white/10 border-white/15' : 'bg-red-500/15 border-red-400/30'
-      }`}>
-        <div className="flex items-center gap-2">
-          <Zap size={15} className={creditsRemaining > 0 ? 'text-amber-300' : 'text-red-300'} />
-          <p className="text-sm text-white">
-            {isFr ? 'Solde :' : 'Balance:'}
-            <span className="font-bold ml-1">{Math.round(creditsRemaining)} crédits</span>
-          </p>
-        </div>
-        {creditsRemaining <= 0 && (
-          <button onClick={() => router.push(`/${locale}/recharger`)}
-            className="text-xs font-bold text-red-300 underline">
-            {isFr ? 'Recharger' : 'Top up'}
-          </button>
-        )}
-      </div>
-    ) : null
-
-    // ── Level 1: Simple vs Premium ──
+    // ── Level 1: J'ai un colis / J'ai une question ──
     if (tier === null) {
       return (
         <MobileLayout locale={locale} title={t.title} showBack>
           <div className="space-y-4 pt-2">
-            <CreditsBar />
+            {creditsBar}
             <p className="text-sm text-blue-100 text-center">
-              {isFr ? 'Choisissez votre mode de demande' : 'Choose your request mode'}
+              {isFr ? 'Quelle est votre situation ?' : 'What is your situation?'}
             </p>
 
-            {/* Simple */}
+            {/* J'ai un colis / BL */}
             <button onClick={() => setTier('simple')}
               className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <FileText size={24} className="text-white" />
+                  <Package size={24} className="text-white" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">{isFr ? 'Simple' : 'Simple'}</p>
+                    <p className="text-base font-bold text-white">
+                      {isFr ? '📦 J\'ai un colis / BL' : '📦 I have a shipment / BL'}
+                    </p>
                     <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
                       {isFr ? 'Gratuit' : 'Free'}
                     </span>
                   </div>
                   <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? 'Formulaire manuel avec BL, ou question libre sans document'
-                      : 'Manual form with BL, or free question without document'}
+                      ? 'Livraison, conteneur, dossier en cours — avec un BL associé'
+                      : 'Delivery, container, ongoing file — with an associated BL'}
                   </p>
                 </div>
               </div>
             </button>
 
-            {/* Premium */}
+            {/* J'ai une question */}
             <button onClick={() => setTier('premium')}
-              className="w-full bg-white/10 border-2 border-[#4A8FC4]/60 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#4A8FC4]/30 flex items-center justify-center flex-shrink-0">
-                  <Zap size={24} className="text-white" />
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <MessageCircle size={24} className="text-white" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">Premium ⚡</p>
-                    <span className="text-[10px] font-bold text-[#4A8FC4] bg-[#4A8FC4]/20 px-2 py-0.5 rounded-full">
-                      {isFr ? 'À partir de 5 cr' : 'From 5 cr'}
+                    <p className="text-base font-bold text-white">
+                      {isFr ? '💬 J\'ai une question' : '💬 I have a question'}
+                    </p>
+                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+                      {isFr ? 'Gratuit ou ⚡' : 'Free or ⚡'}
                     </span>
                   </div>
                   <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? 'IA · Voice · Sans limite · Priorité agent'
-                      : 'AI · Voice · No limit · Agent priority'}
+                      ? 'Renseignement, procédure, tarif, statut — sans document BL'
+                      : 'Information, procedure, pricing, status — without BL document'}
                   </p>
                 </div>
               </div>
@@ -1262,14 +1268,14 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       )
     }
 
-    // ── Level 2: Simple → Manuel / Info ──
+    // ── Level 2: Colis → Manuel / Scan Eagle ──
     if (tier === 'simple') {
       return (
-        <MobileLayout locale={locale} title={isFr ? 'Mode Simple' : 'Simple Mode'} showBack>
+        <MobileLayout locale={locale} title={isFr ? 'J\'ai un colis / BL' : 'I have a shipment / BL'} showBack>
           <div className="space-y-4 pt-2">
-            <CreditsBar />
+            {creditsBar}
             <p className="text-sm text-blue-100 text-center">
-              {isFr ? 'Quel type de demande ?' : 'What type of request?'}
+              {isFr ? 'Comment souhaitez-vous créer votre demande ?' : 'How would you like to create your request?'}
             </p>
 
             {/* Manuel */}
@@ -1281,63 +1287,21 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">{isFr ? 'Manuel' : 'Manual'}</p>
+                    <p className="text-base font-bold text-white">{isFr ? 'Saisie manuelle' : 'Manual entry'}</p>
                     <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
                       {isFr ? 'Gratuit' : 'Free'}
                     </span>
                   </div>
                   <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? 'Formulaire complet avec BL, équipement et logistique'
-                      : 'Full form with BL, equipment and logistics'}
+                      ? 'Je renseigne moi-même le BL, le navire et la logistique'
+                      : 'I fill in the BL, vessel and logistics myself'}
                   </p>
                 </div>
               </div>
             </button>
 
-            {/* Info Simple */}
-            <button onClick={() => { setPageMode('info-simple'); setInfoStep('form') }}
-              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <Mic size={24} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">{isFr ? 'Demande d\'info' : 'Information request'}</p>
-                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
-                      {isFr ? 'Gratuit' : 'Free'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-blue-100 leading-relaxed">
-                    {isFr
-                      ? 'Une question rapide, sans BL ni équipement'
-                      : 'A quick question, without BL or equipment'}
-                  </p>
-                </div>
-              </div>
-            </button>
-
-            <button onClick={() => setTier(null)}
-              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
-              ← {isFr ? 'Retour' : 'Back'}
-            </button>
-          </div>
-        </MobileLayout>
-      )
-    }
-
-    // ── Level 2: Premium → Upload BL / Info Premium ──
-    if (tier === 'premium') {
-      return (
-        <MobileLayout locale={locale} title="Premium ⚡" showBack>
-          <div className="space-y-4 pt-2">
-            <CreditsBar />
-            <p className="text-sm text-blue-100 text-center">
-              {isFr ? 'Quel type de demande Premium ?' : 'What type of Premium request?'}
-            </p>
-
-            {/* Upload BL */}
+            {/* Scan Eagle BL */}
             <button onClick={enterBLMode}
               className={`w-full rounded-2xl p-5 text-left active:scale-[0.99] transition-all ${
                 hasEnoughForBL
@@ -1352,28 +1316,77 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">⚡ {isFr ? 'Upload BL Eagle' : 'Upload Eagle BL'}</p>
+                    <p className="text-base font-bold text-white">⚡ {isFr ? 'Scan Eagle BL' : 'Scan Eagle BL'}</p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       hasEnoughForBL ? 'text-[#4A8FC4] bg-[#4A8FC4]/20' : 'text-red-300 bg-red-400/20'
                     }`}>50 crédits</span>
                   </div>
                   <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? 'Importez votre Booking Confirmation, l\'IA remplit tout'
-                      : 'Import your Booking Confirmation, AI fills everything'}
+                      ? 'Importez votre Booking Confirmation Eagle — le formulaire se remplit seul'
+                      : 'Import your Eagle Booking Confirmation — the form fills itself'}
                   </p>
                   {!hasEnoughForBL && (
                     <p className="text-xs text-red-300 font-semibold mt-1.5">
                       {isFr
-                        ? `Crédits insuffisants — 50 requis, vous avez ${Math.round(creditsRemaining ?? 0)}`
+                        ? `Crédits insuffisants — 50 requis, vous en avez ${Math.round(creditsRemaining ?? 0)}`
                         : `Insufficient credits — need 50, you have ${Math.round(creditsRemaining ?? 0)}`}
+                    </p>
+                  )}
+                  {hasEnoughForBL && creditsRemaining !== null && (
+                    <p className="text-[10px] text-blue-300 mt-1">
+                      {isFr
+                        ? `Il vous restera ${Math.round(creditsRemaining - 50)} crédits après`
+                        : `You will have ${Math.round(creditsRemaining - 50)} credits left after`}
                     </p>
                   )}
                 </div>
               </div>
             </button>
 
-            {/* Info Premium */}
+            <button onClick={() => setTier(null)}
+              className="w-full py-2.5 rounded-2xl border-2 border-white/10 text-white/50 text-sm font-medium">
+              ← {isFr ? 'Retour' : 'Back'}
+            </button>
+          </div>
+        </MobileLayout>
+      )
+    }
+
+    // ── Level 2: Question → Standard / Prioritaire ──
+    if (tier === 'premium') {
+      return (
+        <MobileLayout locale={locale} title={isFr ? 'J\'ai une question' : 'I have a question'} showBack>
+          <div className="space-y-4 pt-2">
+            {creditsBar}
+            <p className="text-sm text-blue-100 text-center">
+              {isFr ? 'Quel niveau de service souhaitez-vous ?' : 'What level of service do you want?'}
+            </p>
+
+            {/* Standard */}
+            <button onClick={() => { setPageMode('info-simple'); setInfoStep('form') }}
+              className="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-5 text-left active:scale-[0.99] transition-all">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <MessageCircle size={24} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-base font-bold text-white">{isFr ? 'Standard' : 'Standard'}</p>
+                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+                      {isFr ? 'Gratuit' : 'Free'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-100 leading-relaxed">
+                    {isFr
+                      ? 'Écrivez votre question, réponse sous 24h'
+                      : 'Write your question, response within 24h'}
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Prioritaire */}
             <button
               onClick={() => {
                 if (!hasEnoughForInfo) { router.push(`/${locale}/recharger`); return }
@@ -1390,24 +1403,24 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   hasEnoughForInfo ? 'bg-[#4A8FC4]/30' : 'bg-red-500/20'
                 }`}>
-                  <Mic size={24} className="text-white" />
+                  <Zap size={24} className="text-white" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-base font-bold text-white">⚡ {isFr ? 'Demande d\'info' : 'Information request'}</p>
+                    <p className="text-base font-bold text-white">⚡ {isFr ? 'Prioritaire' : 'Priority'}</p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       hasEnoughForInfo ? 'text-[#4A8FC4] bg-[#4A8FC4]/20' : 'text-red-300 bg-red-400/20'
                     }`}>5 crédits</span>
                   </div>
                   <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr
-                      ? 'Question libre, sans limite · Voice · Priorité agent'
-                      : 'Free question, no limit · Voice · Agent priority'}
+                      ? 'Réponse prioritaire · Dictée vocale · Sans limite de texte'
+                      : 'Priority response · Voice dictation · No text limit'}
                   </p>
                   {!hasEnoughForInfo && (
                     <p className="text-xs text-red-300 font-semibold mt-1.5">
                       {isFr
-                        ? `Crédits insuffisants — 5 requis, vous avez ${Math.round(creditsRemaining ?? 0)}`
+                        ? `Crédits insuffisants — 5 requis, vous en avez ${Math.round(creditsRemaining ?? 0)}`
                         : `Insufficient credits — need 5, you have ${Math.round(creditsRemaining ?? 0)}`}
                     </p>
                   )}
@@ -1547,14 +1560,14 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             onClose={() => setShowScanner(false)}
           />
         )}
-        <MobileLayout locale={locale} title={isFr ? 'Demande d\'info' : 'Information request'} showBack>
+        <MobileLayout locale={locale} title={isFr ? 'Question Standard' : 'Standard Question'} showBack>
           <div className="space-y-4">
             <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
               <p className="text-sm font-bold text-white mb-0.5">
                 {isFr ? '💬 Posez votre question' : '💬 Ask your question'}
               </p>
               <p className="text-xs text-blue-100">
-                {isFr ? 'Sans BL ni équipement — juste votre question.' : 'No BL or equipment — just your question.'}
+                {isFr ? 'Renseignement, procédure, tarif — réponse sous 24h.' : 'Information, procedure, pricing — response within 24h.'}
               </p>
             </div>
 
@@ -1614,7 +1627,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">
               {t.next} <ChevronRight size={18} />
             </button>
-            <button onClick={() => { setPageMode(null); setInfoStep('form') }}
+            <button onClick={() => { setPageMode(null); setInfoStep('form'); setTier('premium') }}
               className="w-full py-2.5 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
               ← {t.back}
             </button>
@@ -1626,7 +1639,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
     if (infoStep === 'recap') {
       return (
-        <MobileLayout locale={locale} title={t.recap} showBack>
+        <MobileLayout locale={locale} title={isFr ? 'Récapitulatif' : 'Summary'} showBack>
           <div className="space-y-3">
             <div className="bg-white/10 rounded-2xl px-4 py-3 border border-white/20">
               <h2 className="text-base font-bold text-white mb-0.5">{t.recap}</h2>
@@ -1681,7 +1694,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             onClose={() => setShowScanner(false)}
           />
         )}
-        <MobileLayout locale={locale} title={isFr ? 'Demande d\'info Premium ⚡' : 'Premium Information ⚡'} showBack>
+        <MobileLayout locale={locale} title={isFr ? 'Question Prioritaire ⚡' : 'Priority Question ⚡'} showBack>
           <div className="space-y-4">
             {/* Bannière info premium */}
             <div className="bg-[#4A8FC4]/20 border border-[#4A8FC4]/40 rounded-2xl px-4 py-3 flex items-start gap-2">
@@ -1765,7 +1778,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-30">
               {t.next} <ChevronRight size={18} />
             </button>
-            <button onClick={() => { setPageMode(null); setInfoStep('form') }}
+            <button onClick={() => { setPageMode(null); setInfoStep('form'); setTier('premium') }}
               className="w-full py-2.5 rounded-2xl border-2 border-white/20 text-white/70 text-sm font-medium">
               ← {t.back}
             </button>
