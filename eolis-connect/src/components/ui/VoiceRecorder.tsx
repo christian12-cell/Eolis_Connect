@@ -11,6 +11,7 @@ interface Props {
   className?: string
   size?: 'sm' | 'md'
   label?: string
+  locale?: string
   disabledReason?: 'offline' | 'no_credits' | null
   onDisabledClick?: () => void
 }
@@ -25,7 +26,7 @@ const BAR_COUNT = 22
 
 export function VoiceRecorder({
   onResult, ticketId, onCostUpdate,
-  className = '', size = 'md', label,
+  className = '', size = 'md', label, locale = 'fr',
   disabledReason, onDisabledClick,
 }: Props) {
   const [supported, setSupported] = useState(false)
@@ -195,7 +196,7 @@ export function VoiceRecorder({
         {/* Stop icon + label toujours visibles */}
         <div className="flex items-center gap-1 text-red-500 flex-shrink-0">
           <Square size={12} className="fill-red-500" />
-          <span className="text-xs font-bold">Arrêter</span>
+          <span className="text-xs font-bold">{locale === 'fr' ? 'Arrêter' : 'Stop'}</span>
         </div>
       </button>
     )

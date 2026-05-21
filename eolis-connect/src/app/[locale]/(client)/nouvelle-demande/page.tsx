@@ -1721,6 +1721,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               <div className="flex items-center justify-between mt-1.5">
                 <VoiceRecorder size="sm"
                   label={isFr ? 'Dicter' : 'Dictate'}
+                  locale={locale}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] active:bg-[#1B3A5C] active:text-white transition-colors"
                   disabledReason={!isOnline ? 'offline' : (creditsRemaining !== null && creditsRemaining <= 0) ? 'no_credits' : null}
                   onDisabledClick={() => !isOnline ? undefined : router.push(`/${locale}/recharger`)}
@@ -2361,6 +2362,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 {premiumAccepted
                   ? <VoiceRecorder size="sm"
                       label={isFr ? 'Dicter' : 'Dictate'}
+                      locale={locale}
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] active:bg-[#1B3A5C] active:text-white transition-colors"
                       disabledReason={!isOnline ? 'offline' : (creditsRemaining !== null && creditsRemaining <= 0) ? 'no_credits' : null}
                       onDisabledClick={() => router.push(`/${locale}/recharger`)}

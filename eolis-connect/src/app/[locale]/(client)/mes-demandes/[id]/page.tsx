@@ -1566,6 +1566,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                       ? <VoiceRecorder
                           className="flex-shrink-0 mb-2 text-gray-400 active:text-[#1B3A5C] transition-colors"
                           ticketId={ticketId}
+                          locale={locale}
                           onCostUpdate={refreshAiCost}
                           disabledReason={!isOnline ? 'offline' : (creditsRemaining !== null && creditsRemaining <= 0) ? 'no_credits' : null}
                           onDisabledClick={() => router.push(`/${locale}/recharger`)}
