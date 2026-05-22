@@ -351,12 +351,12 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
           <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
             <MessageSquare size={18} className="text-emerald-600" />
           </div>
-          <h2 className="font-semibold text-gray-900">{isFr ? 'Test SMS Twilio' : 'Twilio SMS test'}</h2>
+          <h2 className="font-semibold text-gray-900">{isFr ? 'Test SMS Twilio Verify' : 'Twilio Verify SMS test'}</h2>
         </div>
         <p className="text-sm text-gray-500 mb-4">
           {isFr
-            ? 'Envoyez un SMS de test pour vérifier que la configuration Twilio est opérationnelle.'
-            : 'Send a test SMS to confirm Twilio is configured and working.'}
+            ? 'Envoie un code de vérification via Twilio Verify pour confirmer que le service OTP fonctionne sur ce numéro.'
+            : 'Sends a verification code via Twilio Verify to confirm the OTP service works for this number.'}
         </p>
         <form onSubmit={sendTestSms} className="flex gap-2">
           <input
