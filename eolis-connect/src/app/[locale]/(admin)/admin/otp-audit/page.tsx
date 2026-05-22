@@ -186,7 +186,10 @@ export default function OtpAuditPage({ params }: { params: Promise<{ locale: str
 
                   {/* Code + status */}
                   <div className="text-right flex-shrink-0 space-y-1">
-                    <p className="text-xl font-mono font-bold text-[#1B3A5C] tracking-widest">{item.code}</p>
+                    {item.code === 'VERIFY'
+                      ? <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-violet-100 text-violet-700 uppercase tracking-wide">Twilio Verify</span>
+                      : <p className="text-xl font-mono font-bold text-[#1B3A5C] tracking-widest">{item.code}</p>
+                    }
                     <StatusBadge status={item.status} isFr={isFr} />
                   </div>
                 </div>

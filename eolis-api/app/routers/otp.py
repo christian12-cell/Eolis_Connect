@@ -1,11 +1,15 @@
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import User
+from ..models import User, OtpCode
 from ..schemas import OtpSendRequest, OtpVerifyRequest
 from ..sms_service import _e164, verify_send, verify_check
 from ..email_service import send_welcome_client
 from typing import Optional
+
+OTP_TTL_MINUTES = 10
+_VERIFY_MARKER = "VERIFY"
 
 router = APIRouter(prefix="/auth/otp", tags=["otp"])
 
@@ -20,6 +24,10 @@ def send_otp(body: OtpSendRequest, background_tasks: BackgroundTasks, db: Sessio
     if not phone.startswith("+"):
         raise HTTPException(status_code=400, detail="invalid_phone")
 
+    db.query(OtpCode).filter(OtpCode.phone == phone, OtpCode.code == _VERIFY_MARKER, OtpCode.used == False).update({"used": True})
+    db.add(OtpCode(user_id=body.user_id, phone=phone, code=_VERIFY_MARKER,
+                   expires_at=datetime.utcnow() + timedelta(minutes=OTP_TTL_MINUTES)))
+    db.commit()
     background_tasks.add_task(verify_send, phone)
     return {"sent": True, "phone": phone}
 
@@ -28,11 +36,17 @@ def send_otp(body: OtpSendRequest, background_tasks: BackgroundTasks, db: Sessio
 def verify_otp(body: OtpVerifyRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     phone = _normalize(body.phone)
 
-    status = verify_check(phone, body.code)
-    if status == "canceled":
+    result = verify_check(phone, body.code)
+    if result == "canceled":
         raise HTTPException(status_code=400, detail="otp_expired")
-    if status != "approved":
+    if result != "approved":
         raise HTTPException(status_code=400, detail="otp_wrong:2")
+
+    audit = (db.query(OtpCode)
+             .filter(OtpCode.phone == phone, OtpCode.code == _VERIFY_MARKER, OtpCode.used == False)
+             .order_by(OtpCode.created_at.desc()).first())
+    if audit:
+        audit.used = True
 
     uid  = body.user_id
     user: Optional[User] = db.query(User).filter(User.id == uid).first() if uid else None
@@ -72,6 +86,10 @@ def phone_verify_init(body: dict, background_tasks: BackgroundTasks, db: Session
         raise HTTPException(400, "no_phone")
 
     phone = _normalize(user.phone)
+    db.query(OtpCode).filter(OtpCode.phone == phone, OtpCode.code == _VERIFY_MARKER, OtpCode.used == False).update({"used": True})
+    db.add(OtpCode(user_id=user.id, phone=phone, code=_VERIFY_MARKER,
+                   expires_at=datetime.utcnow() + timedelta(minutes=OTP_TTL_MINUTES)))
+    db.commit()
     background_tasks.add_task(verify_send, phone)
 
     p = user.phone
@@ -99,6 +117,12 @@ def phone_verify_confirm(body: dict, background_tasks: BackgroundTasks, db: Sess
         raise HTTPException(400, "otp_expired")
     if result != "approved":
         raise HTTPException(400, "otp_wrong:2")
+
+    audit = (db.query(OtpCode)
+             .filter(OtpCode.phone == phone, OtpCode.code == _VERIFY_MARKER, OtpCode.used == False)
+             .order_by(OtpCode.created_at.desc()).first())
+    if audit:
+        audit.used = True
 
     first_verification = not user.phone_verified
     user.phone_verified = True
