@@ -27,6 +27,7 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [step, setStep]           = useState<'credentials' | '2fa'>('credentials')
   const [preToken, setPreToken]   = useState('')
   const [maskedPhone, setMaskedPhone] = useState('')
+  const [maskedEmail, setMaskedEmail] = useState('')
   const [otpCode, setOtpCode]     = useState('')
   const [countdown, setCountdown] = useState(0)
   const [resending, setResending] = useState(false)
@@ -177,6 +178,7 @@ export default function LoginPage({ params }: LoginPageProps) {
         if (data.requires_2fa) {
           setPreToken(data.pre_token)
           setMaskedPhone(data.masked_phone ?? '')
+          setMaskedEmail(data.masked_email ?? '')
           setStep('2fa')
           setLoading(false)
           return
@@ -369,8 +371,8 @@ export default function LoginPage({ params }: LoginPageProps) {
               </h2>
               <p className="text-sm text-gray-500 mt-1">
                 {locale === 'fr'
-                  ? `Un code a été envoyé par SMS au ${maskedPhone}`
-                  : `A code was sent by SMS to ${maskedPhone}`}
+                  ? `Un code a été envoyé par email à ${maskedEmail}`
+                  : `A code was sent by email to ${maskedEmail}`}
               </p>
             </div>
 

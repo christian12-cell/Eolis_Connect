@@ -177,9 +177,10 @@ def login(request: Request, body: LoginRequest, background_tasks: BackgroundTask
             )
             db.add(otp)
             db.commit()
-            background_tasks.add_task(sms_otp, user.phone, code)
+            background_tasks.add_task(send_otp_email, user.email, user.first_name, code, user.language or "fr")
             pre_token = _sign_pre_auth(user.id)
-            return {"requires_2fa": True, "pre_token": pre_token, "masked_phone": _mask_phone(user.phone)}
+            masked_email = _mask_email(user.email)
+            return {"requires_2fa": True, "pre_token": pre_token, "masked_phone": _mask_phone(user.phone), "masked_email": masked_email}
 
     user.last_login_at = datetime.utcnow()
     db.add(user)
@@ -300,7 +301,7 @@ def resend_2fa(request: Request, body: dict, background_tasks: BackgroundTasks, 
     )
     db.add(otp)
     db.commit()
-    background_tasks.add_task(sms_otp, user.phone, code)
+    background_tasks.add_task(send_otp_email, user.email, user.first_name, code, user.language or "fr")
 
     return {"pre_token": _sign_pre_auth(user.id)}
 
