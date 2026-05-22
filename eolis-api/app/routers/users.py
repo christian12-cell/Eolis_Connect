@@ -13,7 +13,7 @@ from ..deps import get_current_user, require_roles
 from ..security import hash_password, verify_password
 from ..config import settings
 from ..email_service import send_account_created_by_admin, send_account_deleted
-from ..sms_service import verify_send, sms_account_deleted
+from ..sms_service import verify_send, sms_test, sms_account_deleted
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -171,6 +171,15 @@ def test_sms(body: dict, background_tasks: BackgroundTasks, current_user: User =
     if not phone:
         raise HTTPException(status_code=400, detail="phone_required")
     background_tasks.add_task(verify_send, phone)
+    return {"sent": True, "to": phone}
+
+
+@router.post("/admin/test-sms-notif")
+def test_sms_notif(body: dict, background_tasks: BackgroundTasks, current_user: User = Depends(require_roles("SYSTEM_ADMIN"))):
+    phone = body.get("phone", "")
+    if not phone:
+        raise HTTPException(status_code=400, detail="phone_required")
+    background_tasks.add_task(sms_test, phone)
     return {"sent": True, "to": phone}
 
 

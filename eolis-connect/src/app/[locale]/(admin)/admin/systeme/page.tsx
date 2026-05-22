@@ -36,6 +36,9 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
   const [testPhone, setTestPhone] = useState('')
   const [smsSending, setSmsSending] = useState(false)
   const [smsResult, setSmsResult] = useState<'ok' | 'err' | null>(null)
+  const [testPhoneNotif, setTestPhoneNotif] = useState('')
+  const [smsNotifSending, setSmsNotifSending] = useState(false)
+  const [smsNotifResult, setSmsNotifResult] = useState<'ok' | 'err' | null>(null)
 
   const [resetPhrase, setResetPhrase] = useState('')
   const [resetting, setResetting] = useState(false)
@@ -196,6 +199,20 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
     }
     setSmsSending(false)
     setTimeout(() => setSmsResult(null), 4000)
+  }
+
+  async function sendTestSmsNotif(e: React.FormEvent) {
+    e.preventDefault()
+    setSmsNotifSending(true)
+    setSmsNotifResult(null)
+    try {
+      await apiFetch('/api/users/admin/test-sms-notif', { method: 'POST', body: JSON.stringify({ phone: testPhoneNotif }) })
+      setSmsNotifResult('ok')
+    } catch {
+      setSmsNotifResult('err')
+    }
+    setSmsNotifSending(false)
+    setTimeout(() => setSmsNotifResult(null), 4000)
   }
 
   if (!user) return null
@@ -381,6 +398,40 @@ export default function SystemePage({ params }: { params: Promise<{ locale: stri
         )}
         {smsResult === 'err' && (
           <p className="mt-2 text-xs text-red-500">{isFr ? 'Échec d\'envoi. Vérifiez les logs.' : 'Send failed. Check server logs.'}</p>
+        )}
+      </section>
+
+      {/* Test SMS notification */}
+      <section className="bg-white rounded-2xl border border-gray-100 card-shadow p-6 max-w-md">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
+            <MessageSquare size={18} className="text-orange-500" />
+          </div>
+          <h2 className="font-semibold text-gray-900">{isFr ? 'Test SMS notification' : 'Notification SMS test'}</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          {isFr
+            ? 'Envoie un SMS de notification classique (Programmable Messaging) pour tester la délivrabilité vers ce numéro.'
+            : 'Sends a standard notification SMS (Programmable Messaging) to test delivery to this number.'}
+        </p>
+        <form onSubmit={sendTestSmsNotif} className="flex gap-2">
+          <input
+            type="tel" required value={testPhoneNotif}
+            onChange={e => setTestPhoneNotif(e.target.value)}
+            placeholder="+237 6XX XXX XXX"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+          />
+          <button type="submit" disabled={smsNotifSending}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 transition-colors">
+            <Send size={14} />
+            {smsNotifSending ? '...' : isFr ? 'Envoyer' : 'Send'}
+          </button>
+        </form>
+        {smsNotifResult === 'ok' && (
+          <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1"><Check size={12} /> {isFr ? 'SMS envoyé !' : 'SMS sent!'}</p>
+        )}
+        {smsNotifResult === 'err' && (
+          <p className="mt-2 text-xs text-red-500">{isFr ? 'Échec. Vérifiez les logs Railway.' : 'Failed. Check Railway logs.'}</p>
         )}
       </section>
 
