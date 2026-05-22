@@ -33,6 +33,47 @@ def send_sms(to: str, body: str):
         print(f"[sms] Failed to {phone}: {exc}")
 
 
+# ── Twilio Verify (OTP global) ────────────────────────────────────────────────
+
+def verify_send(phone: str):
+    """Send OTP via Twilio Verify — handles carrier routing globally."""
+    if not settings.TWILIO_ENABLED or not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_VERIFY_SERVICE_SID:
+        print("[verify] Not configured — skipping")
+        return
+    phone = _e164(phone)
+    if not phone.startswith("+"):
+        return
+    try:
+        from twilio.rest import Client
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verifications.create(
+            to=phone, channel="sms"
+        )
+        print(f"[verify] Sent to {phone}")
+    except Exception as exc:
+        print(f"[verify] Failed to {phone}: {exc}")
+
+
+def verify_check(phone: str, code: str) -> str:
+    """
+    Check OTP via Twilio Verify.
+    Returns: 'approved' | 'pending' (wrong code) | 'canceled' (expired/max attempts) | 'error'
+    """
+    if not settings.TWILIO_ENABLED or not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_VERIFY_SERVICE_SID:
+        return "error"
+    phone = _e164(phone)
+    try:
+        from twilio.rest import Client
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        result = client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID).verification_checks.create(
+            to=phone, code=code
+        )
+        return result.status
+    except Exception as exc:
+        print(f"[verify] Check failed for {phone}: {exc}")
+        return "error"
+
+
 # ── Notification wrappers ──────────────────────────────────────────────────────
 
 def sms_otp(to: str, code: str):

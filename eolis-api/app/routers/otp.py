@@ -1,22 +1,13 @@
-import random
-from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import User, OtpCode
+from ..models import User
 from ..schemas import OtpSendRequest, OtpVerifyRequest
-from ..sms_service import sms_otp, _e164
+from ..sms_service import _e164, verify_send, verify_check
 from ..email_service import send_welcome_client
 from typing import Optional
 
 router = APIRouter(prefix="/auth/otp", tags=["otp"])
-
-OTP_TTL_MINUTES = 10
-OTP_MAX_ATTEMPTS = 3
-
-
-def _generate_code() -> str:
-    return str(random.randint(100000, 999999))
 
 
 def _normalize(phone: str) -> str:
@@ -29,23 +20,7 @@ def send_otp(body: OtpSendRequest, background_tasks: BackgroundTasks, db: Sessio
     if not phone.startswith("+"):
         raise HTTPException(status_code=400, detail="invalid_phone")
 
-    # Invalidate any existing unused OTPs for this phone
-    db.query(OtpCode).filter(
-        OtpCode.phone == phone,
-        OtpCode.used == False,
-    ).update({"used": True})
-
-    code = _generate_code()
-    otp = OtpCode(
-        user_id=body.user_id,
-        phone=phone,
-        code=code,
-        expires_at=datetime.utcnow() + timedelta(minutes=OTP_TTL_MINUTES),
-    )
-    db.add(otp)
-    db.commit()
-
-    background_tasks.add_task(sms_otp, phone, code)
+    background_tasks.add_task(verify_send, phone)
     return {"sent": True, "phone": phone}
 
 
@@ -53,67 +28,15 @@ def send_otp(body: OtpSendRequest, background_tasks: BackgroundTasks, db: Sessio
 def verify_otp(body: OtpVerifyRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     phone = _normalize(body.phone)
 
-    otp = (
-        db.query(OtpCode)
-        .filter(
-            OtpCode.phone == phone,
-            OtpCode.used == False,
-            OtpCode.expires_at > datetime.utcnow(),
-        )
-        .order_by(OtpCode.created_at.desc())
-        .first()
-    )
-
-    if not otp:
+    status = verify_check(phone, body.code)
+    if status == "canceled":
         raise HTTPException(status_code=400, detail="otp_expired")
+    if status != "approved":
+        raise HTTPException(status_code=400, detail="otp_wrong:2")
 
-    now = datetime.utcnow()
-
-    uid  = body.user_id or otp.user_id
+    uid  = body.user_id
     user: Optional[User] = db.query(User).filter(User.id == uid).first() if uid else None
 
-    if user:
-        if user.status == "LOCKED":
-            raise HTTPException(status_code=403, detail="account_locked")
-        if user.login_locked_until and user.login_locked_until > now:
-            secs = int((user.login_locked_until - now).total_seconds())
-            raise HTTPException(status_code=423, detail=f"temporarily_locked:{secs}")
-
-    otp.attempts += 1
-
-    if otp.code != body.code:
-        if user:
-            had_prev_lock = user.login_locked_until is not None
-            user.login_failed_count = (user.login_failed_count or 0) + 1
-            if otp.attempts >= OTP_MAX_ATTEMPTS:
-                otp.used = True
-            if user.login_failed_count >= 3:
-                if had_prev_lock:
-                    user.status = "LOCKED"
-                    user.login_failed_count = 0
-                    user.login_locked_until = None
-                    db.commit()
-                    raise HTTPException(status_code=403, detail="account_locked")
-                else:
-                    user.login_locked_until = now + timedelta(minutes=15)
-                    user.login_failed_count = 0
-                    db.commit()
-                    raise HTTPException(status_code=423, detail="temporarily_locked:900")
-            if otp.attempts >= OTP_MAX_ATTEMPTS:
-                db.commit()
-                raise HTTPException(status_code=400, detail="otp_max_attempts")
-            remaining = min(3 - user.login_failed_count, OTP_MAX_ATTEMPTS - otp.attempts)
-        else:
-            if otp.attempts >= OTP_MAX_ATTEMPTS:
-                otp.used = True
-                db.commit()
-                raise HTTPException(status_code=400, detail="otp_max_attempts")
-            remaining = OTP_MAX_ATTEMPTS - otp.attempts
-        db.commit()
-        raise HTTPException(status_code=400, detail=f"otp_wrong:{remaining}")
-
-    # Correct code — mark used and verify phone on user
-    otp.used = True
     first_verification = user and not user.phone_verified
     if user:
         user.phone_verified = True
@@ -149,13 +72,7 @@ def phone_verify_init(body: dict, background_tasks: BackgroundTasks, db: Session
         raise HTTPException(400, "no_phone")
 
     phone = _normalize(user.phone)
-    db.query(OtpCode).filter(OtpCode.phone == phone, OtpCode.used == False).update({"used": True})
-    code = _generate_code()
-    otp = OtpCode(user_id=user.id, phone=phone, code=code,
-                  expires_at=datetime.utcnow() + timedelta(minutes=OTP_TTL_MINUTES))
-    db.add(otp)
-    db.commit()
-    background_tasks.add_task(sms_otp, phone, code)
+    background_tasks.add_task(verify_send, phone)
 
     p = user.phone
     masked = (p[:3] + '*' * max(1, len(p) - 6) + p[-3:]) if len(p) >= 7 else p
@@ -177,25 +94,12 @@ def phone_verify_confirm(body: dict, background_tasks: BackgroundTasks, db: Sess
         return {"verified": True}
 
     phone = _normalize(user.phone)
-    otp = (db.query(OtpCode)
-           .filter(OtpCode.phone == phone, OtpCode.used == False,
-                   OtpCode.expires_at > datetime.utcnow())
-           .order_by(OtpCode.created_at.desc()).first())
-
-    if not otp:
+    result = verify_check(phone, code)
+    if result == "canceled":
         raise HTTPException(400, "otp_expired")
+    if result != "approved":
+        raise HTTPException(400, "otp_wrong:2")
 
-    otp.attempts += 1
-    if otp.code != code:
-        if otp.attempts >= OTP_MAX_ATTEMPTS:
-            otp.used = True
-            db.commit()
-            raise HTTPException(400, "otp_max_attempts")
-        remaining = OTP_MAX_ATTEMPTS - otp.attempts
-        db.commit()
-        raise HTTPException(400, f"otp_wrong:{remaining}")
-
-    otp.used = True
     first_verification = not user.phone_verified
     user.phone_verified = True
     user.login_failed_count = 0
