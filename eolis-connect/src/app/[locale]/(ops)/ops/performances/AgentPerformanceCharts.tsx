@@ -84,7 +84,7 @@ export default function AgentPerformanceCharts({ trendData, urgencyData, scoreEv
                   {!c.dashed && <span style={{ borderTop: `2px solid ${c.color}`, width: 12, display: 'inline-block', verticalAlign: 'middle' }} />}
                   {isFr ? c.labelFr : c.labelEn}
                 </span>
-                <span className="font-bold text-gray-800">{typeof val === 'number' ? +val.toFixed(1) : val}/100</span>
+                <span className="font-bold text-gray-800">{typeof val === 'number' ? +val.toFixed(2) : val}/100</span>
               </div>
               <p className="text-gray-400 text-[10px] mt-0.5 leading-snug">{isFr ? c.descFr : c.descEn}</p>
             </div>
