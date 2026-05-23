@@ -31,4 +31,5 @@ def create_rating(ticket_id: str, body: RatingCreateRequest, current_user: User 
     db.add(Log(user_id=current_user.id, action="CREATE_RATING", entity="Ticket", entity_id=ticket_id))
     db.commit()
     db.refresh(rating)
+    print(f"[rating] ✅ Ticket {ticket.ref} — score={body.score}/5 — comment={'oui' if body.comment else 'non'} — agent={ticket.agent_id}")
     return rating

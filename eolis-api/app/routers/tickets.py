@@ -30,7 +30,10 @@ def list_tickets(current_user: User = Depends(get_current_user), db: Session = D
         q = q.filter(Ticket.client_id == current_user.id)
     elif current_user.role == "AGENT":
         q = q.filter((Ticket.agent_id == current_user.id) | (Ticket.agent_id == None))
-    return q.order_by(Ticket.created_at.desc()).all()
+    results = q.order_by(Ticket.created_at.desc()).all()
+    rated = sum(1 for t in results if t.satisfaction_rating is not None)
+    print(f"[tickets] {len(results)} tickets retournés — {rated} avec rating")
+    return results
 
 
 @router.post("", response_model=TicketResponse, status_code=status.HTTP_201_CREATED)
