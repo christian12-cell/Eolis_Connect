@@ -66,6 +66,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ locale
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading]         = useState(true)
   const [range, setRange]             = useState<DateRange | null>(null)
+  const [tab, setTab]                 = useState<'all' | 'unread' | 'read'>('all')
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -91,23 +92,44 @@ export default function NotificationsPage({ params }: { params: Promise<{ locale
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
   }
 
-  const filtered  = notifications.filter(n => inRange(n.createdAt, range))
-  const unread    = filtered.filter(n => !n.isRead)
-  const read      = filtered.filter(n => n.isRead)
+  const byPeriod    = notifications.filter(n => inRange(n.createdAt, range))
+  const unreadAll   = byPeriod.filter(n => !n.isRead)
+  const readAll     = byPeriod.filter(n => n.isRead)
+  const filtered    = tab === 'unread' ? unreadAll : tab === 'read' ? readAll : byPeriod
+  const unread      = filtered.filter(n => !n.isRead)
+  const read        = filtered.filter(n => n.isRead)
   const totalUnread = notifications.filter(n => !n.isRead).length
 
   return (
     <MobileLayout locale={locale} title={isFr ? 'Notifications' : 'Notifications'} unreadCount={0}>
 
       {/* Filters row */}
-      <div className="flex items-center justify-between mb-5 gap-3">
-        <PeriodFilter onChange={handlePeriod} isFr={isFr} dark={false} />
-        {totalUnread > 0 && (
-          <button onClick={markAllRead}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold flex-shrink-0">
-            <CheckCheck size={13} /> {isFr ? 'Tout lire' : 'Mark all read'}
-          </button>
-        )}
+      <div className="mb-5 space-y-3 overflow-visible">
+        {/* Période + tout lire */}
+        <div className="flex items-center justify-between gap-3 overflow-visible">
+          <div className="overflow-visible">
+            <PeriodFilter onChange={handlePeriod} isFr={isFr} dark={false} />
+          </div>
+          {totalUnread > 0 && (
+            <button onClick={markAllRead}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold flex-shrink-0">
+              <CheckCheck size={13} /> {isFr ? 'Tout lire' : 'Mark all read'}
+            </button>
+          )}
+        </div>
+        {/* Toggle lues / non lues */}
+        <div className="flex gap-2">
+          {(['all', 'unread', 'read'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                tab === t ? 'bg-[#1B3A5C] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}>
+              {t === 'all'    ? (isFr ? 'Toutes' : 'All')             : ''}
+              {t === 'unread' ? (isFr ? `Non lues (${unreadAll.length})` : `Unread (${unreadAll.length})`) : ''}
+              {t === 'read'   ? (isFr ? `Lues (${readAll.length})`    : `Read (${readAll.length})`)    : ''}
+            </button>
+          ))}
+        </div>
       </div>
 
       {filtered.length === 0 ? (
