@@ -78,12 +78,6 @@ export default function NotificationsPage({ params }: { params: Promise<{ locale
       setNotifications(Array.isArray(data) ? data : [])
       setLoading(false)
     }).catch(() => setLoading(false))
-
-    return () => {
-      apiFetch('/api/notifications/read-all', { method: 'POST' })
-        .then(() => window.dispatchEvent(new Event('eolis:notifications_read')))
-        .catch(() => {})
-    }
   }, [locale])
 
   const handlePeriod = useCallback((r: DateRange | null) => setRange(r), [])
