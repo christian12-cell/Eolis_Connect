@@ -197,6 +197,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   const [selectedAgent, setSelectedAgent] = useState<string>('all')
   const [yearFilter, setYearFilter]     = useState<number[]>([])
   const [monthFilter, setMonthFilter]   = useState<number[]>([])
+  const [dayFilter, setDayFilter]       = useState<number[]>([])
   const [urgencyFilter, setUrgencyFilter] = useState<string[]>([])
   const [commentsOpen, setCommentsOpen]   = useState(false)
   const [equite, setEquite]               = useState(false)
@@ -241,13 +242,14 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   const now    = new Date()
 
   // ── Filter tickets by period ─────────────────────────────────────────────
-  const hasFilter = !!(yearFilter.length || monthFilter.length || urgencyFilter.length)
+  const hasFilter = !!(yearFilter.length || monthFilter.length || dayFilter.length || urgencyFilter.length)
   const closedAll = tickets.filter(t => t.status === 'TREATED' || t.status === 'CLOSED')
 
-  const periodClosed = (yearFilter.length || monthFilter.length) ? closedAll.filter(t => {
+  const periodClosed = (yearFilter.length || monthFilter.length || dayFilter.length) ? closedAll.filter(t => {
     const d = new Date(t.closedAt ?? t.updatedAt)
     if (yearFilter.length  && !yearFilter.includes(d.getFullYear())) return false
     if (monthFilter.length && !monthFilter.includes(d.getMonth() + 1)) return false
+    if (dayFilter.length   && !dayFilter.includes(d.getDate())) return false
     return true
   }) : closedAll
 
@@ -573,6 +575,11 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
           selected={monthFilter}
           onToggle={v => setMonthFilter(p => p.includes(v as number) ? p.filter(x => x !== v) : [...p, v as number])}
           onClear={() => setMonthFilter([])} />
+        <MultiSelect label={isFr ? 'Jour' : 'Day'} isFr={isFr}
+          options={[...Array(31)].map((_, i) => ({ value: i + 1, label: String(i + 1) }))}
+          selected={dayFilter}
+          onToggle={v => setDayFilter(p => p.includes(v as number) ? p.filter(x => x !== v) : [...p, v as number])}
+          onClear={() => setDayFilter([])} />
         <MultiSelect label={isFr ? 'Urgence' : 'Urgency'} isFr={isFr}
           options={[
             { value: 'HIGH',   label: `🔴 ${isFr ? 'Élevée' : 'High'}` },
@@ -583,7 +590,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
           onToggle={v => setUrgencyFilter(p => p.includes(v as string) ? p.filter(x => x !== v) : [...p, v as string])}
           onClear={() => setUrgencyFilter([])} />
         {hasFilter && (
-          <button onClick={() => { setYearFilter([]); setMonthFilter([]); setUrgencyFilter([]) }}
+          <button onClick={() => { setYearFilter([]); setMonthFilter([]); setDayFilter([]); setUrgencyFilter([]) }}
             className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 font-medium">
             <X size={14} /> {L.clearAll}
           </button>
