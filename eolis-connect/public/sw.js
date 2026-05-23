@@ -1,4 +1,4 @@
-const CACHE = 'eolis-v7'
+const CACHE = 'eolis-v8'
 const SHELL_URLS = ['/', '/fr/accueil', '/en/accueil']
 
 self.addEventListener('install', e => {
@@ -149,7 +149,14 @@ async function doBackgroundSync() {
     const lang    = langRec?.data || 'fr'
     const en      = lang === 'en'
 
-    if (!token) { db.close(); return }
+    if (!token) {
+      self.registration.showNotification('Eolis Connect [debug]', {
+        body: 'Sync déclenché mais token manquant — reconnecte-toi dans l\'app',
+        icon: '/logo.png',
+      })
+      db.close()
+      return
+    }
 
     const pending = await swGetAll(db)
     if (!pending.length) { db.close(); return }
