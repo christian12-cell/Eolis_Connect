@@ -8,6 +8,7 @@ from ..schemas import MessageCreateRequest, MessageResponse
 from ..deps import get_current_user
 from ..config import settings
 from ..sms_service import sms_final_response, sms_document_requested, sms_docs_submitted
+from ..email_service import send_final_response_email, send_document_requested_email
 from ..push_service import send_push_to_user
 from ..ws_manager import ws_manager
 
@@ -178,6 +179,13 @@ def send_message(
                     client.phone, client.first_name, current_user.first_name,
                     ticket.ref, client.language or "fr",
                 )
+            _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
+            _login_url = f"{_frontend}/{client.language or 'fr'}/mes-demandes/{ticket_id}"
+            background_tasks.add_task(
+                send_final_response_email,
+                client.email, client.first_name, current_user.first_name,
+                ticket.ref, _login_url, client.language or "fr",
+            )
             background_tasks.add_task(
                 send_push_to_user,ticket.client_id, "FINAL_RESPONSE",
                 "Réponse finale" if (client.language != "en") else "Final response",
@@ -199,6 +207,12 @@ def send_message(
                     sms_document_requested,
                     client.phone, client.first_name, ticket.ref, client.language or "fr",
                 )
+            _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
+            _login_url = f"{_frontend}/{client.language or 'fr'}/mes-demandes/{ticket_id}"
+            background_tasks.add_task(
+                send_document_requested_email,
+                client.email, client.first_name, ticket.ref, _login_url, client.language or "fr",
+            )
             background_tasks.add_task(
                 send_push_to_user,ticket.client_id, "DOCUMENT_REQUEST",
                 "Documents requis" if (client.language != "en") else "Documents required",

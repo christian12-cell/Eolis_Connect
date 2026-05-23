@@ -404,3 +404,51 @@ def send_maintenance_end(to_email: str, first_name: str, return_message: str | N
       </table>
     """
     _send(to_email, subject, _template(content, lang))
+
+
+def send_final_response_email(to_email: str, first_name: str, agent_first_name: str, ticket_ref: str, login_url: str, lang: str = "fr"):
+    en = lang == "en"
+    subject = f"Your request {ticket_ref} has been closed — Eolis Connect" if en else f"Votre dossier {ticket_ref} a été clôturé — Eolis Connect"
+    t_greeting = "Hello" if en else "Bonjour"
+    t_intro    = f"Agent <strong>{agent_first_name}</strong> has sent a final response to your request <strong>{ticket_ref}</strong> and closed it." if en else f"L'agent <strong>{agent_first_name}</strong> a envoyé une réponse finale à votre dossier <strong>{ticket_ref}</strong> et l'a clôturé."
+    t_btn      = "View the response →" if en else "Consulter la réponse →"
+    t_rating   = "Don't forget to rate your experience once you've read the response." if en else "N'oubliez pas d'évaluer votre expérience après avoir consulté la réponse."
+    content = f"""
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_greeting} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">{t_intro}</p>
+      <table cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        <tr><td style="background:#1B3A5C;border-radius:10px;padding:0;">
+          <a href="{login_url}" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">{t_btn}</a>
+        </td></tr>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFF6FF;border:1px solid #bfdbfe;border-radius:12px;margin:0 0 16px;">
+        <tr><td style="padding:14px 20px;">
+          <p style="margin:0;font-size:13px;color:#1e40af;">⭐ {t_rating}</p>
+        </td></tr>
+      </table>
+    """
+    _send(to_email, subject, _template(content, lang))
+
+
+def send_document_requested_email(to_email: str, first_name: str, ticket_ref: str, login_url: str, lang: str = "fr"):
+    en = lang == "en"
+    subject = f"Documents required for your request {ticket_ref} — Eolis Connect" if en else f"Documents requis pour votre dossier {ticket_ref} — Eolis Connect"
+    t_greeting = "Hello" if en else "Bonjour"
+    t_intro    = f"Your agent needs additional documents to process your request <strong>{ticket_ref}</strong>." if en else f"Votre agent a besoin de documents supplémentaires pour traiter votre dossier <strong>{ticket_ref}</strong>."
+    t_btn      = "Provide the documents →" if en else "Fournir les documents →"
+    t_urgency  = "Please provide them as soon as possible to avoid any delay in processing your request." if en else "Merci de les fournir dès que possible pour éviter tout retard dans le traitement de votre dossier."
+    content = f"""
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">{t_greeting} <strong style="color:#1B3A5C;">{first_name}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">{t_intro}</p>
+      <table cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        <tr><td style="background:#1B3A5C;border-radius:10px;padding:0;">
+          <a href="{login_url}" style="display:inline-block;padding:13px 32px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">{t_btn}</a>
+        </td></tr>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF9C3;border:1px solid #fde047;border-radius:12px;margin:0 0 16px;">
+        <tr><td style="padding:14px 20px;">
+          <p style="margin:0;font-size:13px;color:#92400e;">⏱ {t_urgency}</p>
+        </td></tr>
+      </table>
+    """
+    _send(to_email, subject, _template(content, lang))
