@@ -195,8 +195,9 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [selectedAgent, setSelectedAgent] = useState<string>('all')
-  const [yearFilter, setYearFilter]     = useState<number[]>([])
-  const [monthFilter, setMonthFilter]   = useState<number[]>([])
+  const _now = new Date()
+  const [yearFilter, setYearFilter]     = useState<number[]>([_now.getFullYear()])
+  const [monthFilter, setMonthFilter]   = useState<number[]>([_now.getMonth() + 1])
   const [dayFilter, setDayFilter]       = useState<number[]>([])
   const [urgencyFilter, setUrgencyFilter] = useState<string[]>([])
   const [commentsOpen, setCommentsOpen]   = useState(false)
@@ -486,6 +487,65 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
     })
   }
 
+  function buildScoreEvolution(agentId: string): { points: any[]; granularity: 'day' | 'week' | 'month' } {
+    const src = agentId === 'all' ? filteredClosedAll : filteredClosedAll.filter(t => t.agentId === agentId)
+    if (!src.length) return { points: [], granularity: 'day' }
+    const timestamps = src.map(t => new Date(t.closedAt ?? t.updatedAt).getTime()).filter(d => !isNaN(d))
+    if (!timestamps.length) return { points: [], granularity: 'day' }
+    const dayRange = (Date.now() - Math.min(...timestamps)) / 86400000
+    const granularity: 'day' | 'week' | 'month' = dayRange > 180 ? 'month' : dayRange >= 30 ? 'week' : 'day'
+    const n = granularity === 'day' ? 30 : 12
+
+    function scoresBucket(pts: any[]) {
+      if (!pts.length) return { composite: null, satScore: null, speedScore: null, slaScore: null, firstRScore: null }
+      const sc = pts.filter(t => t.satisfactionRating?.score).map(t => t.satisfactionRating.score)
+      const satScore = sc.length ? +(sc.reduce((a: number, b: number) => a + b, 0) / sc.length / 5 * 100).toFixed(1) : null
+      const spParts = (['HIGH','MEDIUM','LOW'] as const).map(u => {
+        const uts = pts.filter(t => t.urgency === u)
+        const ts = uts.map(t => (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000).filter(h => !isNaN(h) && isFinite(h) && h >= 0)
+        if (!ts.length) return null
+        return { score: Math.max(0, 100 - (ts.reduce((a, b) => a + b, 0) / ts.length / SLA_HOURS[u]) * 100), n: ts.length }
+      }).filter(Boolean) as { score: number; n: number }[]
+      const spN = spParts.reduce((s, p) => s + p.n, 0)
+      const speedScore = spN > 0 ? +(spParts.reduce((s, p) => s + p.score * p.n, 0) / spN).toFixed(1) : null
+      const slaOk = pts.filter(t => { const h = (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000; return h <= (SLA_HOURS[t.urgency as keyof typeof SLA_HOURS] ?? 10) }).length
+      const slaScore = pts.length > 0 ? Math.round(slaOk / pts.length * 100) : null
+      const frParts = (['HIGH','MEDIUM','LOW'] as const).map(u => {
+        const uts = pts.filter(t => t.urgency === u)
+        const times = uts.map(getFirstResponseH).filter(h => h !== null) as number[]
+        if (!times.length) return null
+        return { score: Math.max(0, 100 - (times.reduce((a, b) => a + b, 0) / times.length / (SLA_HOURS[u] / 3)) * 100), n: times.length }
+      }).filter(Boolean) as { score: number; n: number }[]
+      const frN = frParts.reduce((s, p) => s + p.n, 0)
+      const firstRScore = frN > 0 ? +(frParts.reduce((s, p) => s + p.score * p.n, 0) / frN).toFixed(1) : null
+      const cp = ([{ score: satScore, w: 0.25 }, { score: speedScore, w: 0.25 }, { score: slaScore, w: 0.30 }, { score: firstRScore, w: 0.20 }] as { score: number | null; w: number }[]).filter(c => c.score !== null) as { score: number; w: number }[]
+      const cT = cp.reduce((s, c) => s + c.w, 0)
+      const composite = cp.length > 0 ? +(cp.reduce((s, c) => s + c.score * (c.w / cT), 0)).toFixed(1) : null
+      return { composite, satScore, speedScore, slaScore, firstRScore }
+    }
+
+    const points = Array.from({ length: n }, (_, i) => {
+      let label = '', pts: any[] = []
+      if (granularity === 'month') {
+        const d = new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1)
+        label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
+        pts = src.filter(t => { const td = new Date(t.closedAt ?? t.updatedAt); return td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() })
+      } else if (granularity === 'week') {
+        const ws = new Date(now); ws.setDate(ws.getDate() - (n - 1 - i) * 7); ws.setHours(0,0,0,0)
+        const we = new Date(ws); we.setDate(we.getDate() + 6); we.setHours(23,59,59,999)
+        label = ws.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+        pts = src.filter(t => { const td = new Date(t.closedAt ?? t.updatedAt); return td >= ws && td <= we })
+      } else {
+        const d = new Date(now); d.setDate(d.getDate() - (n - 1 - i)); d.setHours(0,0,0,0)
+        label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+        pts = src.filter(t => { const td = new Date(t.closedAt ?? t.updatedAt); return td.getDate() === d.getDate() && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() })
+      }
+      return { date: label, ...scoresBucket(pts) }
+    })
+    return { points, granularity }
+  }
+
+  const scoreEvolution = selectedAgent !== 'all' ? buildScoreEvolution(selectedAgent) : buildScoreEvolution('all')
   const trendData    = selectedAgent !== 'all' ? buildTrend(selectedAgent) : buildTrend('all')
   const urgencyData  = (() => {
     const src = selectedAgent !== 'all' ? filteredClosed.filter(t => t.agentId === selectedAgent) : filteredClosed
@@ -702,7 +762,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
           </div>
 
           {/* Charts */}
-          <AgentPerformanceCharts trendData={trendData} urgencyData={urgencyData} locale={locale} />
+          <AgentPerformanceCharts trendData={trendData} urgencyData={urgencyData} scoreEvolution={scoreEvolution} locale={locale} />
 
           {/* Comments — accordion */}
           <div className="bg-white rounded-2xl border border-gray-100 card-shadow mt-5">
@@ -754,7 +814,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
       {selectedAgent === 'all' && (
         <>
           {/* Global charts */}
-          <AgentPerformanceCharts trendData={trendData} urgencyData={urgencyData} locale={locale} />
+          <AgentPerformanceCharts trendData={trendData} urgencyData={urgencyData} scoreEvolution={scoreEvolution} locale={locale} />
 
           {/* Comparison table */}
           <div className="bg-white rounded-2xl border border-gray-100 card-shadow mt-5 overflow-hidden">
