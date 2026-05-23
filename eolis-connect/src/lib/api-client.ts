@@ -77,7 +77,7 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   }
 
   const controller = new AbortController()
-  const timeoutId  = setTimeout(() => controller.abort(), 8000)
+  const timeoutId  = setTimeout(() => controller.abort(), 3000)
 
   try {
     const res = await fetch(apiUrl(path), {
