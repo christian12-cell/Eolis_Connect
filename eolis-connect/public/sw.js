@@ -132,6 +132,7 @@ async function doBackgroundSync() {
     if (!pending.length) { db.close(); return }
 
     let sent = 0
+    const refs = []
 
     for (const action of pending) {
       try {
@@ -145,6 +146,10 @@ async function doBackgroundSync() {
             body: JSON.stringify(action.payload),
           })
           ok = r.ok
+          if (ok) {
+            const data = await r.json().catch(() => ({}))
+            if (data.ref) refs.push(data.ref)
+          }
         } else if (action.type === 'SEND_MESSAGE') {
           const { ticketId, ...body } = action.payload
           const r = await fetch(`${base}/api/tickets/${ticketId}/messages`, {
@@ -172,9 +177,20 @@ async function doBackgroundSync() {
 
     if (sent > 0) {
       const title = 'Eolis Connect'
-      const body  = en
-        ? (sent === 1 ? 'Your request has been sent successfully ✅' : `${sent} actions synced successfully ✅`)
-        : (sent === 1 ? 'Votre dossier a été envoyé avec succès ✅' : `${sent} action(s) synchronisée(s) avec succès ✅`)
+      let body
+      if (refs.length === 1) {
+        body = en
+          ? `Your request ${refs[0]} has been sent successfully ✅`
+          : `Votre dossier ${refs[0]} a été envoyé avec succès ✅`
+      } else if (refs.length > 1) {
+        body = en
+          ? `Your requests ${refs.join(', ')} have been sent successfully ✅`
+          : `Vos dossiers ${refs.join(', ')} ont été envoyés avec succès ✅`
+      } else {
+        body = en
+          ? `${sent} action(s) synced successfully ✅`
+          : `${sent} action(s) synchronisée(s) avec succès ✅`
+      }
       self.registration.showNotification(title, {
         body, icon: '/logo.png', badge: '/logo.png',
         data: { url: `/${lang}/mes-demandes` }, vibrate: [200, 100, 200],
