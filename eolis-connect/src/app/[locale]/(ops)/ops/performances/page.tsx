@@ -353,8 +353,8 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
     }
     const active   = tickets.filter(t => t.agentId === agentId && (t.status === 'PENDING' || t.status === 'IN_PROGRESS')).length
     const comments = treated
-      .filter(t => t.satisfactionRating?.comment)
-      .map(t => ({ comment: t.satisfactionRating.comment, score: t.satisfactionRating.score, ref: t.ref, date: t.updatedAt ?? t.closedAt }))
+      .filter(t => t.satisfactionRating?.score)
+      .map(t => ({ comment: t.satisfactionRating.comment ?? null, score: t.satisfactionRating.score, ref: t.ref, date: t.updatedAt ?? t.closedAt }))
 
     // Speed score: 100-(temps/cible)×100 par urgence, pondéré par nombre de tickets
     const speedParts = (['HIGH','MEDIUM','LOW'] as const).map(u => {
@@ -727,7 +727,10 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-700 italic">&ldquo;{c.comment}&rdquo;</p>
+                          {c.comment
+                            ? <p className="text-sm text-gray-700 italic">&ldquo;{c.comment}&rdquo;</p>
+                            : <p className="text-sm text-gray-400 italic">{isFr ? 'Sans commentaire' : 'No comment'}</p>
+                          }
                           <p className="text-xs text-gray-400 mt-1">{c.ref} · {formatDate(c.date, locale)}</p>
                         </div>
                       </div>
@@ -878,7 +881,10 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
                               </div>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm text-gray-700 italic">&ldquo;{c.comment}&rdquo;</p>
+                              {c.comment
+                                ? <p className="text-sm text-gray-700 italic">&ldquo;{c.comment}&rdquo;</p>
+                                : <p className="text-sm text-gray-400 italic">{isFr ? 'Sans commentaire' : 'No comment'}</p>
+                              }
                               <p className="text-xs text-gray-400 mt-1">{c.ref} · {formatDate(c.date, locale)}</p>
                             </div>
                           </div>
