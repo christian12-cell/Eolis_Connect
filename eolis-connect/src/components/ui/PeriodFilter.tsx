@@ -154,7 +154,7 @@ export function PeriodFilter({ onChange, isFr, dark = false }: PeriodFilterProps
 
       {/* Dropdown panel */}
       {open && (
-        <div className={`absolute top-full mt-2 right-0 z-50 ${panelBg} rounded-2xl shadow-2xl border border-gray-100 p-4 min-w-[300px]`}>
+        <div className={`absolute top-full mt-2 left-0 z-50 ${panelBg} rounded-2xl shadow-2xl border border-gray-100 p-4 min-w-[300px]`}>
 
           {/* Mode selector */}
           <div className="flex gap-1 mb-4 flex-wrap">
