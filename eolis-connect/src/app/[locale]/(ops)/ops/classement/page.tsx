@@ -124,7 +124,6 @@ function computeAgentStats(agentId: string, closedSrc: any[], allTickets: any[])
 
   // First response score: 100-(réponse/(cible/3))×100 par urgence, pondéré par nombre de tickets
   // Cibles 1ère réponse: HIGH 1h, MEDIUM ~1h40, LOW ~3h20 (= SLA/3)
-  const agentTickets = allTickets.filter(t => t.agentId === agentId)
   const firstRParts  = (['HIGH','MEDIUM','LOW'] as const).map(u => {
     const ts = treated.filter(t => t.urgency === u).map(getFirstResponseH).filter(h => h !== null) as number[]
     if (!ts.length) return null
@@ -163,8 +162,9 @@ export default function ClassementPage({ params }: { params: Promise<{ locale: s
   const [countdown, setCountdown]   = useState(REFRESH_INTERVAL)
   const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [yearFilter, setYearFilter]   = useState<number[]>([])
-  const [monthFilter, setMonthFilter] = useState<number[]>([])
+  const _now = new Date()
+  const [yearFilter, setYearFilter]   = useState<number[]>([_now.getFullYear()])
+  const [monthFilter, setMonthFilter] = useState<number[]>([_now.getMonth() + 1])
   const [dayFilter, setDayFilter]     = useState<number[]>([])
   const [urgencyFilter, setUrgencyFilter]   = useState<string[]>([])
   const [tableOpen, setTableOpen]           = useState(false)
