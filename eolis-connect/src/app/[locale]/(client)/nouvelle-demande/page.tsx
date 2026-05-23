@@ -309,11 +309,6 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     setUser(u)
   }, [locale])
 
-  useEffect(() => {
-    offlineDb.hasPending().then(has => {
-      if (has && !navigator.onLine) setPendingOffline(true)
-    })
-  }, [])
 
   useEffect(() => {
     setPremiumAccepted(localStorage.getItem('eolis_premium_accepted') === '1')

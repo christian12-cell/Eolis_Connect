@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle, BookOpen, Wallet } from 'lucide-react'
 import { BottomNav } from './BottomNav'
-import { clearSession, isTokenExpired, getUser, apiFetch } from '@/lib/api-client'
+import { clearSession, isTokenExpired, getUser, getToken, apiFetch } from '@/lib/api-client'
 import { subscribeToPush } from '@/lib/push'
 import { syncPending } from '@/lib/offline-sync'
 import { offlineDb } from '@/lib/offline-db'
@@ -91,6 +91,16 @@ export function MobileLayout({
       navigator.serviceWorker.register('/sw.js')
         .then(() => subscribeToPush())
         .catch(() => {})
+    }
+
+    // Sync token + API base to IndexedDB so SW background sync can use them
+    const token = getToken()
+    const user  = getUser()
+    if (token) {
+      const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+      offlineDb.set('auth_token', token)
+      offlineDb.set('api_base', API)
+      offlineDb.set('user_lang', user?.language ?? 'fr')
     }
 
     // Set initial online state
