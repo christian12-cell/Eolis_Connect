@@ -10,7 +10,7 @@ export default function CookieBanner() {
   const [locale, setLocale] = useState<'fr' | 'en'>('fr')
 
   useEffect(() => {
-    const already = sessionStorage.getItem(STORAGE_KEY)
+    const already = localStorage.getItem(STORAGE_KEY)
     if (!already) setVisible(true)
 
     const lang = window.location.pathname.startsWith('/en') ? 'en' : 'fr'
@@ -18,7 +18,7 @@ export default function CookieBanner() {
   }, [])
 
   const accept = useCallback(() => {
-    sessionStorage.setItem(STORAGE_KEY, 'accepted')
+    localStorage.setItem(STORAGE_KEY, 'accepted')
     setVisible(false)
   }, [])
 
