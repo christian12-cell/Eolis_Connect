@@ -103,6 +103,11 @@ export default function MesDemandesPage({ params }: { params: Promise<{ locale: 
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
   useEffect(() => {
+    window.history.scrollRestoration = 'manual'
+    return () => { window.history.scrollRestoration = 'auto' }
+  }, [])
+
+  useEffect(() => {
     if (!loading) document.querySelector('main')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [loading])
 
