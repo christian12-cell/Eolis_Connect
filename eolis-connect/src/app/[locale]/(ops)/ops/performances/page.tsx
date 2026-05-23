@@ -318,6 +318,14 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   // ── Per-agent stat computation ────────────────────────────────────────────
   function computeStats(agentId: string, src: any[]) {
     const treated = src.filter(t => t.agentId === agentId)
+    const active  = tickets.filter(t => t.agentId === agentId && (t.status === 'PENDING' || t.status === 'IN_PROGRESS')).length
+
+    if (!treated.length) return {
+      count: 0, avgSat: null, avgRes: null, avgFirstR: null, avgMsgs: null,
+      sla: { HIGH:{total:0,ok:0,pct:null}, MEDIUM:{total:0,ok:0,pct:null}, LOW:{total:0,ok:0,pct:null} },
+      slaGlobal: null, urgency: { HIGH:0, MEDIUM:0, LOW:0 }, active, comments: [], composite: null,
+    }
+
     const scores  = treated.filter(t => t.satisfactionRating?.score).map(t => t.satisfactionRating.score)
     const avgSat  = scores.length ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length : null
 
@@ -326,11 +334,10 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
       .filter(h => !isNaN(h) && isFinite(h) && h >= 0)
     const avgRes = resTimes.length ? resTimes.reduce((a, b) => a + b, 0) / resTimes.length : null
 
-    const assigned    = tickets.filter(t => t.agentId === agentId)
-    const firstRespT  = assigned.map(getFirstResponseH).filter(h => h !== null) as number[]
+    const firstRespT  = treated.map(getFirstResponseH).filter(h => h !== null) as number[]
     const avgFirstR   = firstRespT.length ? firstRespT.reduce((a, b) => a + b, 0) / firstRespT.length : null
 
-    const msgCounts = assigned.map(getMsgCount)
+    const msgCounts = treated.map(getMsgCount)
     const avgMsgs   = msgCounts.length ? +(msgCounts.reduce((a, b) => a + b, 0) / msgCounts.length).toFixed(1) : null
 
     const sla = ['HIGH', 'MEDIUM', 'LOW'].reduce((acc, u) => {
@@ -354,7 +361,6 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
       MEDIUM: treated.filter(t => t.urgency === 'MEDIUM').length,
       LOW:    treated.filter(t => t.urgency === 'LOW').length,
     }
-    const active   = tickets.filter(t => t.agentId === agentId && (t.status === 'PENDING' || t.status === 'IN_PROGRESS')).length
     const comments = treated
       .filter(t => t.satisfactionRating?.score)
       .map(t => ({ comment: t.satisfactionRating.comment ?? null, score: t.satisfactionRating.score, ref: t.ref, date: t.updatedAt ?? t.closedAt }))
@@ -373,7 +379,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
 
     // First response score: 100-(réponse/(cible/3))×100 par urgence, pondéré par nombre de tickets
     const firstRParts = (['HIGH','MEDIUM','LOW'] as const).map(u => {
-      const ts = assigned.filter(t => t.urgency === u).map(getFirstResponseH).filter(h => h !== null) as number[]
+      const ts = treated.filter(t => t.urgency === u).map(getFirstResponseH).filter(h => h !== null) as number[]
       if (!ts.length) return null
       const avg = ts.reduce((a, b) => a + b, 0) / ts.length
       return { score: Math.max(0, 100 - (avg / (SLA_HOURS[u] / 3)) * 100), n: ts.length }
@@ -499,28 +505,29 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
     function scoresBucket(pts: any[]) {
       if (!pts.length) return { composite: null, satScore: null, speedScore: null, slaScore: null, firstRScore: null }
       const sc = pts.filter(t => t.satisfactionRating?.score).map(t => t.satisfactionRating.score)
-      const satScore = sc.length ? +(sc.reduce((a: number, b: number) => a + b, 0) / sc.length / 5 * 100).toFixed(1) : null
+      const avgSat = sc.length ? sc.reduce((a: number, b: number) => a + b, 0) / sc.length : null
+      const satScore = avgSat !== null ? (avgSat / 5) * 100 : null
       const spParts = (['HIGH','MEDIUM','LOW'] as const).map(u => {
-        const uts = pts.filter(t => t.urgency === u)
+        const uts = pts.filter(t => t.urgency === u && (t.closedAt ?? t.updatedAt))
         const ts = uts.map(t => (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000).filter(h => !isNaN(h) && isFinite(h) && h >= 0)
         if (!ts.length) return null
         return { score: Math.max(0, 100 - (ts.reduce((a, b) => a + b, 0) / ts.length / SLA_HOURS[u]) * 100), n: ts.length }
       }).filter(Boolean) as { score: number; n: number }[]
       const spN = spParts.reduce((s, p) => s + p.n, 0)
-      const speedScore = spN > 0 ? +(spParts.reduce((s, p) => s + p.score * p.n, 0) / spN).toFixed(1) : null
-      const slaOk = pts.filter(t => { const h = (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000; return h <= (SLA_HOURS[t.urgency as keyof typeof SLA_HOURS] ?? 10) }).length
+      const speedScore = spN > 0 ? spParts.reduce((s, p) => s + p.score * p.n, 0) / spN : null
+      const slaOk = pts.filter(t => { const h = (new Date(t.closedAt ?? t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / 3600000; return !isNaN(h) && h <= (SLA_HOURS[t.urgency as keyof typeof SLA_HOURS] ?? 10) }).length
       const slaScore = pts.length > 0 ? Math.round(slaOk / pts.length * 100) : null
       const frParts = (['HIGH','MEDIUM','LOW'] as const).map(u => {
-        const uts = pts.filter(t => t.urgency === u)
-        const times = uts.map(getFirstResponseH).filter(h => h !== null) as number[]
-        if (!times.length) return null
-        return { score: Math.max(0, 100 - (times.reduce((a, b) => a + b, 0) / times.length / (SLA_HOURS[u] / 3)) * 100), n: times.length }
+        const ts = pts.filter(t => t.urgency === u).map(getFirstResponseH).filter(h => h !== null) as number[]
+        if (!ts.length) return null
+        const avg = ts.reduce((a, b) => a + b, 0) / ts.length
+        return { score: Math.max(0, 100 - (avg / (SLA_HOURS[u] / 3)) * 100), n: ts.length }
       }).filter(Boolean) as { score: number; n: number }[]
       const frN = frParts.reduce((s, p) => s + p.n, 0)
-      const firstRScore = frN > 0 ? +(frParts.reduce((s, p) => s + p.score * p.n, 0) / frN).toFixed(1) : null
+      const firstRScore = frN > 0 ? frParts.reduce((s, p) => s + p.score * p.n, 0) / frN : null
       const cp = ([{ score: satScore, w: 0.25 }, { score: speedScore, w: 0.25 }, { score: slaScore, w: 0.30 }, { score: firstRScore, w: 0.20 }] as { score: number | null; w: number }[]).filter(c => c.score !== null) as { score: number; w: number }[]
       const cT = cp.reduce((s, c) => s + c.w, 0)
-      const composite = cp.length > 0 ? +(cp.reduce((s, c) => s + c.score * (c.w / cT), 0)).toFixed(1) : null
+      const composite = cp.length > 0 ? +(cp.reduce((s, c) => s + c.score * (c.w / cT), 0)).toFixed(2) : null
       return { composite, satScore, speedScore, slaScore, firstRScore }
     }
 

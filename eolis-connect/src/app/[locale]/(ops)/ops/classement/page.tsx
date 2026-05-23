@@ -94,7 +94,7 @@ function computeAgentStats(agentId: string, closedSrc: any[], allTickets: any[])
     .filter(h => !isNaN(h) && isFinite(h) && h >= 0)
   const avgTime  = times.length ? times.reduce((a, b) => a + b, 0) / times.length : null
 
-  const firstR   = allTickets.filter(t => t.agentId === agentId).map(getFirstResponseH).filter(h => h !== null) as number[]
+  const firstR   = treated.map(getFirstResponseH).filter(h => h !== null) as number[]
   const avgFirstR = firstR.length ? firstR.reduce((a, b) => a + b, 0) / firstR.length : null
 
   const slaRows  = ['HIGH','MEDIUM','LOW'].map(u => {
@@ -126,7 +126,7 @@ function computeAgentStats(agentId: string, closedSrc: any[], allTickets: any[])
   // Cibles 1ère réponse: HIGH 1h, MEDIUM ~1h40, LOW ~3h20 (= SLA/3)
   const agentTickets = allTickets.filter(t => t.agentId === agentId)
   const firstRParts  = (['HIGH','MEDIUM','LOW'] as const).map(u => {
-    const ts = agentTickets.filter(t => t.urgency === u).map(getFirstResponseH).filter(h => h !== null) as number[]
+    const ts = treated.filter(t => t.urgency === u).map(getFirstResponseH).filter(h => h !== null) as number[]
     if (!ts.length) return null
     const avg = ts.reduce((a, b) => a + b, 0) / ts.length
     return { score: Math.max(0, 100 - (avg / (SLA_HOURS[u] / 3)) * 100), n: ts.length }
