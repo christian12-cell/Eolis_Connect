@@ -1,4 +1,4 @@
-const CACHE = 'eolis-v5'
+const CACHE = 'eolis-v6'
 const SHELL_URLS = ['/', '/fr/accueil', '/en/accueil']
 
 self.addEventListener('install', e => {
@@ -208,25 +208,31 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return
   if (url.origin !== self.location.origin) return
 
+  // Navigation (page loads) — cache fallback immédiat si réseau indisponible
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) {
+          caches.open(CACHE).then(c => c.put(e.request, res.clone()))
+        }
+        return res
+      }).catch(async () => {
+        const cached = await caches.match(e.request)
+        if (cached) return cached
+        const shell = await caches.match('/')
+        return shell ?? new Response('Offline', { status: 503 })
+      })
+    )
+    return
+  }
+
+  // Assets (_next/static, images, fonts) — cache first pour la vitesse
   e.respondWith(
     caches.open(CACHE).then(cache =>
       cache.match(e.request).then(cached => {
-        // Always fetch from network to keep cache fresh
         const network = fetch(e.request)
-          .then(res => {
-            if (res.ok) cache.put(e.request, res.clone())
-            return res
-          })
+          .then(res => { if (res.ok) cache.put(e.request, res.clone()); return res })
           .catch(() => null)
-
-        // Navigation (page loads): network first, cache fallback, then app shell
-        if (e.request.mode === 'navigate') {
-          return network.then(r => r ?? cached)
-            .then(r => r ?? caches.open(CACHE).then(c => c.match('/')))
-            .then(r => r ?? new Response('Offline', { status: 503 }))
-        }
-
-        // Assets (_next/static, images, fonts): cache first for speed
         return cached ?? network.then(r => r ?? new Response('', { status: 503 }))
       })
     )
