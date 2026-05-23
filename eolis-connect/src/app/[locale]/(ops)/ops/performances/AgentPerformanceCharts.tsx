@@ -26,6 +26,7 @@ interface Props {
   trendData:     TrendPoint[]
   urgencyData:   UrgencyPoint[]
   scoreEvolution: { points: ScorePoint[]; granularity: 'day' | 'week' | 'month' }
+  equite:        boolean
   locale:        string
 }
 
@@ -37,7 +38,7 @@ const CURVES = [
   { key: 'firstRScore', color: '#8B5CF6', dashed: true,  labelFr: '1ère réponse',          labelEn: 'First response',         descFr: 'Score basé sur le délai de 1ère réponse vs cible (SLA/3)', descEn: 'Score based on first response time vs target (SLA/3)' },
 ] as const
 
-export default function AgentPerformanceCharts({ trendData, urgencyData, scoreEvolution, locale }: Props) {
+export default function AgentPerformanceCharts({ trendData, urgencyData, scoreEvolution, equite, locale }: Props) {
   const isFr     = locale === 'fr'
   const hasTrend = trendData.some(p => p.count > 0)
   const hasUrg   = urgencyData.some(u => u.value > 0)
@@ -118,9 +119,16 @@ export default function AgentPerformanceCharts({ trendData, urgencyData, scoreEv
       <div className="bg-white rounded-2xl border border-gray-100 card-shadow p-5">
         <div className="flex items-start justify-between mb-1 flex-wrap gap-2">
           <h3 className="text-sm font-semibold text-gray-900">{L.scoreTitle}</h3>
-          <span className="text-[10px] text-gray-400 font-medium bg-gray-50 px-2 py-1 rounded-lg">
-            {granLabel} · {L.clickLegend}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] text-gray-400 font-medium bg-gray-50 px-2 py-1 rounded-lg">
+              {granLabel} · {L.clickLegend}
+            </span>
+            {equite && (
+              <span className="text-[10px] font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-2 py-1 rounded-lg">
+                ⚖️ {isFr ? 'Mode équité non appliqué' : 'Fairness mode not applied'}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Clickable legend */}

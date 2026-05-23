@@ -769,7 +769,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
           </div>
 
           {/* Charts */}
-          <AgentPerformanceCharts trendData={trendData} urgencyData={urgencyData} scoreEvolution={scoreEvolution} locale={locale} />
+          <AgentPerformanceCharts trendData={trendData} urgencyData={urgencyData} scoreEvolution={scoreEvolution} equite={equite} locale={locale} />
 
           {/* Comments — accordion */}
           <div className="bg-white rounded-2xl border border-gray-100 card-shadow mt-5">
@@ -821,7 +821,7 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
       {selectedAgent === 'all' && (
         <>
           {/* Global charts */}
-          <AgentPerformanceCharts trendData={trendData} urgencyData={urgencyData} scoreEvolution={scoreEvolution} locale={locale} />
+          <AgentPerformanceCharts trendData={trendData} urgencyData={urgencyData} scoreEvolution={scoreEvolution} equite={equite} locale={locale} />
 
           {/* Comparison table */}
           <div className="bg-white rounded-2xl border border-gray-100 card-shadow mt-5 overflow-hidden">
