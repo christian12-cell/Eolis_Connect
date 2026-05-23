@@ -51,6 +51,17 @@ export function MobileLayout({
     if (sent === 0) return
     const label = refs.length > 0 ? refs.join(', ') : `${sent}`
     showToast(isFr ? `✓ Envoyé — ${label}` : `✓ Sent — ${label}`)
+    // Send push notification via SW (covers iOS where Background Sync doesn't exist)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.active?.postMessage({
+          type: 'SHOW_SYNC_NOTIFICATION',
+          refs,
+          sent,
+          lang: isFr ? 'fr' : 'en',
+        })
+      }).catch(() => {})
+    }
   }
 
   useEffect(() => {

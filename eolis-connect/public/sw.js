@@ -1,4 +1,4 @@
-const CACHE = 'eolis-v6'
+const CACHE = 'eolis-v7'
 const SHELL_URLS = ['/', '/fr/accueil', '/en/accueil']
 
 self.addEventListener('install', e => {
@@ -59,6 +59,29 @@ self.addEventListener('message', e => {
       notifs.forEach(n => {
         if (n.data?.ticketId === e.data.ticketId) n.close()
       })
+    })
+  }
+
+  if (e.data?.type === 'SHOW_SYNC_NOTIFICATION') {
+    const { refs = [], sent = 0, lang = 'fr' } = e.data
+    const en   = lang === 'en'
+    let body
+    if (refs.length === 1) {
+      body = en
+        ? `Your request ${refs[0]} has been sent successfully ✅`
+        : `Votre dossier ${refs[0]} a été envoyé avec succès ✅`
+    } else if (refs.length > 1) {
+      body = en
+        ? `Your requests ${refs.join(', ')} have been sent successfully ✅`
+        : `Vos dossiers ${refs.join(', ')} ont été envoyés avec succès ✅`
+    } else {
+      body = en
+        ? `${sent} action(s) synced successfully ✅`
+        : `${sent} action(s) synchronisée(s) avec succès ✅`
+    }
+    self.registration.showNotification('Eolis Connect', {
+      body, icon: '/logo.png', badge: '/logo.png',
+      data: { url: `/${lang}/mes-demandes` }, vibrate: [200, 100, 200],
     })
   }
 })
