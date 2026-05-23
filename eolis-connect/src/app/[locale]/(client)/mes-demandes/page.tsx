@@ -102,7 +102,7 @@ export default function MesDemandesPage({ params }: { params: Promise<{ locale: 
   const [dayFilter, setDayFilter]     = useState<number[]>([])
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
-  useEffect(() => { window.scrollTo(0, 0) }, [])
+  useEffect(() => { document.querySelector('main')?.scrollTo(0, 0) }, [])
 
   const loadData = useCallback((silent = false) => {
     if (!silent) setRefreshing(true)
