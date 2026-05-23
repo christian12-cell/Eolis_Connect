@@ -88,6 +88,12 @@ export const offlineDb = {
       await run(db, 'pending', 'readwrite', s => s.put(full))
       db.close()
     } catch {}
+    // Register background sync so SW can send even when app is closed
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(reg => {
+        if ('sync' in reg) (reg as any).sync.register('sync-pending').catch(() => {})
+      }).catch(() => {})
+    }
     return id
   },
 

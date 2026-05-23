@@ -23,6 +23,10 @@ export function saveSession(token: string, user: any) {
   localStorage.setItem('eolis_token', token)
   localStorage.setItem('eolis_user', JSON.stringify(user))
   sessionStorage.setItem('eolis_session', '1')
+  // Store for service worker background sync (SW cannot access localStorage)
+  offlineDb.set('auth_token', token)
+  offlineDb.set('api_base', API)
+  offlineDb.set('user_lang', user?.language ?? 'fr')
 }
 
 export function isTokenExpired(): boolean {

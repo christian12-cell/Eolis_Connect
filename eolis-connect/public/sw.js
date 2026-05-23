@@ -63,6 +63,128 @@ self.addEventListener('message', e => {
   }
 })
 
+// ── Background Sync ───────────────────────────────────────────────────────────
+
+self.addEventListener('sync', e => {
+  if (e.tag === 'sync-pending') e.waitUntil(doBackgroundSync())
+})
+
+function swOpenDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('eolis-offline', 1)
+    req.onsuccess = () => resolve(req.result)
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+function swGet(db, store, key) {
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(store, 'readonly').objectStore(store).get(key)
+    req.onsuccess = () => resolve(req.result)
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+function swGetAll(db) {
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('pending', 'readonly').objectStore('pending').index('createdAt').getAll()
+    req.onsuccess = () => resolve(req.result)
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+function swRemove(db, id) {
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('pending', 'readwrite').objectStore('pending').delete(id)
+    req.onsuccess = () => resolve()
+    req.onerror   = () => reject(req.error)
+  })
+}
+
+function swBump(db, id) {
+  return new Promise(resolve => {
+    const t   = db.transaction('pending', 'readwrite')
+    const s   = t.objectStore('pending')
+    const req = s.get(id)
+    req.onsuccess = () => {
+      const a = req.result
+      if (a) { a.retries++; s.put(a) }
+      resolve()
+    }
+    req.onerror = () => resolve()
+  })
+}
+
+async function doBackgroundSync() {
+  try {
+    const db      = await swOpenDb()
+    const tokRec  = await swGet(db, 'cache', 'auth_token')
+    const baseRec = await swGet(db, 'cache', 'api_base')
+    const langRec = await swGet(db, 'cache', 'user_lang')
+    const token   = tokRec?.data
+    const base    = baseRec?.data || 'https://eolisconnect-production-3392.up.railway.app'
+    const lang    = langRec?.data || 'fr'
+    const en      = lang === 'en'
+
+    if (!token) { db.close(); return }
+
+    const pending = await swGetAll(db)
+    if (!pending.length) { db.close(); return }
+
+    let sent = 0
+
+    for (const action of pending) {
+      try {
+        if (action.retries >= 3) { await swRemove(db, action.id); continue }
+        let ok = false
+
+        if (action.type === 'CREATE_TICKET') {
+          const r = await fetch(`${base}/api/tickets`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(action.payload),
+          })
+          ok = r.ok
+        } else if (action.type === 'SEND_MESSAGE') {
+          const { ticketId, ...body } = action.payload
+          const r = await fetch(`${base}/api/tickets/${ticketId}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(body),
+          })
+          ok = r.ok
+        } else if (action.type === 'AGENT_REPLY' || action.type === 'INTERNAL_NOTE') {
+          const { ticketId, content, senderType } = action.payload
+          const r = await fetch(`${base}/api/tickets/${ticketId}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ content, senderType }),
+          })
+          ok = r.ok
+        }
+
+        if (ok) { await swRemove(db, action.id); sent++ }
+        else     { await swBump(db, action.id) }
+      } catch { await swBump(db, action.id) }
+    }
+
+    db.close()
+
+    if (sent > 0) {
+      const title = 'Eolis Connect'
+      const body  = en
+        ? (sent === 1 ? 'Your request has been sent successfully ✅' : `${sent} actions synced successfully ✅`)
+        : (sent === 1 ? 'Votre dossier a été envoyé avec succès ✅' : `${sent} action(s) synchronisée(s) avec succès ✅`)
+      self.registration.showNotification(title, {
+        body, icon: '/logo.png', badge: '/logo.png',
+        data: { url: `/${lang}/mes-demandes` }, vibrate: [200, 100, 200],
+      })
+    }
+  } catch (err) {
+    console.error('[sw:sync] failed:', err)
+  }
+}
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
 
