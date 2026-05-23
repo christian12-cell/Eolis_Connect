@@ -22,6 +22,10 @@ export default function CookieBanner() {
     setVisible(false)
   }, [])
 
+  const dismiss = useCallback(() => {
+    setVisible(false)
+  }, [])
+
   if (!visible) return null
 
   const t = {
@@ -65,7 +69,7 @@ export default function CookieBanner() {
             {text.accept}
           </button>
           <button
-            onClick={accept}
+            onClick={dismiss}
             aria-label="Fermer"
             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           >
