@@ -7,8 +7,10 @@ import { getUser, apiFetch } from '@/lib/api-client'
 import { formatDate } from '@/lib/utils'
 import {
   Star, Clock, CheckCircle, MessageSquare, ChevronDown,
-  X, ArrowLeft, Activity, Users, AlertTriangle, Zap,
+  X, ArrowLeft, Activity, Users, AlertTriangle, Zap, RefreshCw,
 } from 'lucide-react'
+
+const REFRESH_INTERVAL = 30
 import AgentPerformanceCharts from './AgentPerformanceCharts'
 
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
@@ -188,6 +190,10 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
   const [tickets, setTickets]           = useState<any[]>([])
   const [agents, setAgents]             = useState<any[]>([])
   const [loading, setLoading]           = useState(true)
+  const [refreshing, setRefreshing]     = useState(false)
+  const [countdown, setCountdown]       = useState(REFRESH_INTERVAL)
+  const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [selectedAgent, setSelectedAgent] = useState<string>('all')
   const [yearFilter, setYearFilter]     = useState<number[]>([])
   const [monthFilter, setMonthFilter]   = useState<number[]>([])
@@ -197,11 +203,9 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
-  useEffect(() => {
-    const u = getUser()
-    if (!u) { router.replace(`/${locale}/login`); return }
-    if (!['OPS_ADMIN', 'SYSTEM_ADMIN'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
-    setUser(u)
+  const fetchData = useCallback((silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
     Promise.all([
       apiFetch('/api/tickets').then(r => r.json()),
       apiFetch('/api/users').then(r => r.json()),
@@ -209,8 +213,26 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
       setTickets(Array.isArray(tks) ? tks : [])
       setAgents(Array.isArray(usrs) ? usrs.filter((u: any) => u.role === 'AGENT') : [])
       setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [locale])
+      setRefreshing(false)
+    }).catch(() => { setLoading(false); setRefreshing(false) })
+  }, [])
+
+  useEffect(() => {
+    const u = getUser()
+    if (!u) { router.replace(`/${locale}/login`); return }
+    if (!['OPS_ADMIN', 'SYSTEM_ADMIN'].includes(u.role)) { router.replace(`/${locale}/accueil`); return }
+    setUser(u)
+    fetchData(false)
+
+    intervalRef.current = setInterval(() => { fetchData(true); setCountdown(REFRESH_INTERVAL) }, REFRESH_INTERVAL * 1000)
+    setCountdown(REFRESH_INTERVAL)
+    countdownRef.current = setInterval(() => setCountdown(p => p <= 1 ? REFRESH_INTERVAL : p - 1), 1000)
+
+    return () => {
+      if (intervalRef.current)  clearInterval(intervalRef.current)
+      if (countdownRef.current) clearInterval(countdownRef.current)
+    }
+  }, [locale, fetchData])
 
   if (loading || !user) return null
 
@@ -517,6 +539,25 @@ export default function PerformancesPage({ params }: { params: Promise<{ locale:
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{L.title}</h1>
+        <div className="flex items-center gap-3">
+          <div className="relative flex items-center justify-center"
+            title={`${isFr ? 'Actualisation dans' : 'Refresh in'} ${countdown}s`}>
+            <svg width="32" height="32" className="-rotate-90">
+              <circle cx="16" cy="16" r="12" fill="none" stroke="#e5e7eb" strokeWidth="2.5" />
+              <circle cx="16" cy="16" r="12" fill="none" stroke="#4A8FC4" strokeWidth="2.5"
+                strokeDasharray={`${2 * Math.PI * 12}`}
+                strokeDashoffset={`${2 * Math.PI * 12 * (1 - countdown / REFRESH_INTERVAL)}`}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.9s linear' }} />
+            </svg>
+            <span className="absolute text-[9px] font-bold text-gray-500 tabular-nums">{countdown}</span>
+          </div>
+          <button onClick={() => { fetchData(true); setCountdown(REFRESH_INTERVAL) }} disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold transition-colors disabled:opacity-50">
+            <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+            {isFr ? 'Actualiser' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {/* Controls */}
