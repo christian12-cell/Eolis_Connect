@@ -238,27 +238,31 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return
   if (url.origin !== self.location.origin) return
 
-  // Navigation (page loads) — cache fallback immédiat si réseau indisponible
+  // Navigation (page loads)
+  // Network-first with a 3s timeout so offline fallback is immediate, not after 10-30s
   if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).then(res => {
-        if (res.ok) {
-          caches.open(CACHE).then(c => c.put(e.request, res.clone()))
-        }
-        return res
-      }).catch(async () => {
-        // 1. Exact page cached
+    e.respondWith((async () => {
+      const fallback = async () => {
         const cached = await caches.match(e.request)
         if (cached) return cached
-        // 2. App shell (/) — works if JS chunks are cached from a previous online visit
-        const shell = await caches.match('/')
-        if (shell) return shell
-        // 3. Static offline page — no JS dependency, always works
         const offline = await caches.match('/offline.html')
         if (offline) return offline
         return new Response('Offline', { status: 503 })
-      })
-    )
+      }
+
+      const controller = new AbortController()
+      const tid = setTimeout(() => controller.abort(), 3000)
+      try {
+        const res = await fetch(e.request, { signal: controller.signal })
+        clearTimeout(tid)
+        // Cache the page for future offline use (put() ignores no-store header)
+        caches.open(CACHE).then(c => c.put(e.request, res.clone()).catch(() => {}))
+        return res
+      } catch {
+        clearTimeout(tid)
+        return fallback()
+      }
+    })())
     return
   }
 
