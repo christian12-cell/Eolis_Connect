@@ -260,8 +260,17 @@ self.addEventListener('fetch', e => {
   if (e.request.mode === 'navigate') {
     e.respondWith((async () => {
       const fallback = async () => {
+        // 1. Exact URL hit (hard-navigated pages cached by SW)
         const cached = await caches.match(e.request)
         if (cached) return cached
+        // 2. App Shell fallback: serve the locale shell HTML so Next.js boots and
+        //    routes client-side to the right page using cached JS chunks + IndexedDB.
+        //    Link-clicks never create a navigate request so most pages are only cached
+        //    as chunks, not as HTML — the shell is enough for Next.js to take over.
+        const shellKey = url.pathname.startsWith('/en') ? '/en/accueil' : '/fr/accueil'
+        const shell = await caches.match(shellKey) || await caches.match('/')
+        if (shell) return shell
+        // 3. Only show the offline page if even the shell is absent (first install)
         const offline = await caches.match('/offline.html')
         if (offline) return offline
         return new Response('Offline', { status: 503 })
