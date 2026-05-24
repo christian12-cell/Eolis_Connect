@@ -211,6 +211,19 @@ async function doBackgroundSync() {
             body: JSON.stringify({ content, senderType }),
           })
           ok = r.ok
+        } else if (action.type === 'CREDIT_REQUEST') {
+          const file = action.files?.[0]
+          if (!file) { await swRemove(db, action.id); continue }
+          const fd = new FormData()
+          fd.append('amount_declared', String(action.payload.amountDeclared))
+          fd.append('photo', new Blob([file.data], { type: file.mimeType }), file.name)
+          // No Content-Type header — browser sets multipart/form-data boundary automatically
+          const r = await fetch(`${base}/api/credits/request`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+          })
+          ok = r.ok
         }
 
         if (ok) { await swRemove(db, action.id); sent++ }
