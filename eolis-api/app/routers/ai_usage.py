@@ -123,6 +123,12 @@ def ticket_ai_cost(
         AIUsage.type == "voice_transcription",
     ).all()
 
+    # SMS notifications sent for this ticket
+    rows += db.query(AIUsage).filter(
+        AIUsage.ticket_id == ticket_id,
+        AIUsage.type == "sms_notification",
+    ).all()
+
     # BL extraction — only if this is the FIRST ticket to use this bl_document_id
     # (reused BL = another ticket was created earlier with the same bl_document_id → free)
     if ticket.bl_document_id:

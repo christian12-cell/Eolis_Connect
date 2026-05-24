@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import { PeriodFilter, DateRange } from '@/components/ui/PeriodFilter'
 import { apiFetch, getUser } from '@/lib/api-client'
-import { ChevronDown, ChevronRight, Loader2, TrendingUp, Zap, PlusCircle } from 'lucide-react'
+import { ChevronDown, ChevronRight, Loader2, TrendingUp, Zap, PlusCircle, RefreshCw } from 'lucide-react'
 
 interface UsageItem {
   id: string
@@ -44,6 +44,8 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [balance, setBalance] = useState<any>(null)
+  const [error, setError] = useState(false)
+  const [lastRange, setLastRange] = useState<DateRange | null>(null)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
 
@@ -56,11 +58,13 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
 
   const load = useCallback((r: DateRange | null) => {
     setLoading(true)
+    setError(false)
+    setLastRange(r)
     const qs = r ? `?from=${r.from}&to=${r.to}` : ''
     apiFetch(`/api/ai-usage/my${qs}`)
       .then(res => res.json())
       .then(d => { setData(d); setLoading(false) })
-      .catch(() => setLoading(false))
+      .catch(() => { setError(true); setLoading(false) })
   }, [])
 
   const isFr = locale === 'fr'
@@ -69,6 +73,7 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
   const typeLabel = (type: string) => {
     if (type === 'bl_extraction') return isFr ? '📄 Extraction BL' : '📄 BL extraction'
     if (type === 'voice_transcription') return isFr ? '🎙️ Dictée vocale' : '🎙️ Voice dictation'
+    if (type === 'sms_notification') return isFr ? '📱 SMS Premium' : '📱 Premium SMS'
     return type
   }
 
@@ -130,6 +135,18 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 size={24} className="text-white animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="bg-white/10 rounded-2xl py-10 text-center space-y-3">
+            <p className="text-blue-200 text-sm">
+              {isFr ? 'Impossible de charger les données.' : 'Could not load data.'}
+            </p>
+            <button
+              onClick={() => load(lastRange)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 text-white text-sm font-semibold active:opacity-70">
+              <RefreshCw size={14} />
+              {isFr ? 'Réessayer' : 'Retry'}
+            </button>
           </div>
         ) : groups.length === 0 ? (
           <div className="bg-white/10 rounded-2xl py-12 text-center text-blue-200 text-sm">
