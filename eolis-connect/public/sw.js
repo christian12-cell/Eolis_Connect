@@ -1,5 +1,5 @@
-const CACHE = 'eolis-v9'
-const SHELL_URLS = ['/', '/fr/accueil', '/en/accueil']
+const CACHE = 'eolis-v10'
+const SHELL_URLS = ['/', '/fr/accueil', '/en/accueil', '/offline.html']
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -240,10 +240,16 @@ self.addEventListener('fetch', e => {
         }
         return res
       }).catch(async () => {
+        // 1. Exact page cached
         const cached = await caches.match(e.request)
         if (cached) return cached
+        // 2. App shell (/) — works if JS chunks are cached from a previous online visit
         const shell = await caches.match('/')
-        return shell ?? new Response('Offline', { status: 503 })
+        if (shell) return shell
+        // 3. Static offline page — no JS dependency, always works
+        const offline = await caches.match('/offline.html')
+        if (offline) return offline
+        return new Response('Offline', { status: 503 })
       })
     )
     return

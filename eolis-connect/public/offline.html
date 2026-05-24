@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eolis Connect — Hors ligne</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1B3A5C 0%, #2a5298 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 24px;
+      padding: 40px 32px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      color: white;
+    }
+    .icon { font-size: 48px; margin-bottom: 20px; }
+    h1 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+    p  { font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; margin-bottom: 28px; }
+    button {
+      background: white;
+      color: #1B3A5C;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 32px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.2s;
+    }
+    button:active { opacity: 0.8; }
+    .sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📶</div>
+    <h1>Vous êtes hors ligne</h1>
+    <p>Reconnectez-vous à internet pour accéder à Eolis Connect.<br>Vos données locales sont préservées.</p>
+    <button onclick="window.location.reload()">Réessayer</button>
+    <p class="sub">Eolis Connect • Mode hors ligne</p>
+  </div>
+  <script>
+    window.addEventListener('online', () => window.location.reload())
+  </script>
+</body>
+</html>

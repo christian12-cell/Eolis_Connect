@@ -76,18 +76,19 @@ export async function apiFetch(path: string, options: RequestInit & { timeout?: 
     throw new Error('offline')
   }
 
+  const { timeout: timeoutOpt, ...fetchOptions } = options
   const controller = new AbortController()
-  const timeoutMs  = options.timeout ?? (method === 'GET' ? 3000 : 15000)
+  const timeoutMs  = timeoutOpt ?? (method === 'GET' ? 3000 : 15000)
   const timeoutId  = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const res = await fetch(apiUrl(path), {
-      ...options,
-      signal: options.signal ?? controller.signal,
+      ...fetchOptions,
+      signal: fetchOptions.signal ?? controller.signal,
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
+        ...fetchOptions.headers,
       },
     })
     clearTimeout(timeoutId)
