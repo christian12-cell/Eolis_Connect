@@ -239,7 +239,9 @@ self.addEventListener('fetch', e => {
   if (url.origin !== self.location.origin) return
 
   // Navigation (page loads)
-  // Network-first with a 3s timeout so offline fallback is immediate, not after 10-30s
+  // Two paths to avoid both the online-slow and offline-wait problems:
+  //  • Offline (navigator.onLine === false): serve cache immediately, no network attempt
+  //  • Online: network-first with no hard timeout (browser manages), cache on success
   if (e.request.mode === 'navigate') {
     e.respondWith((async () => {
       const fallback = async () => {
@@ -250,16 +252,17 @@ self.addEventListener('fetch', e => {
         return new Response('Offline', { status: 503 })
       }
 
-      const controller = new AbortController()
-      const tid = setTimeout(() => controller.abort(), 3000)
+      // Definitely offline — skip network entirely for instant response
+      if (self.navigator && !self.navigator.onLine) return fallback()
+
+      // Online — network first, no hard timeout so slow connections still work
       try {
-        const res = await fetch(e.request, { signal: controller.signal })
-        clearTimeout(tid)
-        // Cache the page for future offline use (put() ignores no-store header)
+        const res = await fetch(e.request)
+        // cache.put() ignores Cache-Control: no-store so Next.js pages are cached
         caches.open(CACHE).then(c => c.put(e.request, res.clone()).catch(() => {}))
         return res
       } catch {
-        clearTimeout(tid)
+        // Network error (offline mid-request, etc.)
         return fallback()
       }
     })())
