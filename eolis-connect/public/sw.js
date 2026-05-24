@@ -1,5 +1,41 @@
-const CACHE = 'eolis-v10'
-const SHELL_URLS = ['/', '/fr/accueil', '/en/accueil', '/offline.html']
+const CACHE = 'eolis-v11'
+const SHELL_URLS = [
+  '/', '/offline.html',
+  // Client
+  '/fr/accueil',              '/en/accueil',
+  '/fr/mes-demandes',         '/en/mes-demandes',
+  '/fr/notifications',        '/en/notifications',
+  '/fr/depenses',             '/en/depenses',
+  '/fr/recharger',            '/en/recharger',
+  '/fr/nouvelle-demande',     '/en/nouvelle-demande',
+  '/fr/parametres',           '/en/parametres',
+  '/fr/aide',                 '/en/aide',
+  // Agent
+  '/fr/agent/dashboard',      '/en/agent/dashboard',
+  '/fr/agent/historique',     '/en/agent/historique',
+  '/fr/agent/notifications',  '/en/agent/notifications',
+  '/fr/agent/parametres',     '/en/agent/parametres',
+  '/fr/agent/aide',           '/en/agent/aide',
+  // Finance
+  '/fr/finance/dashboard',    '/en/finance/dashboard',
+  '/fr/finance/credits',      '/en/finance/credits',
+  '/fr/finance/revenus',      '/en/finance/revenus',
+  '/fr/finance/depenses',     '/en/finance/depenses',
+  '/fr/finance/audit',        '/en/finance/audit',
+  '/fr/finance/rapport',      '/en/finance/rapport',
+  '/fr/finance/projections',  '/en/finance/projections',
+  '/fr/finance/aide',         '/en/finance/aide',
+  // Admin / Ops
+  '/fr/admin/dashboard',      '/en/admin/dashboard',
+  '/fr/admin/credits',        '/en/admin/credits',
+  '/fr/admin/utilisateurs',   '/en/admin/utilisateurs',
+  '/fr/admin/ia-couts',       '/en/admin/ia-couts',
+  '/fr/ops/dashboard',        '/en/ops/dashboard',
+  '/fr/ops/classement',       '/en/ops/classement',
+  '/fr/ops/performances',     '/en/ops/performances',
+  // Auth
+  '/fr/login',                '/en/login',
+]
 
 self.addEventListener('install', e => {
   // cache.addAll() fails atomically if ANY url has Cache-Control: no-store (Next.js pages).
@@ -273,17 +309,21 @@ self.addEventListener('fetch', e => {
   if (e.request.mode === 'navigate') {
     e.respondWith((async () => {
       const fallback = async () => {
-        // 1. Exact URL hit (hard-navigated pages cached by SW)
+        // 1. Exact URL match (pre-cached shell pages + any page the user hard-navigated to)
         const cached = await caches.match(e.request)
         if (cached) return cached
-        // 2. App Shell fallback: serve the locale shell HTML so Next.js boots and
-        //    routes client-side to the right page using cached JS chunks + IndexedDB.
-        //    Link-clicks never create a navigate request so most pages are only cached
-        //    as chunks, not as HTML — the shell is enough for Next.js to take over.
+        // 2. Parent URL — covers dynamic segments like /mes-demandes/[id], /agent/dossiers/[id]
+        const segments = url.pathname.split('/').filter(Boolean)
+        if (segments.length > 2) {
+          const parent = '/' + segments.slice(0, -1).join('/')
+          const parentCached = await caches.match(parent)
+          if (parentCached) return parentCached
+        }
+        // 3. Locale shell as last-resort HTML (Next.js boots and role-based redirect takes over)
         const shellKey = url.pathname.startsWith('/en') ? '/en/accueil' : '/fr/accueil'
         const shell = await caches.match(shellKey) || await caches.match('/')
         if (shell) return shell
-        // 3. Only show the offline page if even the shell is absent (first install)
+        // 4. Absolute last resort — offline page (only if shell was never cached)
         const offline = await caches.match('/offline.html')
         if (offline) return offline
         return new Response('Offline', { status: 503 })
