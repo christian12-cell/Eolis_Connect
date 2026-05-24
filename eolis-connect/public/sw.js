@@ -17,12 +17,27 @@ self.addEventListener('install', e => {
 })
 
 self.addEventListener('activate', e => {
-  // Delete old cache versions
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  )
+  // Migrate entries from old caches into the new cache before deleting them.
+  // Next.js JS chunks are content-addressed (immutable) so they are safe to copy
+  // across versions — this preserves all accumulated chunks and avoids breaking
+  // offline for users who haven't opened the app since the last deployment.
+  e.waitUntil((async () => {
+    const keys = await caches.keys()
+    const newCache = await caches.open(CACHE)
+    for (const key of keys) {
+      if (key === CACHE) continue
+      try {
+        const oldCache = await caches.open(key)
+        const requests = await oldCache.keys()
+        for (const req of requests) {
+          const res = await oldCache.match(req)
+          if (res) await newCache.put(req, res).catch(() => {})
+        }
+      } catch {}
+      await caches.delete(key)
+    }
+    return self.clients.claim()
+  })())
 })
 
 self.addEventListener('push', e => {
