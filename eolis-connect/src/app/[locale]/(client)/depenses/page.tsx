@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import { PeriodFilter, DateRange } from '@/components/ui/PeriodFilter'
 import { apiFetch, getUser } from '@/lib/api-client'
-import { ChevronDown, ChevronRight, Loader2, TrendingUp, Zap, PlusCircle, RefreshCw } from 'lucide-react'
+import { offlineDb } from '@/lib/offline-db'
+import { ChevronDown, ChevronRight, Loader2, Zap, PlusCircle, RefreshCw, WifiOff } from 'lucide-react'
+
+const OFFLINE_SNAPSHOT_KEY = 'depenses-snapshot'
 
 interface UsageItem {
   id: string
@@ -40,11 +43,12 @@ function groupByTicket(items: UsageItem[]): TicketGroup[] {
 export default function DepensesPage({ params }: { params: Promise<{ locale: string }> }) {
   const router = useRouter()
   const [locale, setLocale] = useState('fr')
-  const [data, setData]     = useState<any>(null)
+  const [data, setData]       = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
-  const [balance, setBalance] = useState<any>(null)
-  const [error, setError] = useState(false)
+  const [balance, setBalance]  = useState<any>(null)
+  const [error, setError]      = useState(false)
+  const [offline, setOffline]  = useState(false)
   const [lastRange, setLastRange] = useState<DateRange | null>(null)
 
   useEffect(() => { params.then(p => setLocale(p.locale)) }, [params])
@@ -53,27 +57,55 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
     const u = getUser()
     if (!u) { router.replace(`/${locale}/login`); return }
     if (u.role !== 'CLIENT') { router.replace(`/${locale}/accueil`); return }
-    apiFetch('/api/credits/balance').then(r => r.json()).then(setBalance).catch(() => {})
+    apiFetch('/api/credits/balance', { timeout: 6000 })
+      .then(r => r.json()).then(setBalance).catch(() => {})
   }, [locale])
+
+  const loadSnapshot = useCallback(async () => {
+    const cached = await offlineDb.get(OFFLINE_SNAPSHOT_KEY)
+    if (cached) { setData(cached); setOffline(true) }
+    else        { setError(true) }
+    setLoading(false)
+  }, [])
 
   const load = useCallback((r: DateRange | null) => {
     setLoading(true)
     setError(false)
+    setOffline(false)
     setLastRange(r)
+
+    // Offline: serve snapshot immediately
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      loadSnapshot()
+      return
+    }
+
     const qs = r ? `?from=${r.from}&to=${r.to}` : ''
     apiFetch(`/api/ai-usage/my${qs}`, { timeout: 10000 })
       .then(res => res.json())
-      .then(d => { setData(d); setLoading(false) })
-      .catch(() => { setError(true); setLoading(false) })
-  }, [])
+      .then(d => {
+        setData(d)
+        setLoading(false)
+        // Persist snapshot for future offline use (all-time view, no date filter)
+        if (!r) offlineDb.set(OFFLINE_SNAPSHOT_KEY, d)
+        else {
+          // Also refresh snapshot with all-time data in background
+          apiFetch('/api/ai-usage/my', { timeout: 10000 })
+            .then(res2 => res2.json())
+            .then(d2 => offlineDb.set(OFFLINE_SNAPSHOT_KEY, d2))
+            .catch(() => {})
+        }
+      })
+      .catch(() => loadSnapshot())
+  }, [loadSnapshot])
 
   const isFr = locale === 'fr'
   const groups: TicketGroup[] = data?.items ? groupByTicket(data.items) : []
 
   const typeLabel = (type: string) => {
-    if (type === 'bl_extraction') return isFr ? '📄 Extraction BL' : '📄 BL extraction'
+    if (type === 'bl_extraction')    return isFr ? '📄 Extraction BL'   : '📄 BL extraction'
     if (type === 'voice_transcription') return isFr ? '🎙️ Dictée vocale' : '🎙️ Voice dictation'
-    if (type === 'sms_notification') return isFr ? '📱 SMS Premium' : '📱 Premium SMS'
+    if (type === 'sms_notification') return isFr ? '📱 SMS Premium'     : '📱 Premium SMS'
     return type
   }
 
@@ -82,6 +114,18 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
       <div className="space-y-4">
 
         <PeriodFilter onChange={(r) => load(r)} isFr={isFr} dark />
+
+        {/* Offline banner */}
+        {offline && (
+          <div className="bg-amber-500/20 border border-amber-400/30 rounded-2xl px-4 py-2.5 flex items-center gap-2">
+            <WifiOff size={13} className="text-amber-300 flex-shrink-0" />
+            <p className="text-xs text-amber-200">
+              {isFr
+                ? 'Mode hors ligne — données de votre dernière consultation.'
+                : 'Offline mode — data from your last visit.'}
+            </p>
+          </div>
+        )}
 
         {/* Total credits banner */}
         {data && (
@@ -104,8 +148,8 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
             </div>
             <div className="space-y-2 text-sm">
               {[
-                { label: isFr ? 'Achetés' : 'Purchased',  value: Math.round(balance.creditsTotal) },
-                { label: isFr ? 'Utilisés' : 'Used',      value: Math.round(balance.creditsUsed) },
+                { label: isFr ? 'Achetés' : 'Purchased', value: Math.round(balance.creditsTotal) },
+                { label: isFr ? 'Utilisés' : 'Used',     value: Math.round(balance.creditsUsed) },
               ].map(row => (
                 <div key={row.label} className="flex justify-between text-gray-600">
                   <span>{row.label}</span>
@@ -138,8 +182,9 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
           </div>
         ) : error ? (
           <div className="bg-white/10 rounded-2xl py-10 text-center space-y-3">
+            <WifiOff size={20} className="text-blue-300 mx-auto" />
             <p className="text-blue-200 text-sm">
-              {isFr ? 'Impossible de charger les données.' : 'Could not load data.'}
+              {isFr ? 'Données non disponibles hors ligne.' : 'Data not available offline.'}
             </p>
             <button
               onClick={() => load(lastRange)}
