@@ -2,10 +2,17 @@ const CACHE = 'eolis-v10'
 const SHELL_URLS = ['/', '/fr/accueil', '/en/accueil', '/offline.html']
 
 self.addEventListener('install', e => {
+  // cache.addAll() fails atomically if ANY url has Cache-Control: no-store (Next.js pages).
+  // Use individual fetch + cache.put() so each url is cached independently.
   e.waitUntil(
-    caches.open(CACHE)
-      .then(cache => cache.addAll(SHELL_URLS).catch(() => {}))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE).then(async cache => {
+      await Promise.all(SHELL_URLS.map(url =>
+        fetch(url, { cache: 'no-cache' })
+          .then(res => { if (res.ok) return cache.put(url, res) })
+          .catch(() => {})
+      ))
+      return self.skipWaiting()
+    })
   )
 })
 
@@ -255,14 +262,19 @@ self.addEventListener('fetch', e => {
     return
   }
 
-  // Assets (_next/static, images, fonts) — cache first pour la vitesse
+  // Assets (_next/static, images, fonts) — stale-while-revalidate
   e.respondWith(
     caches.open(CACHE).then(cache =>
       cache.match(e.request).then(cached => {
         const network = fetch(e.request)
-          .then(res => { if (res.ok) cache.put(e.request, res.clone()); return res })
+          .then(res => {
+            if (res.ok) cache.put(e.request, res.clone()).catch(() => {})
+            return res
+          })
           .catch(() => null)
-        return cached ?? network.then(r => r ?? new Response('', { status: 503 }))
+        // Serve cached immediately; update in background
+        if (cached) { network.catch(() => {}); return cached }
+        return network.then(r => r ?? new Response('', { status: 503 }))
       })
     )
   )
