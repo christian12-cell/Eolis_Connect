@@ -83,9 +83,32 @@ def my_usage(
 
     total_credits = sum(getattr(r, "credits_cost", 0) or 0 for r in rows)
 
+    # Batch-load all referenced tickets in one query (avoids N+1)
+    ticket_ids    = {r.ticket_id        for r in rows if r.ticket_id}
+    bl_ids        = {r.bl_document_id   for r in rows if r.bl_document_id and not r.ticket_id}
+
+    tickets_by_id: dict = {}
+    if ticket_ids:
+        for t in db.query(Ticket).filter(
+            Ticket.id.in_(ticket_ids), Ticket.client_id == current_user.id
+        ).all():
+            tickets_by_id[t.id] = t
+
+    tickets_by_bl: dict = {}
+    if bl_ids:
+        for t in db.query(Ticket).filter(
+            Ticket.bl_document_id.in_(bl_ids), Ticket.client_id == current_user.id
+        ).all():
+            tickets_by_bl[t.bl_document_id] = t
+
     items = []
     for r in rows:
-        ticket = _resolve_ticket(r, db, current_user.id)
+        if r.ticket_id:
+            ticket = tickets_by_id.get(r.ticket_id)
+        elif r.bl_document_id:
+            ticket = tickets_by_bl.get(r.bl_document_id)
+        else:
+            ticket = None
         items.append({
             "id":           r.id,
             "type":         r.type,

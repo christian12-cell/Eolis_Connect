@@ -61,7 +61,7 @@ export default function DepensesPage({ params }: { params: Promise<{ locale: str
     setError(false)
     setLastRange(r)
     const qs = r ? `?from=${r.from}&to=${r.to}` : ''
-    apiFetch(`/api/ai-usage/my${qs}`)
+    apiFetch(`/api/ai-usage/my${qs}`, { timeout: 10000 })
       .then(res => res.json())
       .then(d => { setData(d); setLoading(false) })
       .catch(() => { setError(true); setLoading(false) })

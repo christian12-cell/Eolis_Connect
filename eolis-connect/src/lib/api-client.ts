@@ -60,7 +60,7 @@ export function clearSession() {
   } catch {}
 }
 
-export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+export async function apiFetch(path: string, options: RequestInit & { timeout?: number } = {}): Promise<Response> {
   const token  = getToken()
   const method = (options.method ?? 'GET').toUpperCase()
 
@@ -77,7 +77,8 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   }
 
   const controller = new AbortController()
-  const timeoutId  = setTimeout(() => controller.abort(), method === 'GET' ? 3000 : 15000)
+  const timeoutMs  = options.timeout ?? (method === 'GET' ? 3000 : 15000)
+  const timeoutId  = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const res = await fetch(apiUrl(path), {
