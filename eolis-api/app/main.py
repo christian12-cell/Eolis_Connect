@@ -299,6 +299,10 @@ def startup():
         conn.execute(text(
             "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS subject VARCHAR(100)"
         ))
+        # SMS premium par dossier (ajouté 2026-05)
+        conn.execute(text(
+            "ALTER TABLE tickets ADD COLUMN IF NOT EXISTS sms_enabled BOOLEAN NOT NULL DEFAULT FALSE"
+        ))
         conn.commit()
 
     # pwd_hint migration in its own block so a failure doesn't crash startup

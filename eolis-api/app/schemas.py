@@ -196,6 +196,8 @@ class TicketResponse(BaseModel):
     attachments: list[AttachmentResponse] = []
     messages: list["MessageResponse"] = []
     ai_usage: Optional["AIUsageSummary"] = None
+    sms_enabled: bool = False
+    sms_slots: int = 0  # 0, 1 ou 2 — calculé selon crédits client (pour la vue agent)
 
     model_config = camel_config()
 

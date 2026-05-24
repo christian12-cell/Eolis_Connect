@@ -7,6 +7,7 @@ CREDITS_PER_EXTRACTION = 50.0
 CREDITS_PER_VOICE_MINUTE = 10.0
 FREE_CREDITS_ON_SIGNUP = 100.0
 CREDITS_INFO_PREMIUM_OPENING = 5.0
+CREDITS_PER_SMS = 160.0
 
 
 def get_or_create_balance(client_id: str, db: Session) -> CreditBalance:

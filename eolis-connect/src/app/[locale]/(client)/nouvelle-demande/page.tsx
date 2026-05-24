@@ -1136,6 +1136,19 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             </p>
           </div>
 
+          {/* Notifications */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
+            <p className="text-xs font-bold text-white/60 uppercase tracking-wide">
+              {isFr ? 'Notifications sur ce dossier' : 'Notifications for this file'}
+            </p>
+            <div className="space-y-1.5 text-xs text-blue-200">
+              <div className="flex items-center gap-2"><span>✉️</span><span>{isFr ? 'Email — gratuit, toujours actif' : 'Email — free, always active'}</span></div>
+              <div className="flex items-center gap-2"><span>📲</span><span>{isFr ? 'Push téléphone — gratuit, toujours actif' : 'Phone push — free, always active'}</span></div>
+              <div className="flex items-center gap-2 text-blue-300"><span>📱</span><span>{isFr ? 'SMS — 160 crédits/SMS, activable après création (max 2 : demande docs + réponse finale)' : 'SMS — 160 credits/SMS, enable after creation (max 2: doc request + final response)'}</span></div>
+            </div>
+            <p className="text-[10px] text-blue-400">1 crédit = 1 FCFA</p>
+          </div>
+
           {/* Checkbox */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" className="w-4 h-4 rounded"
@@ -1182,10 +1195,13 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
     }`}>
       <div className="flex items-center gap-2">
         <Zap size={15} className={creditsRemaining > 0 ? 'text-amber-300' : 'text-red-300'} />
-        <p className="text-sm text-white">
-          {isFr ? 'Solde :' : 'Balance:'}
-          <span className="font-bold ml-1">{Math.round(creditsRemaining)} crédits</span>
-        </p>
+        <div>
+          <p className="text-sm text-white">
+            {isFr ? 'Solde :' : 'Balance:'}
+            <span className="font-bold ml-1">{Math.round(creditsRemaining)} crédits</span>
+          </p>
+          <p className="text-[10px] text-blue-300">1 crédit = 1 FCFA</p>
+        </div>
       </div>
       {creditsRemaining <= 0 && (
         <button onClick={() => router.push(`/${locale}/recharger`)}
@@ -1258,6 +1274,19 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             </div>
           </div>
 
+
+          {/* Notifications */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
+            <p className="text-xs font-bold text-white/60 uppercase tracking-wide">
+              {isFr ? 'Notifications sur ce dossier' : 'Notifications for this file'}
+            </p>
+            <div className="space-y-1.5 text-xs text-blue-200">
+              <div className="flex items-center gap-2"><span>✉️</span><span>{isFr ? 'Email — gratuit, toujours actif' : 'Email — free, always active'}</span></div>
+              <div className="flex items-center gap-2"><span>📲</span><span>{isFr ? 'Push téléphone — gratuit, toujours actif' : 'Phone push — free, always active'}</span></div>
+              <div className="flex items-center gap-2 text-blue-300"><span>📱</span><span>{isFr ? 'SMS — 160 crédits/SMS, activable après création (réponse finale)' : 'SMS — 160 credits/SMS, enable after creation (final response)'}</span></div>
+            </div>
+            <p className="text-[10px] text-blue-400">1 crédit = 1 FCFA</p>
+          </div>
 
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" className="w-4 h-4 rounded"
@@ -1369,6 +1398,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                       ? 'Je renseigne moi-même le BL, le navire et la logistique'
                       : 'I fill in the BL, vessel and logistics myself'}
                   </p>
+                  <p className="text-[10px] text-blue-300 mt-2">📲 Push · ✉️ Email</p>
                 </div>
               </div>
             </button>
@@ -1411,6 +1441,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                         : `You will have ${Math.round(creditsRemaining - 50)} credits left after`}
                     </p>
                   )}
+                  <p className="text-[10px] text-blue-300 mt-1.5">📲 Push · ✉️ Email · 📱 SMS optionnel</p>
                 </div>
               </div>
             </button>
@@ -1453,6 +1484,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   <p className="text-sm text-blue-100 leading-relaxed">
                     {isFr ? 'Écrivez votre question, réponse sous 24h' : 'Write your question, response within 24h'}
                   </p>
+                  <p className="text-[10px] text-blue-300 mt-2">📲 Push · ✉️ Email</p>
                 </div>
               </div>
             </button>
@@ -1500,6 +1532,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                         : `Insufficient credits — need 5, you have ${Math.round(creditsRemaining ?? 0)}`}
                     </p>
                   )}
+                  <p className="text-[10px] text-blue-300 mt-1.5">📲 Push · ✉️ Email · 📱 SMS optionnel</p>
                 </div>
               </div>
             </button>

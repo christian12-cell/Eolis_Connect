@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     TWILIO_FROM_NUMBER: str = ""
     TWILIO_VERIFY_SERVICE_SID: str = ""
 
+    # Seven.io — SMS provider cible (migration après validation Guillaume)
+    SEVEN_IO_API_KEY: str = ""
+    SEVEN_IO_ENABLED: bool = False   # false = Twilio reste actif, true = Seven.io
+    SEVEN_IO_FROM: str = "Eolis"     # sender ID alphanumérique
+
     # OpenAI — BL extraction
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o"

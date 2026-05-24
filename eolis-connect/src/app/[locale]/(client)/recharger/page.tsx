@@ -230,7 +230,10 @@ export default function RechargerPage({ params }: { params: Promise<{ locale: st
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100 text-sm">
               <span className="text-gray-500">{isFr ? 'Crédits à recevoir' : 'Credits to receive'}</span>
-              <span className="font-bold text-[#1B3A5C]">{credits} crédits</span>
+              <div className="text-right">
+                <span className="font-bold text-[#1B3A5C]">{credits} crédits</span>
+                <p className="text-[10px] text-gray-400">1 crédit = 1 FCFA</p>
+              </div>
             </div>
             <div className="flex justify-between items-center py-2 text-sm">
               <span className="text-gray-500">{isFr ? 'Justificatif' : 'Proof'}</span>

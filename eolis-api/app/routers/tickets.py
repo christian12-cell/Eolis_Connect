@@ -7,7 +7,7 @@ from ..ws_manager import ws_manager
 from ..schemas import TicketCreateRequest, TicketUpdateRequest, TicketResponse
 from ..deps import get_current_user
 from ..config import settings
-from ..credit_service import check_credits, deduct_credits, get_or_create_balance, CREDITS_INFO_PREMIUM_OPENING
+from ..credit_service import check_credits, deduct_credits, get_or_create_balance, credits_remaining, CREDITS_INFO_PREMIUM_OPENING, CREDITS_PER_SMS
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -106,6 +106,18 @@ def create_ticket(body: TicketCreateRequest, current_user: User = Depends(get_cu
     return ticket
 
 
+def _compute_sms_slots(ticket, db: Session) -> int:
+    """Compute how many SMS the client can still receive on this ticket (0, 1, or 2)."""
+    if not ticket.sms_enabled or ticket.ticket_mode not in ("BL_PREMIUM", "INFO_PREMIUM"):
+        return 0
+    rem = credits_remaining(ticket.client_id, db)
+    if rem >= CREDITS_PER_SMS * 2:
+        return 2
+    if rem >= CREDITS_PER_SMS:
+        return 1
+    return 0
+
+
 @router.get("/{ticket_id}", response_model=TicketResponse)
 def get_ticket(ticket_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ticket = db.query(Ticket).options(joinedload(Ticket.client), joinedload(Ticket.agent), joinedload(Ticket.satisfaction_rating), joinedload(Ticket.attachments)).filter(Ticket.id == ticket_id).first()
@@ -113,9 +125,37 @@ def get_ticket(ticket_id: str, current_user: User = Depends(get_current_user), d
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
     if current_user.role == "CLIENT" and ticket.client_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-    # Attach AI usage summary if available
     ai = db.query(AIUsage).filter(AIUsage.ticket_id == ticket.id).first()
     ticket.__dict__["ai_usage"] = ai
+    ticket.__dict__["sms_slots"] = _compute_sms_slots(ticket, db)
+    return ticket
+
+
+@router.patch("/{ticket_id}/sms", response_model=TicketResponse)
+def toggle_ticket_sms(ticket_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Client toggles SMS notifications for this specific ticket (premium only)."""
+    if current_user.role != "CLIENT":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Clients only")
+    ticket = db.query(Ticket).options(joinedload(Ticket.client), joinedload(Ticket.agent), joinedload(Ticket.satisfaction_rating), joinedload(Ticket.attachments)).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+    if ticket.client_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if ticket.ticket_mode not in ("BL_PREMIUM", "INFO_PREMIUM"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="sms_premium_only")
+
+    # If trying to enable, check minimum credits
+    new_state = not ticket.sms_enabled
+    if new_state:
+        rem = credits_remaining(current_user.id, db)
+        if rem < CREDITS_PER_SMS:
+            raise HTTPException(status_code=402, detail="insufficient_credits_for_sms")
+
+    ticket.sms_enabled = new_state
+    db.commit()
+    db.refresh(ticket)
+    ticket.__dict__["ai_usage"] = db.query(AIUsage).filter(AIUsage.ticket_id == ticket.id).first()
+    ticket.__dict__["sms_slots"] = _compute_sms_slots(ticket, db)
     return ticket
 
 

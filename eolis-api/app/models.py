@@ -63,6 +63,7 @@ class Ticket(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     taken_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    sms_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     client: Mapped["User"] = relationship("User", foreign_keys=[client_id], back_populates="tickets_as_client")
     agent: Mapped["User | None"] = relationship("User", foreign_keys=[agent_id], back_populates="tickets_as_agent")

@@ -7,8 +7,9 @@ from ..models import User, Ticket, Message, Notification, Attachment
 from ..schemas import MessageCreateRequest, MessageResponse
 from ..deps import get_current_user
 from ..config import settings
-from ..sms_service import sms_final_response, sms_document_requested, sms_docs_submitted
+from ..sms_service import sms_final_response, sms_document_requested
 from ..email_service import send_final_response_email, send_document_requested_email
+from ..credit_service import credits_remaining, deduct_credits, CREDITS_PER_SMS
 from ..push_service import send_push_to_user
 from ..ws_manager import ws_manager
 
@@ -173,7 +174,20 @@ def send_message(
                 title="Réponse finale" if (client.language != "en") else "Final response",
                 message=f"Votre dossier {ticket.ref} a été clôturé. Consultez la réponse." if (client.language != "en") else f"Your request {ticket.ref} has been closed. View the response.",
             ))
-            if client.phone:
+            # SMS premium : seulement si ticket premium + sms_enabled + crédits ≥ 160
+            if (client.phone
+                    and ticket.ticket_mode in ("BL_PREMIUM", "INFO_PREMIUM")
+                    and ticket.sms_enabled
+                    and credits_remaining(client.id, db) >= CREDITS_PER_SMS):
+                deduct_credits(client.id, CREDITS_PER_SMS, db)
+                from ..models import AIUsage
+                db.add(AIUsage(
+                    client_id=client.id, ticket_id=ticket_id,
+                    type="sms_notification", model="sms",
+                    input_tokens=0, output_tokens=0,
+                    cost_usd=0.0, cost_fcfa=CREDITS_PER_SMS,
+                    fcfa_rate=1.0, credits_cost=CREDITS_PER_SMS,
+                ))
                 background_tasks.add_task(
                     sms_final_response,
                     client.phone, client.first_name, current_user.first_name,
@@ -202,7 +216,20 @@ def send_message(
                 title="Documents requis" if (client.language != "en") else "Documents required",
                 message=f"Documents demandés pour le dossier {ticket.ref}" if (client.language != "en") else f"Documents requested for {ticket.ref}",
             ))
-            if client.phone:
+            # SMS premium : demande de docs seulement si crédits ≥ 320 (réserve la finale)
+            if (client.phone
+                    and ticket.ticket_mode in ("BL_PREMIUM", "INFO_PREMIUM")
+                    and ticket.sms_enabled
+                    and credits_remaining(client.id, db) >= CREDITS_PER_SMS * 2):
+                deduct_credits(client.id, CREDITS_PER_SMS, db)
+                from ..models import AIUsage
+                db.add(AIUsage(
+                    client_id=client.id, ticket_id=ticket_id,
+                    type="sms_notification", model="sms",
+                    input_tokens=0, output_tokens=0,
+                    cost_usd=0.0, cost_fcfa=CREDITS_PER_SMS,
+                    fcfa_rate=1.0, credits_cost=CREDITS_PER_SMS,
+                ))
                 background_tasks.add_task(
                     sms_document_requested,
                     client.phone, client.first_name, ticket.ref, client.language or "fr",
@@ -304,11 +331,7 @@ def send_message(
             title="Documents reçus" if lang_notif != "en" else "Documents received",
             message=f"Le client a envoyé les documents demandés pour {ticket.ref}",
         ))
-        if ticket.agent and ticket.agent.phone and client:
-            background_tasks.add_task(
-                sms_docs_submitted,
-                ticket.agent.phone, client.first_name, ticket.ref,
-            )
+        # Pas de SMS agent pour docs soumis — push suffit
         background_tasks.add_task(
             send_push_to_user,ticket.agent_id, "DOCS_SUBMITTED",
             "Documents reçus",

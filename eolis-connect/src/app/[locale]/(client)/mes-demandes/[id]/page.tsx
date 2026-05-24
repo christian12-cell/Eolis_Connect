@@ -255,6 +255,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
   }
   const [fileUploads, setFileUploads] = useState<FileUpload[]>([])
   const [open, setOpen] = useState({ equip: true, log: true, desc: true, docs: true, bl: true })
+  const [smsEnabled, setSmsEnabled]   = useState(false)
+  const [smsToggling, setSmsToggling] = useState(false)
+  const [showSmsPopup, setShowSmsPopup] = useState<'confirm_2' | 'confirm_1' | 'insufficient' | null>(null)
   const messagesEndRef     = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const chatInnerRef       = useRef<HTMLDivElement>(null)
@@ -463,6 +466,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
         apiFetch(`/api/tickets/${ticketId}/messages`).then(r => r.json()),
       ])
       setTicket(tk)
+      if (tk?.smsEnabled !== undefined) setSmsEnabled(tk.smsEnabled)
       const msgArray = Array.isArray(msgs) ? msgs : []
       setMessages(msgArray)
       prevMsgLenRef.current = msgArray.length
@@ -854,6 +858,119 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                 {isFr ? 'Crédits consommés (ce dossier)' : 'Credits used (this file)'}
               </p>
               <p className="text-xs font-bold text-white font-mono">{creditsConsumed} crédits</p>
+            </div>
+          )}
+
+          {/* ── Toggle SMS — premium uniquement ── */}
+          {(ticket?.ticketMode === 'BL_PREMIUM' || ticket?.ticketMode === 'INFO_PREMIUM') && (
+            <div className={`flex items-center justify-between rounded-2xl px-4 py-2.5 border ${
+              smsEnabled ? 'bg-emerald-500/15 border-emerald-400/30' : 'bg-white/10 border-white/15'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">{smsEnabled ? '📱' : '📵'}</span>
+                <div>
+                  <p className="text-xs font-semibold text-white">
+                    {isFr ? 'Notifications SMS' : 'SMS Notifications'}
+                  </p>
+                  <p className="text-[10px] text-blue-200">
+                    {isFr ? '160 crédits / SMS reçu' : '160 credits / SMS received'}
+                  </p>
+                </div>
+              </div>
+              {!isOnline ? (
+                <p className="text-[10px] text-blue-300 italic">
+                  {isFr ? 'Connexion requise' : 'Connection required'}
+                </p>
+              ) : (
+                <button
+                  disabled={smsToggling}
+                  onClick={async () => {
+                    if (smsEnabled) {
+                      // Désactiver directement
+                      setSmsToggling(true)
+                      try {
+                        const res = await apiFetch(`/api/tickets/${ticketId}/sms`, { method: 'PATCH' })
+                        if (res.ok) { const d = await res.json(); setSmsEnabled(d.smsEnabled) }
+                      } finally { setSmsToggling(false) }
+                    } else {
+                      // Choisir le popup selon les crédits
+                      const rem = creditsRemaining ?? 0
+                      if (rem < 160) setShowSmsPopup('insufficient')
+                      else if (rem >= 320) setShowSmsPopup('confirm_2')
+                      else setShowSmsPopup('confirm_1')
+                    }
+                  }}
+                  className={`relative w-10 h-5.5 rounded-full transition-colors flex-shrink-0 ${
+                    smsEnabled ? 'bg-emerald-400' : 'bg-white/20'
+                  } ${smsToggling ? 'opacity-50' : ''}`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
+                    smsEnabled ? 'left-5' : 'left-0.5'
+                  }`} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Popup SMS activation ── */}
+          {showSmsPopup && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setShowSmsPopup(null)}>
+              <div className="bg-[#1B3A5C] rounded-t-3xl w-full max-w-md p-6 pb-8 space-y-4" onClick={e => e.stopPropagation()}>
+                {showSmsPopup === 'insufficient' ? (
+                  <>
+                    <p className="text-base font-bold text-white">📵 {isFr ? 'Crédits insuffisants' : 'Insufficient credits'}</p>
+                    <p className="text-sm text-blue-200">
+                      {isFr
+                        ? `Il vous faut au moins 160 crédits pour activer les SMS. Solde actuel : ${creditsRemaining ?? 0} crédits.`
+                        : `You need at least 160 credits to enable SMS. Current balance: ${creditsRemaining ?? 0} credits.`}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <button onClick={() => setShowSmsPopup(null)} className="py-3 rounded-2xl border border-white/30 text-white text-sm font-medium">
+                        {isFr ? 'Fermer' : 'Close'}
+                      </button>
+                      <button onClick={() => { setShowSmsPopup(null); router.push(`/${locale}/recharger`) }}
+                        className="py-3 rounded-2xl bg-white text-[#1B3A5C] text-sm font-bold">
+                        {isFr ? 'Recharger →' : 'Top up →'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-base font-bold text-white">📱 {isFr ? 'Activer les SMS pour ce dossier ?' : 'Enable SMS for this file?'}</p>
+                    {showSmsPopup === 'confirm_2' ? (
+                      <div className="bg-white/10 rounded-xl p-3 space-y-1.5 text-xs text-blue-200">
+                        <div className="flex justify-between"><span>{isFr ? '1 demande de documents' : '1 document request'}</span><span className="font-mono text-white">160 crédits</span></div>
+                        <div className="flex justify-between"><span>{isFr ? '1 réponse finale' : '1 final response'}</span><span className="font-mono text-white">160 crédits</span></div>
+                        <div className="flex justify-between border-t border-white/15 pt-1.5"><span className="font-semibold text-white">{isFr ? 'Maximum possible' : 'Maximum total'}</span><span className="font-mono font-bold text-amber-300">320 crédits</span></div>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-500/15 border border-amber-400/30 rounded-xl p-3 text-xs text-amber-200">
+                        {isFr
+                          ? 'Votre solde permet 1 SMS uniquement. Vous recevrez le SMS de réponse finale seulement — le SMS de demande de documents ne sera pas envoyé.'
+                          : 'Your balance allows 1 SMS only. You will receive the final response SMS — the document request SMS will not be sent.'}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-blue-300">1 crédit = 1 FCFA</p>
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <button onClick={() => setShowSmsPopup(null)} className="py-3 rounded-2xl border border-white/30 text-white text-sm font-medium">
+                        {isFr ? 'Annuler' : 'Cancel'}
+                      </button>
+                      <button
+                        disabled={smsToggling}
+                        onClick={async () => {
+                          setSmsToggling(true)
+                          try {
+                            const res = await apiFetch(`/api/tickets/${ticketId}/sms`, { method: 'PATCH' })
+                            if (res.ok) { const d = await res.json(); setSmsEnabled(d.smsEnabled) }
+                          } finally { setSmsToggling(false); setShowSmsPopup(null) }
+                        }}
+                        className="py-3 rounded-2xl bg-white text-[#1B3A5C] text-sm font-bold disabled:opacity-50">
+                        {isFr ? 'Activer →' : 'Enable →'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
 

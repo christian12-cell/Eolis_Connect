@@ -8,16 +8,44 @@ def _e164(phone: str) -> str:
 
 def send_sms(to: str, body: str):
     """
-    Send an SMS via Twilio.
-    - TWILIO_FROM_NUMBER can be a phone number (+1XXXXXXXXXX)
-      OR an alphanumeric sender ID (e.g. "Eolis") — Twilio handles both.
-    - Silently skips if disabled, not configured, or phone is invalid.
+    Send an SMS — routes to Seven.io (SEVEN_IO_ENABLED=true) or Twilio (default).
+    Silently skips if disabled, not configured, or phone is invalid.
     """
-    if not settings.TWILIO_ENABLED or not settings.TWILIO_ACCOUNT_SID or not to:
+    if not to:
         return
     phone = _e164(to)
     if not phone.startswith("+"):
         return
+
+    if settings.SEVEN_IO_ENABLED and settings.SEVEN_IO_API_KEY:
+        _send_via_seven(phone, body)
+    elif settings.TWILIO_ENABLED and settings.TWILIO_ACCOUNT_SID:
+        _send_via_twilio(phone, body)
+
+
+def _send_via_seven(phone: str, body: str):
+    """Seven.io HTTP API — migration cible post-validation Guillaume."""
+    try:
+        import urllib.request, urllib.parse, json
+        payload = urllib.parse.urlencode({
+            "to": phone,
+            "text": body,
+            "from": settings.SEVEN_IO_FROM,
+        }).encode()
+        req = urllib.request.Request(
+            "https://gateway.seven.io/api/sms",
+            data=payload,
+            headers={"X-Api-Key": settings.SEVEN_IO_API_KEY},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read())
+            print(f"[sms/seven] Sent to {phone} — balance: {result.get('balance')}")
+    except Exception as exc:
+        print(f"[sms/seven] Failed to {phone}: {exc}")
+
+
+def _send_via_twilio(phone: str, body: str):
     try:
         from twilio.rest import Client
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
@@ -26,11 +54,11 @@ def send_sms(to: str, body: str):
             from_=settings.TWILIO_FROM_NUMBER,
             to=phone,
         )
-        print(f"[sms] Sent to {phone} — SID: {msg.sid}")
+        print(f"[sms/twilio] Sent to {phone} — SID: {msg.sid}")
     except ImportError:
-        print("[sms] twilio not installed — run: pip install twilio")
+        print("[sms/twilio] twilio not installed — run: pip install twilio")
     except Exception as exc:
-        print(f"[sms] Failed to {phone}: {exc}")
+        print(f"[sms/twilio] Failed to {phone}: {exc}")
 
 
 # ── Twilio Verify (OTP global) ────────────────────────────────────────────────

@@ -173,6 +173,31 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
                   ⚡ Premium
                 </span>
               )}
+              {/* Pastille SMS — visible uniquement sur tickets premium */}
+              {(ticket.ticketMode === 'BL_PREMIUM' || ticket.ticketMode === 'INFO_PREMIUM') && (() => {
+                const slots = ticket.smsSlots ?? 0
+                const enabled = ticket.smsEnabled
+                if (!enabled) return (
+                  <span className="inline-flex items-center gap-0.5 bg-gray-100 text-gray-400 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                    📵 SMS désactivé
+                  </span>
+                )
+                if (slots === 0) return (
+                  <span className="inline-flex items-center gap-0.5 bg-red-50 text-red-500 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                    📵 SMS activé · crédits insuffisants
+                  </span>
+                )
+                if (slots === 1) return (
+                  <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                    📱 SMS activé · 1 SMS (réponse finale uniquement)
+                  </span>
+                )
+                return (
+                  <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                    📱 SMS activé · 2 SMS (1 demande de documents + réponse finale)
+                  </span>
+                )
+              })()}
               {(ticket.ticketMode === 'INFO_SIMPLE' || ticket.ticketMode === 'INFO_PREMIUM') && (
                 <span className="inline-flex items-center gap-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-md">
                   💬 Info
