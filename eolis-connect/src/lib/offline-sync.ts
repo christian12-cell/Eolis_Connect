@@ -26,6 +26,7 @@ async function execute(action: PendingAction): Promise<string | null> {
     })
     if (!res.ok) throw new Error('create_ticket_failed')
     const ticket = await res.json()
+    await offlineDb.set('/api/tickets', null)
 
     // Upload queued files grouped by source
     if (action.files && action.files.length > 0 && ticket.id) {

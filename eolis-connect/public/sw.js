@@ -182,6 +182,14 @@ function swRemove(db, id) {
   })
 }
 
+function swInvalidateApiCache(db, key) {
+  return new Promise(resolve => {
+    const req = db.transaction('cache', 'readwrite').objectStore('cache').delete(key)
+    req.onsuccess = () => resolve()
+    req.onerror   = () => resolve()
+  })
+}
+
 function swBump(db, id) {
   return new Promise(resolve => {
     const t   = db.transaction('pending', 'readwrite')
@@ -230,6 +238,8 @@ async function doBackgroundSync() {
           if (ok) {
             const data = await r.json().catch(() => ({}))
             if (data.ref) refs.push(data.ref)
+            // Invalidate ticket list cache so mes-demandes shows fresh data
+            await swInvalidateApiCache(db, '/api/tickets').catch(() => {})
           }
         } else if (action.type === 'SEND_MESSAGE') {
           const { ticketId, ...body } = action.payload

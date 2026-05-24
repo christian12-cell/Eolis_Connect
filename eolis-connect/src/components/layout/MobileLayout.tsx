@@ -186,9 +186,9 @@ export function MobileLayout({
         </div>
       )}
 
-      {/* Offline banner */}
+      {/* Offline banner — in-flow so it never covers the header */}
       {isOffline && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-amber-500 text-white text-[11px] font-semibold py-1" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="flex items-center justify-center gap-2 bg-amber-500 text-white text-[11px] font-semibold py-1.5 flex-shrink-0">
           <WifiOff size={11} />
           {isFr ? 'Hors-ligne — données depuis le cache' : 'Offline — showing cached data'}
         </div>
@@ -197,7 +197,7 @@ export function MobileLayout({
       {/* Top bar */}
       <header
         className="sticky top-0 z-40 bg-white/15 backdrop-blur-md border-b border-white/10"
-        style={{ boxShadow: '0 1px 12px rgba(0,0,0,0.15)', marginTop: isOffline ? '22px' : 0 }}
+        style={{ boxShadow: '0 1px 12px rgba(0,0,0,0.15)' }}
       >
         <div className="flex items-center h-14 px-4 gap-3 max-w-lg mx-auto">
           {showBack ? (

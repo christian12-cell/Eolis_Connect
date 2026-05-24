@@ -5,7 +5,7 @@ import mimetypes
 import boto3
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -14,6 +14,7 @@ from ..deps import get_current_user, require_roles
 from ..credit_service import get_or_create_balance, FREE_CREDITS_ON_SIGNUP
 from ..config import settings
 from ..limiter import limiter
+from ..push_service import send_push_to_user
 
 router = APIRouter(prefix="/credits", tags=["credits"])
 
@@ -108,6 +109,7 @@ def get_balance(current_user: User = Depends(get_current_user), db: Session = De
 async def submit_request(
     amount_declared: float = Form(...),
     photo: UploadFile = File(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -144,6 +146,19 @@ async def submit_request(
 
     db.commit()
     db.refresh(req)
+
+    # Push notification to each finance agent / admin
+    client_name = f"{current_user.first_name} {current_user.last_name}"
+    for admin in admins:
+        lang = getattr(admin, 'language', 'fr') or 'fr'
+        en = lang == 'en'
+        background_tasks.add_task(
+            send_push_to_user, admin.id, "CREDIT_REQUEST_NEW",
+            "New top-up request" if en else "Nouvelle demande de recharge",
+            f"{client_name} — {int(amount_declared)} FCFA",
+            f"/{lang}/finance/credits", None, None, 0,
+        )
+
     return {"id": req.id, "status": "pending"}
 
 
@@ -188,6 +203,7 @@ def approve_request(
     request: Request,
     request_id: str,
     amount_received: float = Form(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(require_roles("FINANCE_AGENT")),
     db: Session = Depends(get_db),
 ):
@@ -259,6 +275,17 @@ def approve_request(
            f"client={req.client_id} credits={credits_to_add}", _client_ip(request))
 
     db.commit()
+
+    client_obj = db.query(User).filter(User.id == req.client_id).first()
+    lang = getattr(client_obj, 'language', 'fr') or 'fr'
+    en = lang == 'en'
+    background_tasks.add_task(
+        send_push_to_user, req.client_id, "CREDITS_ADDED",
+        "Credits added ✓" if en else "Crédits ajoutés ✓",
+        f"{int(credits_to_add)} credits added to your account." if en else f"{int(credits_to_add)} crédits ajoutés à votre compte.",
+        f"/{lang}/depenses", None, None, 0,
+    )
+
     return {"creditsAdded": credits_to_add}
 
 
@@ -268,6 +295,7 @@ def reject_request(
     request: Request,
     request_id: str,
     reason: str = Form(""),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(require_roles("FINANCE_AGENT")),
     db: Session = Depends(get_db),
 ):
@@ -295,10 +323,20 @@ def reject_request(
         ),
     )
     db.add(notif)
-    # Audit log
     _audit(db, current_user.id, "CREDIT_REJECT", req.id, req.amount_declared,
            f"reason={reason[:200]}", _client_ip(request))
     db.commit()
+
+    client_obj = db.query(User).filter(User.id == req.client_id).first()
+    lang = getattr(client_obj, 'language', 'fr') or 'fr'
+    en = lang == 'en'
+    body_txt = (f"{reason} — " if reason else "") + ("Contact us." if en else "Contactez-nous.")
+    background_tasks.add_task(
+        send_push_to_user, req.client_id, "CREDITS_REJECTED",
+        "Top-up request rejected" if en else "Demande de recharge refusée",
+        body_txt, f"/{lang}/recharger", None, None, 0,
+    )
+
     return {"status": "rejected"}
 
 
@@ -329,6 +367,7 @@ def _fmt_request(r: CreditRequest) -> dict:
 def admin_confirm_request(
     request: Request,
     request_id: str,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
@@ -378,6 +417,17 @@ def admin_confirm_request(
     _audit(db, current_user.id, "CREDIT_ADMIN_CONFIRM", req.id, req.amount_validated,
            f"client={req.client_id} credits={credits_to_add}", _client_ip(request))
     db.commit()
+
+    client_obj2 = db.query(User).filter(User.id == req.client_id).first()
+    clang = getattr(client_obj2, 'language', 'fr') or 'fr'
+    cen = clang == 'en'
+    background_tasks.add_task(
+        send_push_to_user, req.client_id, "CREDITS_ADDED",
+        "Credits added ✓" if cen else "Crédits ajoutés ✓",
+        f"{int(credits_to_add)} credits added to your account." if cen else f"{int(credits_to_add)} crédits ajoutés à votre compte.",
+        f"/{clang}/depenses", None, None, 0,
+    )
+
     return {"creditsAdded": credits_to_add}
 
 
@@ -387,6 +437,7 @@ def admin_reject_pending(
     request: Request,
     request_id: str,
     reason: str = Form(""),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
@@ -432,6 +483,17 @@ def admin_reject_pending(
     _audit(db, current_user.id, "CREDIT_ADMIN_REJECT", req.id, req.amount_validated,
            f"reason={reason[:200]}", _client_ip(request))
     db.commit()
+
+    client_r = db.query(User).filter(User.id == req.client_id).first()
+    clang_r = getattr(client_r, 'language', 'fr') or 'fr'
+    cen_r = clang_r == 'en'
+    body_r = (f"{reason} — " if reason else "") + ("Contact us." if cen_r else "Contactez-nous.")
+    background_tasks.add_task(
+        send_push_to_user, req.client_id, "CREDITS_REJECTED",
+        "Top-up request rejected" if cen_r else "Demande de recharge refusée",
+        body_r, f"/{clang_r}/recharger", None, None, 0,
+    )
+
     return {"status": "rejected"}
 
 
