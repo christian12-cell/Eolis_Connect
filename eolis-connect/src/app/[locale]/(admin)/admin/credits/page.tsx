@@ -100,6 +100,14 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
   const [rejectReasons, setRejectReasons]       = useState<Record<string, string>>({})
   const [adminRejectingId, setAdminRejectingId] = useState<string | null>(null)
   const [adminRejectReasons, setAdminRejectReasons] = useState<Record<string, string>>({})
+  const [confirmModal, setConfirmModal] = useState<{
+    id: string; clientName: string; amountDeclared: number; amount: string
+  } | null>(null)
+  const [adjustModal, setAdjustModal] = useState<{
+    clientId: string; clientName: string; creditsRemaining: number
+    amount: string; note: string; isRemove: boolean
+  } | null>(null)
+  const [adjusting, setAdjusting] = useState(false)
   const [refreshing, setRefreshing]       = useState(false)
   const [countdown, setCountdown]         = useState(30)
   const autoRef    = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -183,15 +191,31 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
     r.status === 'pending_admin' || (r.status === 'pending' && r.amountDeclared >= LARGE_THRESHOLD)
   ).length
 
-  async function approve(id: string) {
-    const amt = parseFloat(amountInputs[id] || '')
+  async function approve(id: string, amountOverride?: string) {
+    const amt = parseFloat(amountOverride ?? amountInputs[id] ?? '')
     if (!amt || amt < 500) return alert(isFr ? 'Montant minimum 500 FCFA' : 'Minimum 500 FCFA')
     setValidating(id)
     const fd = new FormData()
     fd.append('amount_received', String(amt))
     await apiUpload(`/api/credits/admin/requests/${id}/approve`, fd)
     setValidating(null)
+    setConfirmModal(null)
     loadRequests(true)
+  }
+
+  async function doAdjust() {
+    if (!adjustModal) return
+    const amt = parseFloat(adjustModal.amount)
+    if (!amt || amt <= 0) return
+    setAdjusting(true)
+    const fd = new FormData()
+    fd.append('client_id', adjustModal.clientId)
+    fd.append('amount_fcfa', String(adjustModal.isRemove ? -amt : amt))
+    fd.append('note', adjustModal.note)
+    await apiUpload('/api/credits/admin/adjust', fd)
+    setAdjusting(false)
+    setAdjustModal(null)
+    loadBalances(true)
   }
 
   async function directApprove(id: string) {
@@ -522,7 +546,12 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                             className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C]"
                           />
                           <button
-                            onClick={() => approve(r.id)}
+                            onClick={() => setConfirmModal({
+                              id: r.id,
+                              clientName: r.clientName ?? r.clientId,
+                              amountDeclared: r.amountDeclared,
+                              amount: amountInputs[r.id] ?? String(r.amountDeclared),
+                            })}
                             disabled={validating === r.id || proofOpen !== r.id}
                             title={proofOpen !== r.id ? (isFr ? 'Ouvrez d\'abord le justificatif' : 'Open proof first') : undefined}
                             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
@@ -593,22 +622,23 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
               <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-gray-400" /></div>
             ) : (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="grid grid-cols-4 gap-4 px-5 py-3 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wide">
+                <div className={`grid gap-4 px-5 py-3 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wide ${isSystemAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
                   <span className="col-span-2">{isFr ? 'Client' : 'Client'}</span>
                   <span className="text-right">{isFr ? 'Achetés' : 'Purchased'}</span>
                   <span className="text-right">{isFr ? 'Restants' : 'Remaining'}</span>
+                  {isSystemAdmin && <span className="text-right">{isFr ? 'Action' : 'Action'}</span>}
                 </div>
                 <div className="divide-y divide-gray-50">
                   {filteredBalances.map((b: any) => (
                     <div key={b.clientId}>
                       {/* Client row */}
-                      <button
-                        onClick={() => loadClientUsage(b.clientId)}
-                        className="w-full grid grid-cols-4 gap-4 px-5 py-3.5 items-center hover:bg-gray-50 transition-colors text-left">
-                        <div className="col-span-2 min-w-0">
+                      <div className={`grid gap-4 px-5 py-3.5 items-center ${isSystemAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
+                        <button
+                          onClick={() => loadClientUsage(b.clientId)}
+                          className="col-span-2 text-left min-w-0">
                           <p className="text-sm font-semibold text-gray-900 truncate">{b.clientName}</p>
                           <p className="text-xs text-gray-400">@{b.username}</p>
-                        </div>
+                        </button>
                         <div className="text-right">
                           <p className="text-sm font-bold text-gray-700 font-mono">{Math.round(b.creditsTotal)}</p>
                           <p className="text-[10px] text-gray-400">{isFr ? 'utilisés' : 'used'}: {Math.round(b.creditsUsed)}</p>
@@ -622,7 +652,23 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
                           </p>
                           <p className="text-[10px] text-gray-400">crédits</p>
                         </div>
-                      </button>
+                        {isSystemAdmin && (
+                          <div className="text-right">
+                            <button
+                              onClick={() => setAdjustModal({
+                                clientId: b.clientId,
+                                clientName: b.clientName,
+                                creditsRemaining: b.creditsRemaining,
+                                amount: '',
+                                note: '',
+                                isRemove: false,
+                              })}
+                              className="px-2.5 py-1 rounded-lg bg-[#EDF1F7] text-[#1B3A5C] text-xs font-semibold hover:bg-blue-100 transition-colors">
+                              ⚡ {isFr ? 'Ajuster' : 'Adjust'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Expanded: usage detail in credits */}
                       {expandedClient === b.clientId && (
@@ -671,6 +717,155 @@ export default function AdminCreditsPage({ params }: { params: Promise<{ locale:
           </>
         )}
       </div>
+
+      {/* ── Modal confirmation validation crédits ─────────────────────────── */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+            <div>
+              <p className="text-lg font-bold text-gray-900">
+                {isFr ? 'Confirmer la validation' : 'Confirm approval'}
+              </p>
+              <p className="text-sm text-gray-500 mt-0.5">{confirmModal.clientName}</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl px-4 py-3 flex justify-between items-center">
+              <span className="text-xs text-gray-500">{isFr ? 'Montant déclaré' : 'Declared amount'}</span>
+              <span className="font-bold text-gray-800 font-mono">{confirmModal.amountDeclared.toLocaleString()} FCFA</span>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-600">
+                {isFr ? 'Montant à valider (FCFA)' : 'Amount to approve (FCFA)'}
+              </label>
+              <input
+                type="number"
+                value={confirmModal.amount}
+                onChange={e => setConfirmModal(m => m ? { ...m, amount: e.target.value } : null)}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none focus:border-[#1B3A5C]"
+                placeholder="FCFA"
+              />
+              {parseFloat(confirmModal.amount) > confirmModal.amountDeclared && (
+                <p className="text-xs text-red-500">
+                  {isFr ? `Maximum : ${confirmModal.amountDeclared.toLocaleString()} FCFA` : `Maximum: ${confirmModal.amountDeclared.toLocaleString()} FCFA`}
+                </p>
+              )}
+              {parseFloat(confirmModal.amount) < confirmModal.amountDeclared && parseFloat(confirmModal.amount) >= 500 && (
+                <p className="text-xs text-amber-600">
+                  {isFr ? 'Vous validez moins que le montant déclaré.' : 'You are approving less than the declared amount.'}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+                {isFr ? 'Annuler' : 'Cancel'}
+              </button>
+              <button
+                onClick={() => approve(confirmModal.id, confirmModal.amount)}
+                disabled={
+                  validating === confirmModal.id ||
+                  !parseFloat(confirmModal.amount) ||
+                  parseFloat(confirmModal.amount) < 500 ||
+                  parseFloat(confirmModal.amount) > confirmModal.amountDeclared
+                }
+                className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2">
+                {validating === confirmModal.id
+                  ? <Loader2 size={15} className="animate-spin" />
+                  : <Check size={15} />}
+                {isFr ? 'Valider' : 'Approve'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal ajustement crédits (SYSTEM_ADMIN) ───────────────────────── */}
+      {adjustModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+            <div>
+              <p className="text-lg font-bold text-gray-900">
+                {isFr ? 'Ajustement de crédits' : 'Credit adjustment'}
+              </p>
+              <p className="text-sm text-gray-500 mt-0.5">{adjustModal.clientName}</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl px-4 py-3 flex justify-between items-center">
+              <span className="text-xs text-gray-500">{isFr ? 'Solde actuel' : 'Current balance'}</span>
+              <span className="font-bold text-gray-800 font-mono">{Math.round(adjustModal.creditsRemaining)} crédits</span>
+            </div>
+
+            {/* Toggle ajouter / retirer */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAdjustModal(m => m ? { ...m, isRemove: false } : null)}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                  !adjustModal.isRemove ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'
+                }`}>
+                {isFr ? '+ Ajouter' : '+ Add'}
+              </button>
+              <button
+                onClick={() => setAdjustModal(m => m ? { ...m, isRemove: true } : null)}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                  adjustModal.isRemove ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600'
+                }`}>
+                {isFr ? '− Retirer' : '− Remove'}
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-600">
+                {isFr ? 'Montant (FCFA = crédits)' : 'Amount (FCFA = credits)'}
+              </label>
+              <input
+                type="number"
+                value={adjustModal.amount}
+                onChange={e => setAdjustModal(m => m ? { ...m, amount: e.target.value } : null)}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none focus:border-[#1B3A5C]"
+                placeholder="ex: 500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-600">
+                {isFr ? 'Note interne (optionnel)' : 'Internal note (optional)'}
+              </label>
+              <textarea
+                rows={2}
+                value={adjustModal.note}
+                onChange={e => setAdjustModal(m => m ? { ...m, note: e.target.value } : null)}
+                placeholder={isFr ? 'Correction erreur validation, fraude...' : 'Correction, fraud...'}
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1B3A5C] resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setAdjustModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+                {isFr ? 'Annuler' : 'Cancel'}
+              </button>
+              <button
+                onClick={doAdjust}
+                disabled={adjusting || !parseFloat(adjustModal.amount) || parseFloat(adjustModal.amount) <= 0}
+                className={`flex-1 px-4 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2 ${
+                  adjustModal.isRemove ? 'bg-red-500' : 'bg-emerald-500'
+                }`}>
+                {adjusting
+                  ? <Loader2 size={15} className="animate-spin" />
+                  : adjustModal.isRemove ? <X size={15} /> : <Check size={15} />}
+                {adjustModal.isRemove
+                  ? (isFr ? 'Retirer' : 'Remove')
+                  : (isFr ? 'Ajouter' : 'Add')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </DashboardLayout>
   )
 }

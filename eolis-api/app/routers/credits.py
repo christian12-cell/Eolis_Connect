@@ -688,6 +688,82 @@ def admin_balances(
     return result
 
 
+# ── Admin: manual credit adjustment (SYSTEM_ADMIN only) ──────────────────────
+
+@router.post("/admin/adjust")
+def admin_adjust_credits(
+    request: Request,
+    client_id: str = Form(...),
+    amount_fcfa: float = Form(...),
+    note: str = Form(""),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    if amount_fcfa == 0:
+        raise HTTPException(400, "amount_fcfa ne peut pas être 0")
+
+    client = db.query(User).filter(User.id == client_id).first()
+    if not client:
+        raise HTTPException(404, "Client introuvable")
+
+    bal = get_or_create_balance(client_id, db)
+
+    if amount_fcfa > 0:
+        credits_delta = round(amount_fcfa)
+        bal.credits_total += credits_delta
+        action = "CREDIT_ADMIN_ADD"
+        notif_title = "Crédits ajoutés ✓|||Credits added ✓"
+        notif_msg = (
+            f"{int(credits_delta)} crédits ont été ajoutés à votre compte par l'administrateur."
+            + (f" Note : {note}" if note else "")
+            + f"|||{int(credits_delta)} credits were added to your account by the administrator."
+            + (f" Note: {note}" if note else "")
+        )
+    else:
+        credits_delta = round(abs(amount_fcfa))
+        credits_delta = min(credits_delta, round(bal.credits_total))
+        bal.credits_total = max(0.0, bal.credits_total - credits_delta)
+        credits_delta = -credits_delta
+        action = "CREDIT_ADMIN_REMOVE"
+        notif_title = "Ajustement de crédits|||Credits adjusted"
+        notif_msg = (
+            f"{abs(int(credits_delta))} crédits ont été retirés de votre compte."
+            + (f" Motif : {note}" if note else "")
+            + f"|||{abs(int(credits_delta))} credits were removed from your account."
+            + (f" Reason: {note}" if note else "")
+        )
+
+    db.add(bal)
+    db.add(Notification(
+        user_id=client_id,
+        type="CREDITS_ADJUSTED",
+        title=notif_title,
+        message=notif_msg,
+    ))
+    _audit(db, current_user.id, action, None, amount_fcfa,
+           f"client={client_id} note={note}", _client_ip(request))
+    db.commit()
+
+    if credits_delta > 0:
+        lang = getattr(client, "language", "fr") or "fr"
+        en = lang == "en"
+        background_tasks.add_task(
+            send_push_to_user, client_id, "CREDITS_ADJUSTED",
+            "Credits added ✓" if en else "Crédits ajoutés ✓",
+            f"{int(credits_delta)} credits added to your account." if en
+            else f"{int(credits_delta)} crédits ajoutés à votre compte.",
+            f"/{lang}/depenses", None, None, 0,
+        )
+
+    new_remaining = max(0.0, bal.credits_total - bal.credits_used)
+    return {
+        "creditsAdjusted": credits_delta,
+        "newCreditsTotal":  round(bal.credits_total, 2),
+        "newRemaining":     round(new_remaining, 2),
+    }
+
+
 # ── Admin: benefits calculation ────────────────────────────────────────────────
 
 @router.get("/admin/benefits")
