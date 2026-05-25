@@ -502,6 +502,7 @@ def admin_reject_pending(
 def direct_approve_request(
     request: Request,
     request_id: str,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
@@ -544,6 +545,17 @@ def direct_approve_request(
     _audit(db, current_user.id, "CREDIT_DIRECT_ADMIN_APPROVE", req.id, req.amount_declared,
            f"client={req.client_id} credits={credits_to_add} (approbation directe admin)", _client_ip(request))
     db.commit()
+
+    da_client = db.query(User).filter(User.id == req.client_id).first()
+    da_lang = getattr(da_client, 'language', 'fr') or 'fr'
+    da_en = da_lang == 'en'
+    background_tasks.add_task(
+        send_push_to_user, req.client_id, "CREDITS_ADDED",
+        "Credits added ✓" if da_en else "Crédits ajoutés ✓",
+        f"{int(credits_to_add)} credits added to your account." if da_en else f"{int(credits_to_add)} crédits ajoutés à votre compte.",
+        f"/{da_lang}/depenses", None, None, 0,
+    )
+
     return {"creditsAdded": credits_to_add}
 
 
@@ -553,6 +565,7 @@ def direct_reject_request(
     request: Request,
     request_id: str,
     reason: str = Form(""),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(require_roles("SYSTEM_ADMIN")),
     db: Session = Depends(get_db),
 ):
@@ -587,6 +600,17 @@ def direct_reject_request(
     _audit(db, current_user.id, "CREDIT_DIRECT_ADMIN_REJECT", req.id, req.amount_declared,
            f"reason={reason[:200]}", _client_ip(request))
     db.commit()
+
+    dr_client = db.query(User).filter(User.id == req.client_id).first()
+    dr_lang = getattr(dr_client, 'language', 'fr') or 'fr'
+    dr_en = dr_lang == 'en'
+    dr_body = (f"{reason} — " if reason else "") + ("Contact us." if dr_en else "Contactez-nous.")
+    background_tasks.add_task(
+        send_push_to_user, req.client_id, "CREDITS_REJECTED",
+        "Top-up request rejected" if dr_en else "Demande de recharge refusée",
+        dr_body, f"/{dr_lang}/recharger", None, None, 0,
+    )
+
     return {"status": "rejected"}
 
 
