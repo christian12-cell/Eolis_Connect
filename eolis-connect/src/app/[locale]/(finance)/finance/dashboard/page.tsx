@@ -7,7 +7,7 @@ import { PeriodFilter, DateRange } from '@/components/ui/PeriodFilter'
 import { apiFetch, getUser } from '@/lib/api-client'
 import {
   TrendingUp, TrendingDown, DollarSign, Building2, PieChart,
-  Wallet, Clock, Loader2, AlertCircle, Bell,
+  Wallet, Clock, Loader2, AlertCircle, MessageSquare, Phone,
 } from 'lucide-react'
 import FinanceCharts from '../FinanceCharts'
 
@@ -122,9 +122,80 @@ export default function FinanceDashboardPage({ params }: { params: Promise<{ loc
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard icon={<TrendingUp size={18} className="text-emerald-600" />}  label={isFr ? 'Revenus recharges' : 'Top-up revenue'}         fcfa={data.totalRevenue}          sub={`${data.approvedCount} recharge(s)`}  color="bg-emerald-50" />
               <KpiCard icon={<DollarSign size={18} className="text-blue-600" />}     label={isFr ? 'Prix client (crédits)' : 'Client price (credits)'} fcfa={data.totalCreditsConsumed} sub={`${f2(data.totalCreditsConsumed)} cr.`} color="bg-blue-50" />
-              <KpiCard icon={<TrendingDown size={18} className="text-red-500" />}    label={isFr ? 'Coûts traitement' : 'Processing costs'}            fcfa={data.totalAiCostFcfa}       sub={`$${data.totalAiCostUsd}`}            color="bg-red-50"    precise />
+              <KpiCard icon={<TrendingDown size={18} className="text-red-500" />}    label={isFr ? 'Coûts IA (OpenAI)' : 'AI costs (OpenAI)'}          fcfa={data.totalAiCostFcfa}       sub={`$${data.totalAiCostUsd}`}            color="bg-red-50"    precise />
               <KpiCard icon={<Building2 size={18} className="text-amber-600" />}    label={isFr ? 'Charges infra' : 'Infra costs'}                   fcfa={data.totalInfraFcfa}        sub={`$${f2(data.totalInfraUsd)}`}         color="bg-amber-50" />
             </div>
+
+            {/* SMS Premium block */}
+            {(data.smsCount > 0 || data.otpCount > 0) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                {/* SMS Premium */}
+                {data.smsCount > 0 && (
+                  <div className="bg-white rounded-2xl border border-purple-100 p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center">
+                        <MessageSquare size={18} className="text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">{isFr ? 'SMS Premium' : 'Premium SMS'}</p>
+                        <p className="text-[10px] text-gray-400">{isFr ? 'Seven.io · automatique' : 'Seven.io · automatic'}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">{isFr ? 'SMS envoyés' : 'SMS sent'}</span>
+                        <span className="text-sm font-bold text-gray-800">{data.smsCount}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">{isFr ? 'Revenus crédits' : 'Credit revenue'}</span>
+                        <span className="text-sm font-semibold text-emerald-600">{f2(data.smsRevenueFcfa)} FCFA</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">{isFr ? 'Coût Seven.io' : 'Seven.io cost'}</span>
+                        <span className="text-sm font-semibold text-red-500">{f2(data.smsCostFcfa)} FCFA</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                        <span className="text-xs font-bold text-gray-700">{isFr ? 'Marge SMS' : 'SMS margin'}</span>
+                        <span className={`text-sm font-bold ${data.smsProfitFcfa >= 0 ? 'text-purple-600' : 'text-red-500'}`}>
+                          {f2(data.smsProfitFcfa)} FCFA
+                          {data.smsMarginPct !== null && <span className="text-xs font-normal ml-1">({data.smsMarginPct}%)</span>}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* OTP Twilio Verify */}
+                {data.otpCount > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center">
+                        <Phone size={18} className="text-slate-500" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">{isFr ? 'OTP Twilio Verify' : 'Twilio Verify OTP'}</p>
+                        <p className="text-[10px] text-gray-400">{isFr ? 'Charge infra — estimation automatique' : 'Infra cost — auto estimate'}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">{isFr ? 'Vérifications OTP' : 'OTP verifications'}</span>
+                        <span className="text-sm font-bold text-gray-800">{data.otpCount}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                        <span className="text-xs font-bold text-gray-700">{isFr ? 'Coût estimé' : 'Estimated cost'}</span>
+                        <span className="text-sm font-bold text-slate-600">
+                          ~{f2(data.otpEstimatedFcfa)} FCFA
+                          <span className="text-xs font-normal text-gray-400 ml-1">(~${toUsd(data.otpEstimatedFcfa)})</span>
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-gray-400 italic">{isFr ? '≈ 30 FCFA/vérif. · à saisir manuellement dans les charges infra' : '≈ 30 FCFA/verif. · enter manually in infra costs'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Nouveaux clients — info seulement */}
             {data.newClientsCount > 0 && (
@@ -142,15 +213,15 @@ export default function FinanceDashboardPage({ params }: { params: Promise<{ loc
                 <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center mb-3"><TrendingUp size={18} className="text-blue-600" /></div>
                 <p className="text-2xl font-bold text-blue-600">{f2(data.usageProfit)} <span className="text-sm font-normal text-gray-400">FCFA</span></p>
                 <p className="text-[10px] text-gray-400 font-mono mt-0.5">${toUsd(data.usageProfit)} · €{toEur(data.usageProfit)}</p>
-                <p className="text-xs text-gray-500 mt-1">{isFr ? 'Bénéfice sur usages IA' : 'AI usage profit'}</p>
-                <p className="text-[10px] text-gray-400">{isFr ? 'crédits − coûts OpenAI' : 'credits − OpenAI costs'}</p>
+                <p className="text-xs text-gray-500 mt-1">{isFr ? 'Bénéfice sur usages' : 'Usage profit'}</p>
+                <p className="text-[10px] text-gray-400">{isFr ? 'crédits − coûts IA − coûts SMS' : 'credits − AI costs − SMS costs'}</p>
               </div>
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                 <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center mb-3"><TrendingUp size={18} className="text-emerald-600" /></div>
                 <p className="text-2xl font-bold text-emerald-600">{f2(data.grossProfit)} <span className="text-sm font-normal text-gray-400">FCFA</span></p>
                 <p className="text-[10px] text-gray-400 font-mono mt-0.5">${toUsd(data.grossProfit)} · €{toEur(data.grossProfit)}</p>
                 <p className="text-xs text-gray-500 mt-1">{isFr ? 'Bénéfice brut' : 'Gross profit'}</p>
-                <p className="text-[10px] text-gray-400">{isFr ? 'revenus − coûts traitement' : 'revenue − processing costs'}</p>
+                <p className="text-[10px] text-gray-400">{isFr ? 'revenus − coûts IA − coûts SMS' : 'revenue − AI costs − SMS costs'}</p>
               </div>
               <div className={`bg-white rounded-2xl border p-5 shadow-sm ${data.netProfit >= 0 ? 'border-violet-200' : 'border-red-200'}`}>
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${data.netProfit >= 0 ? 'bg-violet-50' : 'bg-red-50'}`}>

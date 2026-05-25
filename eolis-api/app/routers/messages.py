@@ -9,7 +9,7 @@ from ..deps import get_current_user
 from ..config import settings
 from ..sms_service import sms_final_response, sms_document_requested
 from ..email_service import send_final_response_email, send_document_requested_email
-from ..credit_service import credits_remaining, deduct_credits, CREDITS_PER_SMS
+from ..credit_service import credits_remaining, deduct_credits, CREDITS_PER_SMS, SMS_REAL_COST_FCFA, SMS_REAL_COST_USD
 from ..push_service import send_push_to_user
 from ..ws_manager import ws_manager
 
@@ -185,7 +185,7 @@ def send_message(
                     client_id=client.id, ticket_id=ticket_id,
                     type="sms_notification", model="sms",
                     input_tokens=0, output_tokens=0,
-                    cost_usd=0.0, cost_fcfa=CREDITS_PER_SMS,
+                    cost_usd=SMS_REAL_COST_USD, cost_fcfa=SMS_REAL_COST_FCFA,
                     fcfa_rate=1.0, credits_cost=CREDITS_PER_SMS,
                 ))
                 background_tasks.add_task(
@@ -227,7 +227,7 @@ def send_message(
                     client_id=client.id, ticket_id=ticket_id,
                     type="sms_notification", model="sms",
                     input_tokens=0, output_tokens=0,
-                    cost_usd=0.0, cost_fcfa=CREDITS_PER_SMS,
+                    cost_usd=SMS_REAL_COST_USD, cost_fcfa=SMS_REAL_COST_FCFA,
                     fcfa_rate=1.0, credits_cost=CREDITS_PER_SMS,
                 ))
                 background_tasks.add_task(

@@ -6,7 +6,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import User, AIUsage, CreditRequest, InfrastructureCost, FinancialAuditLog, FinancialProjection
+from ..models import User, AIUsage, CreditRequest, InfrastructureCost, FinancialAuditLog, FinancialProjection, OtpCode
+from ..credit_service import OTP_COST_FCFA
 from ..deps import get_current_user, require_roles
 from ..credit_service import FREE_CREDITS_ON_SIGNUP
 
@@ -62,12 +63,25 @@ def finance_dashboard(
     approved = req_q.all()
     total_revenue = sum(r.amount_validated or 0 for r in approved)
 
-    # AI costs
+    # AI + SMS costs — split by type
     ai_q = db.query(AIUsage)
     ai_q = _apply_date_filter(ai_q, AIUsage.created_at, from_date, to_date)
-    usages = ai_q.all()
-    total_ai_fcfa  = sum(u.cost_fcfa for u in usages)
-    total_credits  = sum(getattr(u, "credits_cost", 0) or 0 for u in usages)
+    usages     = ai_q.all()
+    ai_usages  = [u for u in usages if u.type != "sms_notification"]
+    sms_usages = [u for u in usages if u.type == "sms_notification"]
+
+    total_ai_fcfa     = sum(u.cost_fcfa for u in ai_usages)
+    total_sms_cost    = sum(u.cost_fcfa for u in sms_usages)
+    total_ai_credits  = sum(getattr(u, "credits_cost", 0) or 0 for u in ai_usages)
+    total_sms_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in sms_usages)
+    total_credits     = total_ai_credits + total_sms_credits
+    sms_count         = len(sms_usages)
+
+    # OTP count → estimated Twilio Verify cost
+    otp_q = db.query(OtpCode)
+    otp_q = _apply_date_filter(otp_q, OtpCode.created_at, from_date, to_date)
+    otp_count         = otp_q.count()
+    otp_estimated_fcfa = round(otp_count * OTP_COST_FCFA, 2)
 
     # Infrastructure costs
     infra_q = db.query(InfrastructureCost)
@@ -94,11 +108,11 @@ def finance_dashboard(
     new_clients_q = _apply_date_filter(new_clients_q, User.created_at, from_date, to_date)
     new_clients_count = new_clients_q.count()
 
-    # P&L
-    total_costs  = total_ai_fcfa + total_infra_fcfa
-    gross_profit = total_revenue - total_ai_fcfa
-    net_profit   = total_revenue - total_costs
-    usage_profit = total_credits - total_ai_fcfa
+    # P&L — SMS real cost now separate from IA
+    total_costs  = total_ai_fcfa + total_sms_cost + total_infra_fcfa
+    gross_profit = total_revenue - total_ai_fcfa - total_sms_cost
+    net_profit   = gross_profit - total_infra_fcfa
+    usage_profit = total_credits - total_ai_fcfa - total_sms_cost
     margin_pct   = round((net_profit / total_revenue * 100), 1) if total_revenue > 0 else None
 
     return {
@@ -117,6 +131,15 @@ def finance_dashboard(
         "approvedCount":       len(approved),
         "pendingCount":        len(pending),
         "pendingAmount":       round(pending_amount,      2),
+        # SMS Premium block
+        "smsCount":            sms_count,
+        "smsCostFcfa":         round(total_sms_cost,      2),
+        "smsRevenueFcfa":      round(total_sms_credits,   2),
+        "smsProfitFcfa":       round(total_sms_credits - total_sms_cost, 2),
+        "smsMarginPct":        round((total_sms_credits - total_sms_cost) / total_sms_credits * 100, 1) if total_sms_credits > 0 else None,
+        # OTP (Twilio Verify) — informationnel
+        "otpCount":            otp_count,
+        "otpEstimatedFcfa":    otp_estimated_fcfa,
         "infraBreakdown":    [
             {
                 "id":          c.id,
@@ -328,7 +351,7 @@ def pnl_report(
     infra = db.query(InfrastructureCost).all()
 
     def _blank():
-        return {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0, "newClients": 0}
+        return {"revenue": 0, "aiCost": 0, "smsCost": 0, "smsRevenue": 0, "infraCost": 0, "credits": 0, "newClients": 0}
 
     # Group by month
     months: dict = {}
@@ -342,8 +365,13 @@ def pnl_report(
     for u in usages:
         key = u.created_at.strftime("%Y-%m")
         months.setdefault(key, _blank())
-        months[key]["aiCost"]  += u.cost_fcfa
-        months[key]["credits"] += float(getattr(u, "credits_cost", 0) or 0)
+        cr = float(getattr(u, "credits_cost", 0) or 0)
+        if u.type == "sms_notification":
+            months[key]["smsCost"]    += u.cost_fcfa
+            months[key]["smsRevenue"] += cr
+        else:
+            months[key]["aiCost"]  += u.cost_fcfa
+        months[key]["credits"] += cr
 
     for c in infra:
         key = c.period
@@ -360,14 +388,16 @@ def pnl_report(
 
     rows = []
     for month, v in sorted(months.items()):
-        net = v["revenue"] - v["aiCost"] - v["infraCost"]
+        net = v["revenue"] - v["aiCost"] - v["smsCost"] - v["infraCost"]
         rows.append({
             "month":       month,
             "revenue":     round(v["revenue"],   2),
             "aiCost":      round(v["aiCost"],    4),
+            "smsCost":     round(v["smsCost"],   2),
+            "smsRevenue":  round(v["smsRevenue"],2),
             "infraCost":   round(v["infraCost"], 2),
-            "totalCost":   round(v["aiCost"] + v["infraCost"], 2),
-            "grossProfit": round(v["revenue"] - v["aiCost"], 2),
+            "totalCost":   round(v["aiCost"] + v["smsCost"] + v["infraCost"], 2),
+            "grossProfit": round(v["revenue"] - v["aiCost"] - v["smsCost"], 2),
             "netProfit":   round(net,             2),
             "credits":     round(v["credits"],    2),
             "newClients":  v["newClients"],
@@ -426,24 +456,29 @@ def export_pnl_xlsx(
         months[key]["revenue"] += r.amount_validated or 0
     for u in usages:
         key = u.created_at.strftime("%Y-%m")
-        months.setdefault(key, {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0})
-        months[key]["aiCost"]  += u.cost_fcfa
-        months[key]["credits"] += float(getattr(u, "credits_cost", 0) or 0)
+        months.setdefault(key, {"revenue": 0, "aiCost": 0, "smsCost": 0, "infraCost": 0, "credits": 0})
+        cr = float(getattr(u, "credits_cost", 0) or 0)
+        if u.type == "sms_notification":
+            months[key]["smsCost"] += u.cost_fcfa
+        else:
+            months[key]["aiCost"]  += u.cost_fcfa
+        months[key]["credits"] += cr
     for c in infra:
         key = c.period
-        months.setdefault(key, {"revenue": 0, "aiCost": 0, "infraCost": 0, "credits": 0})
+        months.setdefault(key, {"revenue": 0, "aiCost": 0, "smsCost": 0, "infraCost": 0, "credits": 0})
         months[key]["infraCost"] += c.amount_fcfa
 
     rows = []
     for month, v in sorted(months.items()):
-        net = v["revenue"] - v["aiCost"] - v["infraCost"]
+        net = v["revenue"] - v["aiCost"] - v["smsCost"] - v["infraCost"]
         rows.append({
             "month": month,
             "revenue":    round(v["revenue"],   2),
             "aiCost":     round(v["aiCost"],    4),
+            "smsCost":    round(v["smsCost"],   2),
             "infraCost":  round(v["infraCost"], 2),
-            "totalCost":  round(v["aiCost"] + v["infraCost"], 2),
-            "grossProfit": round(v["revenue"] - v["aiCost"], 2),
+            "totalCost":  round(v["aiCost"] + v["smsCost"] + v["infraCost"], 2),
+            "grossProfit": round(v["revenue"] - v["aiCost"] - v["smsCost"], 2),
             "netProfit":  round(net, 2),
             "credits":    round(v["credits"], 2),
             "marginPct":  round(net / v["revenue"] * 100, 1) if v["revenue"] > 0 else None,
@@ -484,7 +519,7 @@ def export_pnl_xlsx(
 
     HEADERS = [
         "Mois", "Revenus (FCFA)", "Revenus ($)", "Revenus (€)",
-        "Coûts IA (FCFA)", "Charges infra (FCFA)", "Coûts totaux (FCFA)",
+        "Coûts IA (FCFA)", "Coûts SMS (FCFA)", "Charges infra (FCFA)", "Coûts totaux (FCFA)",
         "Bénéfice brut (FCFA)", "Bénéfice net (FCFA)", "Bénéf. net ($)", "Bénéf. net (€)", "Marge %",
     ]
     NUM_COLS = len(HEADERS)
@@ -527,7 +562,7 @@ def export_pnl_xlsx(
         values = [
             row["month"],
             row["revenue"],    to_usd(row["revenue"]),    to_eur(row["revenue"]),
-            row["aiCost"],     row["infraCost"],           row["totalCost"],
+            row["aiCost"],     row["smsCost"],             row["infraCost"],  row["totalCost"],
             row["grossProfit"],row["netProfit"],           to_usd(row["netProfit"]), to_eur(row["netProfit"]),
             f"{row['marginPct']}%" if row["marginPct"] is not None else "—",
         ]
@@ -560,6 +595,7 @@ def export_pnl_xlsx(
         tr = 4 + len(rows)
         t_rev   = sum(r["revenue"]    for r in rows)
         t_ai    = sum(r["aiCost"]     for r in rows)
+        t_sms   = sum(r["smsCost"]    for r in rows)
         t_infra = sum(r["infraCost"]  for r in rows)
         t_cost  = sum(r["totalCost"]  for r in rows)
         t_gross = sum(r["grossProfit"]for r in rows)
@@ -569,7 +605,7 @@ def export_pnl_xlsx(
         totals = [
             "TOTAL",
             t_rev, to_usd(t_rev), to_eur(t_rev),
-            t_ai,  t_infra, t_cost,
+            t_ai,  t_sms,  t_infra, t_cost,
             t_gross, t_net, to_usd(t_net), to_eur(t_net),
             f"{t_marg}%" if t_marg is not None else "—",
         ]
@@ -590,7 +626,7 @@ def export_pnl_xlsx(
         c.alignment = align("center")
 
     # Column widths
-    col_widths = [12, 18, 13, 13, 18, 20, 18, 20, 20, 13, 13, 10]
+    col_widths = [12, 18, 13, 13, 18, 16, 20, 18, 20, 20, 13, 13, 10]
     for col, width in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(col)].width = width
 

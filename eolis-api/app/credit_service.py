@@ -3,11 +3,16 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from .models import CreditBalance
 
-CREDITS_PER_EXTRACTION = 50.0
-CREDITS_PER_VOICE_MINUTE = 10.0
-FREE_CREDITS_ON_SIGNUP = 100.0
+CREDITS_PER_EXTRACTION    = 50.0
+CREDITS_PER_VOICE_MINUTE  = 10.0
+FREE_CREDITS_ON_SIGNUP    = 100.0
 CREDITS_INFO_PREMIUM_OPENING = 5.0
-CREDITS_PER_SMS = 160.0
+CREDITS_PER_SMS           = 160.0   # what the client pays (credits)
+
+# Real provider costs (what Eolis actually pays)
+SMS_REAL_COST_FCFA = 107.0   # Seven.io avg Cameroun — margin = 53 FCFA/SMS
+SMS_REAL_COST_USD  = 0.163   # Seven.io price per SMS in USD
+OTP_COST_FCFA      = 30.0    # Twilio Verify ~$0.05/verification × 600 FCFA/$
 
 
 def get_or_create_balance(client_id: str, db: Session) -> CreditBalance:
