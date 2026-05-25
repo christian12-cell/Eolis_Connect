@@ -207,6 +207,22 @@ function RecapSection({ title, isOpen, onToggle, children }: {
   )
 }
 
+function BLSection({ id, title, children, open, onToggle }: {
+  id: string; title: string; children: React.ReactNode;
+  open: boolean; onToggle: (id: string) => void;
+}) {
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden">
+      <button onClick={() => onToggle(id)}
+        className="w-full flex items-center justify-between px-4 py-3 active:bg-gray-50">
+        <p className="text-sm font-bold text-[#1B3A5C]">{title}</p>
+        <ChevronDown size={15} className={`text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
+      </button>
+      {open && <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">{children}</div>}
+    </div>
+  )
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function NouvelleDemandePage({ params }: { params: Promise<{ locale: string }> }) {
@@ -2185,16 +2201,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       const inpErr = "w-full px-3 py-2 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:border-red-500 text-gray-800"
       const lbl = "text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1 block"
       const blReviewCanNext = !!(bf.bookingNo?.trim()) && !!(bf.voyage?.trim())
-      const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
-        <div className="bg-white rounded-2xl overflow-hidden">
-          <button onClick={() => setBlOpenSection(p => ({ ...p, [id]: !p[id] }))}
-            className="w-full flex items-center justify-between px-4 py-3 active:bg-gray-50">
-            <p className="text-sm font-bold text-[#1B3A5C]">{title}</p>
-            <ChevronDown size={15} className={`text-gray-400 transition-transform ${blOpenSection[id] ? '' : '-rotate-90'}`} />
-          </button>
-          {blOpenSection[id] && <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">{children}</div>}
-        </div>
-      )
+      const toggleSection = (id: string) => setBlOpenSection(p => ({ ...p, [id]: !p[id] }))
       return (
         <MobileLayout locale={locale} title={isFr ? 'Vérifier les données BL' : 'Review BL data'} showBack>
           <div className="space-y-3">
@@ -2205,7 +2212,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             </div>
 
             {/* Références */}
-            <Section id="ref" title={isFr ? 'Références' : 'References'}>
+            <BLSection id="ref" title={isFr ? 'Références' : 'References'} open={blOpenSection['ref']} onToggle={toggleSection}>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { l: 'Booking no.', k: 'bookingNo', required: true },
@@ -2221,10 +2228,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </div>
                 ))}
               </div>
-            </Section>
+            </BLSection>
 
             {/* Navire & Voyage */}
-            <Section id="vessel" title={isFr ? 'Navire & Voyage' : 'Vessel & Voyage'}>
+            <BLSection id="vessel" title={isFr ? 'Navire & Voyage' : 'Vessel & Voyage'} open={blOpenSection['vessel']} onToggle={toggleSection}>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { l: isFr ? 'Navire' : 'Vessel', k: 'vessel' },
@@ -2244,10 +2251,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </div>
                 ))}
               </div>
-            </Section>
+            </BLSection>
 
             {/* Pickup reference */}
-            <Section id="pickup" title="Pickup reference / Dépôt">
+            <BLSection id="pickup" title="Pickup reference / Dépôt" open={blOpenSection['pickup']} onToggle={toggleSection}>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { l: 'Pickup ref', k: 'pickup.reference' },
@@ -2263,10 +2270,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </div>
                 ))}
               </div>
-            </Section>
+            </BLSection>
 
             {/* Turn in location */}
-            <Section id="turnin" title="Turn in location">
+            <BLSection id="turnin" title="Turn in location" open={blOpenSection['turnin']} onToggle={toggleSection}>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { l: 'Turn in ref', k: 'turnIn.reference' },
@@ -2281,10 +2288,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </div>
                 ))}
               </div>
-            </Section>
+            </BLSection>
 
             {/* Booking items */}
-            <Section id="items" title="Booking items">
+            <BLSection id="items" title="Booking items" open={blOpenSection['items']} onToggle={toggleSection}>
               {(bf.bookingItems || []).map((item: any, idx: number) => (
                 <div key={idx} className="rounded-xl border border-gray-100 p-3 space-y-2">
                   <p className="text-[10px] font-bold text-[#1B3A5C] uppercase">Item {item.item || idx + 1}</p>
@@ -2306,11 +2313,11 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   </div>
                 </div>
               ))}
-            </Section>
+            </BLSection>
 
             {/* Container details */}
             {(bf.containerDetails || []).length > 0 && (
-              <Section id="containers" title="Container details">
+              <BLSection id="containers" title="Container details" open={blOpenSection['containers']} onToggle={toggleSection}>
                 {(bf.containerDetails || []).map((cd: any, idx: number) => (
                   <div key={idx} className="rounded-xl border border-gray-100 p-3 space-y-2">
                     <p className="text-[10px] font-bold text-[#1B3A5C] uppercase">{isFr ? `Conteneur ${idx + 1}` : `Container ${idx + 1}`}</p>
@@ -2331,14 +2338,14 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                     </div>
                   </div>
                 ))}
-              </Section>
+              </BLSection>
             )}
 
             {/* Remarques */}
-            <Section id="remarks" title={isFr ? 'Remarques' : 'Remarks'}>
+            <BLSection id="remarks" title={isFr ? 'Remarques' : 'Remarks'} open={blOpenSection['remarks']} onToggle={toggleSection}>
               <textarea className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C] resize-none text-gray-800" rows={3}
                 value={bf.remarks || ''} onChange={e => updateBLF('remarks', e.target.value)} />
-            </Section>
+            </BLSection>
 
             {!blReviewCanNext && (
               <p className="text-center text-xs text-red-300 font-medium">
