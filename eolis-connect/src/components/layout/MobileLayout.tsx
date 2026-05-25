@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { ArrowLeft, Globe, LogOut, WifiOff, CheckCircle, BookOpen, Wallet } from 'lucide-react'
+import { ArrowLeft, Globe, LogOut, CheckCircle, BookOpen, Wallet } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { clearSession, isTokenExpired, getUser, getToken, apiFetch } from '@/lib/api-client'
 import { subscribeToPush } from '@/lib/push'
@@ -186,13 +186,8 @@ export function MobileLayout({
         </div>
       )}
 
-      {/* Offline banner — in-flow so it never covers the header */}
-      {isOffline && (
-        <div className="flex items-center justify-center gap-2 bg-amber-500 text-white text-[11px] font-semibold py-1.5 flex-shrink-0">
-          <WifiOff size={11} />
-          {isFr ? 'Hors-ligne — données depuis le cache' : 'Offline — showing cached data'}
-        </div>
-      )}
+      {/* Offline indicator — thin amber strip, no space loss */}
+      {isOffline && <div className="h-1 bg-amber-400 flex-shrink-0" />}
 
       {/* Top bar */}
       <header
