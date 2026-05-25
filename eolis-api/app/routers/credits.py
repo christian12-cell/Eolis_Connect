@@ -833,7 +833,7 @@ def admin_benefits(
     voice_credits   = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "voice_transcription")
     opening_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "info_premium_opening")
 
-    nb_clients   = db.query(CreditBalance).count()
+    nb_clients   = db.query(User).filter(User.role == "CLIENT").count()
     free_credits = nb_clients * FREE_CREDITS_ON_SIGNUP
 
     per_request = []
