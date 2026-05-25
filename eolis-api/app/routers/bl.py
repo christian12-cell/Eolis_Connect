@@ -27,6 +27,12 @@ RÈGLES ABSOLUES :
 3. Les dates du document sont au format DD.MM.YY — convertis-les systématiquement en YYYY-MM-DD.
 4. Réponds UNIQUEMENT avec le JSON ci-dessous, sans texte d'introduction ni balises markdown.
 
+FORMATS ATTENDUS (pour t'aider à lire les scans) :
+- "voyage" : toujours 7 chiffres suivis de la lettre N (format NNNNNNN N). Si tu lis un caractère ambigu (ex: 1/I, 0/O, 5/S, 6/b), corrige-le pour que le résultat soit bien 7 chiffres + N.
+- "booking_no" : commence par 2 lettres majuscules (ex: EA, XX, FA) suivies de 10 chiffres puis 3 lettres (DLA ou autre code port) puis 2 à 4 lettres majuscules.
+- "customer_ref" : souvent vide sur les BL Eagle — mets null si le champ est vide ou absent.
+- "service" : valeur textuelle sur la même ligne que Booking no., pas le nom de la ville (ex: CAM NORTH). Ne pas confondre avec la ville qui peut apparaître sur la ligne suivante.
+
 STRUCTURE DU DOCUMENT (certaines sections peuvent être absentes) :
 - En-tête : Booking Party, Date, Booking no., Customer Ref, Service
 - Navire : Vessel, Voyage, ETS, ETA, Port of loading, Port of discharge, Place of receipt, Place of Delivery
