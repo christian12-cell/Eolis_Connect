@@ -171,9 +171,9 @@ L'argument clé pour la présentation Belgique :
 
 ## 9. Speech Debora — version mise à jour (25 mai 2026)
 
-### Chiffres clés à retenir (corrigés)
+### Chiffres clés à retenir (corrigés — 25 mai 2026)
 
-**Infrastructure fixe mensuelle (~66 $/mois = ~39 600 FCFA)**
+**Infrastructure fixe mensuelle (~85 $/mois = ~51 000 FCFA) — hors maintenance**
 | Service | $/mois | FCFA |
 |---|---|---|
 | Railway (backend) | $25 | ~15 000 |
@@ -181,11 +181,12 @@ L'argument clé pour la présentation Belgique :
 | AWS S3 | $5 | ~3 000 |
 | Resend (emails) | $10 | ~6 000 |
 | Twilio Verify (100 OTPs × $0,05 + $1 numéro) | $6 | ~3 600 |
-| **Total fixe** | **$66** | **~39 600** |
+| Neon PostgreSQL (Launch) | $19 | ~11 400 |
+| **Total fixe** | **$85** | **~51 000** |
 
-> Les coûts OpenAI et SMS ne sont PAS dans l'infra — ils sont déjà déduits par ticket dans le modèle financier.
+> Les coûts OpenAI et SMS ne sont PAS dans l'infra — déjà déduits par ticket dans le modèle financier.
 
-**Marges par type de dossier (1 BL + 1 min voix)**
+**Marges par type de dossier (1 action + 1 min voix)**
 | Type | Revenus | Coût réel | Marge | % |
 |---|---|---|---|---|
 | BL Premium | 60 FCFA | ~3,90 FCFA | ~56 FCFA | ~93% |
@@ -194,14 +195,25 @@ L'argument clé pour la présentation Belgique :
 **SMS optionnel (Seven.io — migration prévue après démo)**
 - 160 FCFA facturés → 98 FCFA coût ($0,163 × 600) → **62 FCFA marge = 38,75%**
 - Ne PAS dire "notre partenaire Seven.io" — dire "notre fournisseur SMS prévu"
+- Hypothèse projections : 30% adoption, 2 SMS/dossier → +37,20 FCFA moyen/dossier
 
 **Seuil d'équilibre**
-- BL seulement : ~707 dossiers/mois
-- Info Premium seulement : ~3 474 dossiers/mois
-- Mix 50/50 : ~1 175 dossiers/mois
+- BL seul (sans SMS) : ~911 dossiers/mois
+- BL + 30% SMS : ~636 dossiers/mois
+- Info Premium seul : ~4 474 dossiers/mois
+
+**Projections BL Premium**
+| Dossiers/mois | Net/mois (sans SMS) | Net/an | Net/mois (+30% SMS) | Net/an |
+|---|---|---|---|---|
+| ~911 | ≈ 0 (seuil) | — | — | — |
+| 1 000 | ~5 000 FCFA | ~60 000 FCFA | ~42 200 FCFA | ~506 400 FCFA |
+| 5 000 | ~229 000 FCFA | ~2 748 000 FCFA | ~303 200 FCFA | ~3 638 400 FCFA |
+| 10 000 | ~509 000 FCFA | ~6 108 000 FCFA | ~620 400 FCFA | ~7 444 800 FCFA |
+| 100 000 | ~5 549 000 FCFA | ~66 588 000 FCFA | ~6 289 000 FCFA | ~75 468 000 FCFA |
 
 - 100 crédits gratuits → coût réel Eolis : **~34 FCFA** (pas 100 FCFA)
 - Bénéfice net = revenus recharges − coûts IA − coûts SMS − coûts infra
+- Maintenance : ne pas chiffrer dans le speech — dire "ressource technique dédiée"
 
 ### Texte du speech
 
