@@ -544,6 +544,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
           setBlFields(buildBlFieldsFromRaw(cached.raw || {}))
           setBlDocumentId(blId)
           setBlStep('review')
+        } else {
+          setBlError(isFr
+            ? 'Ce BL n\'est pas disponible hors ligne. Reconnectez-vous et cliquez dessus une fois d\'abord.'
+            : 'This BL is not available offline. Connect and click it once first.')
         }
         setPrevBLsLoading(false)
         return
@@ -649,6 +653,15 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
         setPrevBLs(bls)
         if (bls.length === 0) setBlStep('upload')
         await offlineDb.set('bl_list', bls)
+        // Pre-cache raw data for the 5 most recent BLs so they work offline
+        for (const bl of bls.slice(0, 5)) {
+          const existing = await offlineDb.get(`bl_raw_${bl.id}`)
+          if (!existing) {
+            apiFetch(`/api/bl/${bl.id}/raw`).then(async r => {
+              if (r.ok) await offlineDb.set(`bl_raw_${bl.id}`, await r.json())
+            }).catch(() => {})
+          }
+        }
       } else {
         setPrevBLs([])
         setBlStep('upload')
