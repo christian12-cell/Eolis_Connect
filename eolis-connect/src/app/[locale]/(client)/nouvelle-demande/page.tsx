@@ -2131,7 +2131,9 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
       // (BLProgress injected below)
       const bf = blFields
       const inp = "w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-[#1B3A5C] text-gray-800"
+      const inpErr = "w-full px-3 py-2 rounded-xl border border-red-400 bg-red-50 text-sm focus:outline-none focus:border-red-500 text-gray-800"
       const lbl = "text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1 block"
+      const blReviewCanNext = !!(bf.bookingNo?.trim()) && !!(bf.voyage?.trim())
       const Section = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
         <div className="bg-white rounded-2xl overflow-hidden">
           <button onClick={() => setBlOpenSection(p => ({ ...p, [id]: !p[id] }))}
@@ -2155,14 +2157,16 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             <Section id="ref" title={isFr ? 'Références' : 'References'}>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { l: 'Booking no.', k: 'bookingNo' },
+                  { l: 'Booking no.', k: 'bookingNo', required: true },
                   { l: isFr ? 'Date' : 'Date', k: 'date' },
                   { l: 'Customer ref', k: 'customerRef' },
                   { l: 'Service', k: 'service' },
                 ].map(f => (
                   <div key={f.k}>
-                    <label className={lbl}>{f.l}</label>
-                    <input className={inp} value={bf[f.k] || ''} onChange={e => updateBLF(f.k, e.target.value)} />
+                    <label className={lbl}>
+                      {f.l}{f.required && <span className="text-red-500 ml-0.5">*</span>}
+                    </label>
+                    <input className={f.required && !bf[f.k]?.trim() ? inpErr : inp} value={bf[f.k] || ''} onChange={e => updateBLF(f.k, e.target.value)} />
                   </div>
                 ))}
               </div>
@@ -2173,7 +2177,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { l: isFr ? 'Navire' : 'Vessel', k: 'vessel' },
-                  { l: 'Voyage', k: 'voyage' },
+                  { l: 'Voyage', k: 'voyage', required: true },
                   { l: 'ETS', k: 'ets' },
                   { l: 'ETA', k: 'eta' },
                   { l: isFr ? 'Port chargement' : 'Port of loading', k: 'portOfLoading' },
@@ -2182,8 +2186,10 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   { l: isFr ? 'Lieu livraison' : 'Place of delivery', k: 'placeOfDelivery' },
                 ].map(f => (
                   <div key={f.k}>
-                    <label className={lbl}>{f.l}</label>
-                    <input className={inp} value={bf[f.k] || ''} onChange={e => updateBLF(f.k, e.target.value)} />
+                    <label className={lbl}>
+                      {f.l}{f.required && <span className="text-red-500 ml-0.5">*</span>}
+                    </label>
+                    <input className={f.required && !bf[f.k]?.trim() ? inpErr : inp} value={bf[f.k] || ''} onChange={e => updateBLF(f.k, e.target.value)} />
                   </div>
                 ))}
               </div>
@@ -2283,21 +2289,28 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                 value={bf.remarks || ''} onChange={e => updateBLF('remarks', e.target.value)} />
             </Section>
 
-            <button onClick={() => {
-              setBlVesselData(JSON.stringify(blFields))
-              setForm(prev => ({
-                ...prev,
-                shipName:       blFields.vessel      || '',
-                voyageNumber:   blFields.voyage       || '',
-                shipDate:       blFields.ets          || '',
-                code:           blFields.bookingNo    || '',
-                equipmentType:  isFr ? 'Autre' : 'Other',
-                equipmentOther: blFields.pickup?.sizeType || '',
-              }))
-              setMode('simple')
-              setBlStep('category')
-            }}
-              className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2">
+            {!blReviewCanNext && (
+              <p className="text-center text-xs text-red-300 font-medium">
+                {isFr ? '* Booking no. et Voyage sont obligatoires' : '* Booking no. and Voyage are required'}
+              </p>
+            )}
+            <button
+              disabled={!blReviewCanNext}
+              onClick={() => {
+                setBlVesselData(JSON.stringify(blFields))
+                setForm(prev => ({
+                  ...prev,
+                  shipName:       blFields.vessel      || '',
+                  voyageNumber:   blFields.voyage       || '',
+                  shipDate:       blFields.ets          || '',
+                  code:           blFields.bookingNo    || '',
+                  equipmentType:  isFr ? 'Autre' : 'Other',
+                  equipmentOther: blFields.pickup?.sizeType || '',
+                }))
+                setMode('simple')
+                setBlStep('category')
+              }}
+              className="w-full py-3.5 rounded-2xl bg-white text-[#1B3A5C] font-bold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
               {isFr ? 'Valider et continuer' : 'Validate & continue'} <ChevronRight size={18} />
             </button>
             <button onClick={resetBL}
