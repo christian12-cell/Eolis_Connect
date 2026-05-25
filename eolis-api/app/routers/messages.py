@@ -237,12 +237,22 @@ def send_message(
                     )
                 elif rem < CREDITS_PER_SMS * 2:
                     # Crédits insuffisants pour SMS doc — notifier le client
+                    _quota_title = "Crédits SMS insuffisants" if not _en else "Insufficient SMS credits"
+                    if rem >= CREDITS_PER_SMS:
+                        _quota_body = (
+                            f"Votre solde ne permet plus de SMS pour les demandes de documents sur {ticket.ref}. Vous recevrez toujours le SMS de clôture."
+                            if not _en else
+                            f"Your balance no longer covers document request SMS on {ticket.ref}. You will still receive the closing SMS."
+                        )
+                    else:
+                        _quota_body = (
+                            f"Votre solde est insuffisant pour tout SMS sur {ticket.ref}. Rechargez vos crédits."
+                            if not _en else
+                            f"Your balance is insufficient for any SMS on {ticket.ref}. Top up your credits."
+                        )
                     background_tasks.add_task(
                         send_push_to_user, ticket.client_id, "SMS_QUOTA_LOW",
-                        "Crédits SMS insuffisants" if not _en else "Insufficient SMS credits",
-                        (f"Votre dossier {ticket.ref} nécessite des documents mais votre solde ne permet plus d'envoyer de SMS. Rechargez vos crédits."
-                         if not _en else
-                         f"Your file {ticket.ref} requires documents but your balance no longer allows SMS notifications. Top up your credits."),
+                        _quota_title, _quota_body,
                         f"/{_lang}/recharger", ticket.urgency, ticket_id, 0,
                     )
             _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
