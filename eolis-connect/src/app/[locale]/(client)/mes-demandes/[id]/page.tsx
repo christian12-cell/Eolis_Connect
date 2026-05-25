@@ -873,7 +873,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                     {isFr ? 'Notifications SMS' : 'SMS Notifications'}
                   </p>
                   <p className="text-[10px] text-blue-200">
-                    {isFr ? '160 crédits / SMS reçu' : '160 credits / SMS received'}
+                    {smsEnabled
+                      ? (isFr ? 'Activé pour ce dossier' : 'Enabled for this file')
+                      : (isFr ? 'Recevoir les mises à jour par SMS' : 'Receive updates by SMS')}
                   </p>
                 </div>
               </div>
@@ -938,19 +940,18 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                   <>
                     <p className="text-base font-bold text-white">📱 {isFr ? 'Activer les SMS pour ce dossier ?' : 'Enable SMS for this file?'}</p>
                     {showSmsPopup === 'confirm_2' ? (
-                      <div className="bg-white/10 rounded-xl p-3 space-y-1.5 text-xs text-blue-200">
-                        <div className="flex justify-between"><span>{isFr ? '1 demande de documents' : '1 document request'}</span><span className="font-mono text-white">160 crédits</span></div>
-                        <div className="flex justify-between"><span>{isFr ? '1 réponse finale' : '1 final response'}</span><span className="font-mono text-white">160 crédits</span></div>
-                        <div className="flex justify-between border-t border-white/15 pt-1.5"><span className="font-semibold text-white">{isFr ? 'Maximum possible' : 'Maximum total'}</span><span className="font-mono font-bold text-amber-300">320 crédits</span></div>
-                      </div>
-                    ) : (
-                      <div className="bg-amber-500/15 border border-amber-400/30 rounded-xl p-3 text-xs text-amber-200">
+                      <p className="text-sm text-blue-200">
                         {isFr
-                          ? 'Votre solde permet 1 SMS uniquement. Vous recevrez le SMS de réponse finale seulement — le SMS de demande de documents ne sera pas envoyé.'
-                          : 'Your balance allows 1 SMS only. You will receive the final response SMS — the document request SMS will not be sent.'}
-                      </div>
+                          ? 'Vous serez notifié par SMS à deux moments : quand l\'agent demande des documents, et à la clôture de votre dossier.'
+                          : 'You will be notified by SMS at two stages: when the agent requests documents, and when your file is closed.'}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-blue-200">
+                        {isFr
+                          ? 'Vous recevrez un SMS à la clôture de votre dossier.'
+                          : 'You will receive an SMS when your file is closed.'}
+                      </p>
                     )}
-                    <p className="text-[10px] text-blue-300">1 crédit = 1 FCFA</p>
                     <div className="grid grid-cols-2 gap-3 pt-1">
                       <button onClick={() => setShowSmsPopup(null)} className="py-3 rounded-2xl border border-white/30 text-white text-sm font-medium">
                         {isFr ? 'Annuler' : 'Cancel'}
