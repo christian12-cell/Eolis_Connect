@@ -494,6 +494,23 @@ def admin_reject_pending(
         body_r, f"/{clang_r}/recharger", None, None, 0,
     )
 
+    # Push aussi à l'agent financier qui avait validé
+    if req.validated_by:
+        agent_r = db.query(User).filter(User.id == req.validated_by).first()
+        if agent_r:
+            ag_lang = getattr(agent_r, 'language', 'fr') or 'fr'
+            ag_en = ag_lang == 'en'
+            ag_body = (
+                f"Your approval of {int(req.amount_validated or 0):,} FCFA was cancelled. Reason: {reason or 'not specified'}."
+                if ag_en else
+                f"Votre approbation de {int(req.amount_validated or 0):,} FCFA a été annulée. Motif : {reason or 'non précisé'}."
+            )
+            background_tasks.add_task(
+                send_push_to_user, agent_r.id, "CREDIT_ADMIN_REJECTED",
+                "Approval cancelled" if ag_en else "Approbation annulée",
+                ag_body, f"/{ag_lang}/finance/credits", None, None, 0,
+            )
+
     return {"status": "rejected"}
 
 
