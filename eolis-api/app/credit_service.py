@@ -10,8 +10,8 @@ CREDITS_INFO_PREMIUM_OPENING = 5.0
 CREDITS_PER_SMS           = 160.0   # what the client pays (credits)
 
 # Real provider costs (what Eolis actually pays)
-SMS_REAL_COST_FCFA = 107.0   # Seven.io avg Cameroun — margin = 53 FCFA/SMS
-SMS_REAL_COST_USD  = 0.163   # Seven.io price per SMS in USD
+SMS_REAL_COST_FCFA = 98.0    # Seven.io Cameroun — $0.163 × 600 FCFA/$ = 97.8 → 98
+SMS_REAL_COST_USD  = 0.163   # Seven.io Cameroun price per SMS
 OTP_COST_FCFA      = 30.0    # Twilio Verify ~$0.05/verification × 600 FCFA/$
 
 
