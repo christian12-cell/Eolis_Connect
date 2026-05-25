@@ -874,8 +874,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                   </p>
                   <p className="text-[10px] text-blue-200">
                     {smsEnabled
-                      ? (isFr ? 'Activé pour ce dossier' : 'Enabled for this file')
-                      : (isFr ? 'Recevoir les mises à jour par SMS' : 'Receive updates by SMS')}
+                      ? (isFr ? 'Activé · max. 2 SMS pour ce dossier' : 'Enabled · max. 2 SMS for this file')
+                      : (isFr ? '160 crédits / SMS · Appuyer pour activer' : '160 credits / SMS · Tap to enable')}
                   </p>
                 </div>
               </div>
