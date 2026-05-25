@@ -259,7 +259,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
               <p>{isFr ? '• Coût réel OpenAI = variable selon les tokens / la durée audio. Beaucoup moins que 50 FCFA en général.' : '• Actual OpenAI cost = variable by tokens / audio duration. Much less than 50 FCFA typically.'}</p>
               <p>{isFr ? '• SMS Premium : 160 crédits facturés au client, 107 FCFA de coût réel Seven.io → 53 FCFA de marge.' : '• Premium SMS: 160 credits charged to client, 107 FCFA real cost (Seven.io) → 53 FCFA margin.'}</p>
               <p>{isFr ? '• Bénéfice sur usages = crédits consommés − coûts OpenAI − coûts SMS.' : '• Usage profit = credits consumed − OpenAI costs − SMS costs.'}</p>
-              <p>{isFr ? '• Bénéfice net recharges = revenus recharges − coûts OpenAI − coûts SMS.' : '• Net top-up profit = top-up revenue − OpenAI costs − SMS costs.'}</p>
+              <p>{isFr ? '• Bénéfice net = revenus recharges − coûts OpenAI − coûts SMS − coûts infra.' : '• Net profit = top-up revenue − OpenAI costs − SMS costs − infra costs.'}</p>
             </div>
 
             {/* Crédits offerts */}
