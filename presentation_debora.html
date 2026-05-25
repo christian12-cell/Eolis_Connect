@@ -363,6 +363,63 @@
 
     /* ── Divider ── */
     .divider { height: 1px; background: #e5e7eb; margin: 8px 0; }
+
+    /* ── Speech ── */
+    .speech-card {
+      background: #1B3A5C;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(27,58,92,0.25);
+    }
+    .speech-header {
+      padding: 20px 28px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .speech-header .sh-icon {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .speech-header h3 { font-size: 16px; font-weight: 700; color: white; }
+    .speech-header p  { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+    .speech-body {
+      padding: 24px 28px 28px;
+      color: rgba(255,255,255,0.85);
+      font-size: 14.5px;
+      line-height: 1.85;
+    }
+    .speech-body .sp { margin-bottom: 16px; }
+    .speech-body .sp:last-child { margin-bottom: 0; }
+    .speech-body strong { color: #7dd3fc; font-weight: 700; }
+    .speech-body .sp-indent {
+      padding-left: 20px;
+      border-left: 2px solid rgba(255,255,255,0.15);
+      margin: 12px 0 12px 4px;
+    }
+    .speech-body .sp-number {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      padding: 1px 7px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #bae6fd;
+      margin: 2px 0;
+    }
+    .speech-note {
+      background: rgba(255,255,255,0.06);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 12px 28px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -376,6 +433,104 @@
 </div>
 
 <div class="container">
+
+  <!-- ══ SPEECH ════════════════════════════════════════════════════ -->
+  <div class="section-title">Speech — texte à prononcer</div>
+  <div class="speech-card">
+    <div class="speech-header">
+      <div class="sh-icon">🎤</div>
+      <div>
+        <h3>Modèle économique — partie financière</h3>
+        <p>Texte à lire à voix haute · Les chiffres en bleu sont les points clés à retenir</p>
+      </div>
+    </div>
+    <div class="speech-body">
+
+      <div class="sp">
+        Nous avons aussi réfléchi à une question très importante :
+        comment faire pour que la plateforme puisse évoluer sur le long terme
+        sans dépendre constamment des finances de l'entreprise ?
+      </div>
+
+      <div class="sp">
+        Donc dès le départ, nous avons intégré un véritable modèle économique dans Eolis Connect.
+        Le système fonctionne avec des crédits prépayés : <strong>1 crédit = 1 FCFA.</strong>
+      </div>
+
+      <div class="sp">
+        La plateforme propose deux types de dossiers premium, chacun avec sa propre logique de revenus.
+      </div>
+
+      <div class="sp">
+        Le premier, c'est le <strong>dossier BL Premium</strong> — pour le traitement des connaissements.
+        Il comprend l'extraction intelligente du BL à <strong>50 FCFA</strong>, et la dictée vocale à <strong>10 FCFA par minute</strong>.
+        Soit environ <strong>60 FCFA générés par dossier</strong>, pour un coût réel de traitement d'environ <strong>4 FCFA</strong>.
+        Ce qui représente une marge d'environ <strong>56 FCFA par dossier, soit 93 %.</strong>
+      </div>
+
+      <div class="sp">
+        Le deuxième, c'est le <strong>dossier Info Premium</strong> — pour les demandes d'information directes.
+        Chaque ouverture génère <strong>5 FCFA de marge pure</strong>, sans aucun coût de traitement associé.
+        Avec la dictée vocale incluse, on arrive à environ <strong>15 FCFA de revenus par dossier</strong>, pour un coût d'environ <strong>3,60 FCFA</strong>.
+        Soit une marge d'environ <strong>11,40 FCFA par dossier, soit 76 %.</strong>
+      </div>
+
+      <div class="sp">
+        À cela s'ajoute une fonctionnalité entièrement <strong>optionnelle</strong> : les notifications SMS premium.
+        Le client choisit librement de l'activer ou non sur son dossier.
+        Lorsqu'elle est activée, chaque SMS est facturé <strong>160 FCFA</strong> au client,
+        pour un coût réel auprès de notre fournisseur SMS d'environ <strong>98 FCFA</strong>.
+        Ce qui génère une marge supplémentaire de <strong>62 FCFA par SMS, soit 39 %.</strong>
+        Si seulement 30 % des clients activent cette option avec en moyenne 2 SMS par dossier,
+        cela représente en moyenne <strong>37 FCFA de revenus bonus par dossier</strong> — sans aucun coût fixe supplémentaire.
+      </div>
+
+      <div class="sp">
+        Côté infrastructure, les coûts réels mensuels de la plateforme s'élèvent à environ
+        <strong>51 000 FCFA par mois, soit 85 dollars</strong> — hors frais de maintenance technique.
+        Cela couvre l'hébergement du backend, du frontend, du stockage des fichiers,
+        des emails transactionnels, des vérifications d'identité, et de la base de données.
+      </div>
+
+      <div class="sp">
+        Ce seuil est couvert <strong>dès environ 911 dossiers BL traités dans le mois</strong> —
+        ou dès environ <strong>636 dossiers</strong> si les notifications SMS sont activées.
+      </div>
+
+      <div class="sp">
+        Concrètement, voilà ce que ça représente en bénéfice net, uniquement sur les dossiers BL :
+        <div class="sp-indent">
+          <div><span class="sp-number">1 000 dossiers / mois</span> → <strong>~5 000 FCFA net / mois</strong> → <strong>~60 000 FCFA par an</strong></div>
+          <div><span class="sp-number">5 000 dossiers / mois</span> → <strong>~229 000 FCFA net / mois</strong> → <strong>~2 748 000 FCFA par an</strong></div>
+          <div><span class="sp-number">10 000 dossiers / mois</span> → <strong>~509 000 FCFA net / mois</strong> → <strong>~6 100 000 FCFA par an</strong></div>
+        </div>
+        Et avec 30 % des clients qui activent les SMS :
+        <div class="sp-indent">
+          <div><span class="sp-number">1 000 dossiers / mois</span> → <strong>~42 200 FCFA net / mois</strong> → <strong>~506 000 FCFA par an</strong></div>
+          <div><span class="sp-number">5 000 dossiers / mois</span> → <strong>~303 000 FCFA net / mois</strong> → <strong>~3 638 000 FCFA par an</strong></div>
+          <div><span class="sp-number">10 000 dossiers / mois</span> → <strong>~620 000 FCFA net / mois</strong> → <strong>~7 444 000 FCFA par an</strong></div>
+        </div>
+        Et ça, uniquement sur les dossiers BL — les dossiers Info Premium s'ajoutent par-dessus.
+      </div>
+
+      <div class="sp">
+        La plateforme est par ailleurs conçue pour être maintenue et évoluée dans le temps
+        par une <strong>ressource technique dédiée</strong> — ce point fait partie de la stratégie de déploiement à long terme.
+      </div>
+
+      <div class="sp">
+        Et bien sûr, toute cette partie financière est pilotée directement depuis Eolis Connect.
+        Un espace dédié permet de suivre en temps réel les revenus des recharges,
+        les coûts réels IA et SMS calculés automatiquement, les coûts d'infrastructure saisis manuellement,
+        et le <strong>bénéfice net calculé automatiquement</strong> — revenus moins tous les coûts.
+        Les agents financiers ont ainsi une visibilité claire et immédiate sur la rentabilité globale de la plateforme.
+      </div>
+
+    </div>
+    <div class="speech-note">
+      Les chiffres en bleu sont les points à retenir. Les tableaux détaillés sont disponibles dans les sections ci-dessous.
+    </div>
+  </div>
 
   <!-- ══ INTRO ══════════════════════════════════════════════════════ -->
   <div class="section-title">Principe général</div>
