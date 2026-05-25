@@ -264,6 +264,30 @@ def get_bl_raw(
     return {"bl_id": bl.id, "raw": raw}
 
 
+@router.patch("/{bl_id}/correct")
+async def correct_bl(
+    bl_id: str,
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save client corrections over the GPT-extracted raw data."""
+    bl = db.query(BLDocument).filter(BLDocument.id == bl_id, BLDocument.client_id == current_user.id).first()
+    if not bl:
+        raise HTTPException(404, "BL non trouvé")
+    bl.raw_extracted = json.dumps(body, ensure_ascii=False)
+    # Sync the indexed columns so my-bls list stays accurate
+    if body.get("booking_no"): bl.booking_no       = body["booking_no"]
+    if body.get("vessel"):      bl.vessel           = body["vessel"]
+    if body.get("voyage"):      bl.voyage           = body["voyage"]
+    if body.get("ets"):         bl.ets              = body["ets"]
+    if body.get("eta"):         bl.eta              = body["eta"]
+    if body.get("port_of_loading"):  bl.port_of_loading  = body["port_of_loading"]
+    if body.get("port_of_discharge"): bl.port_of_discharge = body["port_of_discharge"]
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/my-bls")
 def list_my_bls(
     current_user: User = Depends(get_current_user),

@@ -451,6 +451,57 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
 
   // ── BL Upload ─────────────────────────────────────────────────────────────────
 
+  function blFieldsToRaw(bf: any) {
+    return {
+      booking_no:        bf.bookingNo        || null,
+      date:              bf.date             || null,
+      customer_ref:      bf.customerRef      || null,
+      service:           bf.service          || null,
+      vessel:            bf.vessel           || null,
+      voyage:            bf.voyage           || null,
+      ets:               bf.ets              || null,
+      eta:               bf.eta              || null,
+      port_of_loading:   bf.portOfLoading    || null,
+      port_of_discharge: bf.portOfDischarge  || null,
+      place_of_receipt:  bf.placeOfReceipt   || null,
+      place_of_delivery: bf.placeOfDelivery  || null,
+      pickup: {
+        reference:       bf.pickup?.reference       || null,
+        quantity:        bf.pickup?.quantity ? Number(bf.pickup.quantity) : null,
+        size_type:       bf.pickup?.sizeType        || null,
+        depot:           bf.pickup?.depot           || null,
+        container_usage: bf.pickup?.containerUsage  || null,
+        release_date:    bf.pickup?.releaseDate      || null,
+      },
+      turn_in: {
+        reference:        bf.turnIn?.reference        || null,
+        terminal:         bf.turnIn?.terminal         || null,
+        terminal_closing: bf.turnIn?.terminalClosing  || null,
+        vgm_closing:      bf.turnIn?.vgmClosing       || null,
+        customs_closing:  bf.turnIn?.customsClosing    || null,
+      },
+      booking_items: (bf.bookingItems || []).map((it: any) => ({
+        item:                 it.item || null,
+        no_of_packs:          it.noOfPacks ? Number(it.noOfPacks) : null,
+        kind_of_pack:         it.kindOfPack          || null,
+        description_of_goods: it.descriptionOfGoods  || null,
+        liner_terms:          it.linerTerms           || null,
+        imo:                  it.imo                  || null,
+        gross_weight_tons:    it.grossWeightTons  ? Number(it.grossWeightTons)  : null,
+        measurement_cbm:      it.measurementCbm   ? Number(it.measurementCbm)   : null,
+      })),
+      container_details: (bf.containerDetails || []).map((cd: any) => ({
+        container_no: cd.containerNo || null,
+        set_point:    cd.setPoint    || null,
+        vent:         cd.vent        || null,
+        drains:       cd.drains      || null,
+        humidity:     cd.humidity    || null,
+        remarks:      cd.remarks     || null,
+      })),
+      remarks: bf.remarks || null,
+    }
+  }
+
   function buildBlFieldsFromRaw(r: any) {
     const p  = r.pickup   || {}
     const ti = r.turn_in  || {}
@@ -2296,7 +2347,7 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
             )}
             <button
               disabled={!blReviewCanNext}
-              onClick={() => {
+              onClick={async () => {
                 setBlVesselData(JSON.stringify(blFields))
                 setForm(prev => ({
                   ...prev,
@@ -2307,6 +2358,12 @@ export default function NouvelleDemandePage({ params }: { params: Promise<{ loca
                   equipmentType:  isFr ? 'Autre' : 'Other',
                   equipmentOther: blFields.pickup?.sizeType || '',
                 }))
+                // Persist corrections so reuse always shows the corrected version
+                if (blDocumentId) {
+                  const raw = blFieldsToRaw(blFields)
+                  await offlineDb.set(`bl_raw_${blDocumentId}`, { bl_id: blDocumentId, raw })
+                  if (isOnline) apiFetch(`/api/bl/${blDocumentId}/correct`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(raw) }).catch(() => {})
+                }
                 setMode('simple')
                 setBlStep('category')
               }}
