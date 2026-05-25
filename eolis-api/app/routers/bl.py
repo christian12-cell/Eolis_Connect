@@ -28,7 +28,7 @@ RÈGLES ABSOLUES :
 4. Réponds UNIQUEMENT avec le JSON ci-dessous, sans texte d'introduction ni balises markdown.
 
 FORMATS ATTENDUS (pour t'aider à lire les scans) :
-- "voyage" : exactement 7 chiffres suivis de la lettre N. Les 2 premiers chiffres sont toujours l'année en cours (ex: 26 pour 2026). Si tu lis un caractère ambigu (ex: 1/I, 0/O, 5/S, 6/b), corrige-le pour respecter ce format. Exemple de structure : 26XXXXXN où X sont des chiffres.
+- "voyage" : format attendu 7 chiffres suivis de la lettre N, commençant par l'année (ex: 26XXXXXN pour 2026). Utilise ce format comme guide de lecture. Si le scan est trop flou pour lire un chiffre avec certitude, mets null plutôt que de deviner.
 - "booking_no" : commence par 2 lettres majuscules (ex: EA, XX, FA) suivies de chiffres puis un code port (ex: DLA) puis des lettres.
 - "customer_ref" : ce champ est PRESQUE TOUJOURS vide sur les BL Eagle. Il ne contient jamais un nom de ville. Si tu vois "DOUALA" ou une autre ville near "Customer Ref", c'est le champ Service ou une adresse — mets null dans customer_ref.
 - "service" : valeur textuelle comme "CAM NORTH". Une ville (ex: DOUALA) peut apparaître sur la même ligne ou en dessous mais elle n'est PAS la valeur de service.
