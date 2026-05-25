@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Q
 from fastapi.responses import StreamingResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import CreditBalance, CreditRequest, User, Notification, AIUsage, Ticket, FinancialAuditLog
+from ..models import CreditBalance, CreditRequest, User, Notification, AIUsage, Ticket, FinancialAuditLog, InfrastructureCost
 from ..deps import get_current_user, require_roles
 from ..credit_service import get_or_create_balance, FREE_CREDITS_ON_SIGNUP
 from ..config import settings
@@ -816,9 +816,17 @@ def admin_benefits(
 
     ai_usages     = [u for u in usages if u.type != "sms_notification"]
     sms_usages    = [u for u in usages if u.type == "sms_notification"]
-    total_ai      = sum(u.cost_fcfa for u in ai_usages)
-    total_sms_cost= sum(u.cost_fcfa for u in sms_usages)
-    total_api     = total_ai + total_sms_cost
+    total_ai       = sum(u.cost_fcfa for u in ai_usages)
+    total_sms_cost = sum(u.cost_fcfa for u in sms_usages)
+    total_api      = total_ai + total_sms_cost
+
+    # Infra costs — filter by period (YYYY-MM) derived from date range
+    infra_q = db.query(InfrastructureCost)
+    if from_date and (d := _parse_from(from_date)):
+        infra_q = infra_q.filter(InfrastructureCost.period >= d.strftime("%Y-%m"))
+    if to_date and (d := _parse_to(to_date)):
+        infra_q = infra_q.filter(InfrastructureCost.period <= d.strftime("%Y-%m"))
+    total_infra_fcfa = sum(c.amount_fcfa for c in infra_q.all())
     total_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in usages)
     sms_credits   = sum(getattr(u, "credits_cost", 0) or 0 for u in sms_usages)
     bl_credits      = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "bl_extraction")
@@ -849,6 +857,8 @@ def admin_benefits(
         "totalClientFcfa":        round(total_credits,                     2),
         "usageProfit":            round(total_credits - total_api,         4),
         "grossProfit":            round(total_revenue - total_api,         2),
+        "totalInfraFcfa":         round(total_infra_fcfa,                  2),
+        "netProfit":              round(total_revenue - total_api - total_infra_fcfa, 2),
         "freeCreditsGiven":       free_credits,
         "blCreditsConsumed":       round(bl_credits,                        2),
         "voiceCreditsConsumed":   round(voice_credits,                     2),

@@ -196,8 +196,8 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
           <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-violet-500" /></div>
         ) : !benefits ? null : (
           <div className="space-y-4">
-            {/* KPIs bénéfices — 4 cartes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* KPIs bénéfices — 5 cartes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {[
                 {
                   label: isFr ? 'Revenus recharges' : 'Top-up revenue',
@@ -230,6 +230,15 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                     ? `${(((benefits.usageProfit ?? 0) / benefits.totalClientFcfa) * 100).toFixed(1)}% ${isFr ? 'de marge' : 'margin'}`
                     : isFr ? 'Aucune consommation' : 'No usage yet',
                   color: 'bg-violet-50 text-violet-700',
+                },
+                {
+                  label: isFr ? 'Bénéfice net' : 'Net profit',
+                  fcfa: fmt2(benefits.netProfit ?? 0),
+                  usd: toUsd(benefits.netProfit ?? 0), eur: toEur(benefits.netProfit ?? 0),
+                  sub: benefits.totalRevenue > 0
+                    ? `${(((benefits.netProfit ?? 0) / benefits.totalRevenue) * 100).toFixed(1)}% ${isFr ? 'marge nette' : 'net margin'}${(benefits.totalInfraFcfa ?? 0) > 0 ? ` · infra ${fmt2(benefits.totalInfraFcfa)} FCFA` : ''}`
+                    : isFr ? 'Aucune recharge' : 'No top-up yet',
+                  color: (benefits.netProfit ?? 0) >= 0 ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-600',
                 },
               ].map(card => (
                 <div key={card.label} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
