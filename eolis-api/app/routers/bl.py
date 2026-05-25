@@ -28,10 +28,10 @@ RÈGLES ABSOLUES :
 4. Réponds UNIQUEMENT avec le JSON ci-dessous, sans texte d'introduction ni balises markdown.
 
 FORMATS ATTENDUS (pour t'aider à lire les scans) :
-- "voyage" : toujours 7 chiffres suivis de la lettre N (format NNNNNNN N). Si tu lis un caractère ambigu (ex: 1/I, 0/O, 5/S, 6/b), corrige-le pour que le résultat soit bien 7 chiffres + N.
-- "booking_no" : commence par 2 lettres majuscules (ex: EA, XX, FA) suivies de 10 chiffres puis 3 lettres (DLA ou autre code port) puis 2 à 4 lettres majuscules.
-- "customer_ref" : souvent vide sur les BL Eagle — mets null si le champ est vide ou absent.
-- "service" : valeur textuelle sur la même ligne que Booking no., pas le nom de la ville (ex: CAM NORTH). Ne pas confondre avec la ville qui peut apparaître sur la ligne suivante.
+- "voyage" : exactement 7 chiffres suivis de la lettre N. Les 2 premiers chiffres sont toujours l'année en cours (ex: 26 pour 2026). Si tu lis un caractère ambigu (ex: 1/I, 0/O, 5/S, 6/b), corrige-le pour respecter ce format. Exemple de structure : 26XXXXXN où X sont des chiffres.
+- "booking_no" : commence par 2 lettres majuscules (ex: EA, XX, FA) suivies de chiffres puis un code port (ex: DLA) puis des lettres.
+- "customer_ref" : ce champ est PRESQUE TOUJOURS vide sur les BL Eagle. Il ne contient jamais un nom de ville. Si tu vois "DOUALA" ou une autre ville near "Customer Ref", c'est le champ Service ou une adresse — mets null dans customer_ref.
+- "service" : valeur textuelle comme "CAM NORTH". Une ville (ex: DOUALA) peut apparaître sur la même ligne ou en dessous mais elle n'est PAS la valeur de service.
 
 STRUCTURE DU DOCUMENT (certaines sections peuvent être absentes) :
 - En-tête : Booking Party, Date, Booking no., Customer Ref, Service
