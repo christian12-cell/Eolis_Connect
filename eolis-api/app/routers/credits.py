@@ -738,8 +738,13 @@ def admin_benefits(
                 filtered.append(u)
         usages = filtered
 
-    total_api     = sum(u.cost_fcfa for u in usages)
+    ai_usages     = [u for u in usages if u.type != "sms_notification"]
+    sms_usages    = [u for u in usages if u.type == "sms_notification"]
+    total_ai      = sum(u.cost_fcfa for u in ai_usages)
+    total_sms_cost= sum(u.cost_fcfa for u in sms_usages)
+    total_api     = total_ai + total_sms_cost
     total_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in usages)
+    sms_credits   = sum(getattr(u, "credits_cost", 0) or 0 for u in sms_usages)
     bl_credits    = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "bl_extraction")
     voice_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "voice_transcription")
 
@@ -757,15 +762,19 @@ def admin_benefits(
         })
 
     return {
-        "totalRevenue":           round(total_revenue,               2),
-        "totalApiCost":           round(total_api,                   4),
-        "totalCreditsConsumed":   round(total_credits,               2),
-        "totalClientFcfa":        round(total_credits,               2),
-        "usageProfit":            round(total_credits - total_api,   4),
-        "grossProfit":            round(total_revenue - total_api,   2),
+        "totalRevenue":           round(total_revenue,                     2),
+        "totalApiCost":           round(total_api,                         4),
+        "aiCostFcfa":             round(total_ai,                          4),
+        "smsCostFcfa":            round(total_sms_cost,                    4),
+        "smsCount":               len(sms_usages),
+        "smsCreditsConsumed":     round(sms_credits,                       2),
+        "totalCreditsConsumed":   round(total_credits,                     2),
+        "totalClientFcfa":        round(total_credits,                     2),
+        "usageProfit":            round(total_credits - total_api,         4),
+        "grossProfit":            round(total_revenue - total_api,         2),
         "freeCreditsGiven":       free_credits,
-        "blCreditsConsumed":      round(bl_credits,                  2),
-        "voiceCreditsConsumed":   round(voice_credits,               2),
+        "blCreditsConsumed":      round(bl_credits,                        2),
+        "voiceCreditsConsumed":   round(voice_credits,                     2),
         "approvedRequestsCount":  len(approved),
         "pendingRequestsCount":   pending_count,
         "revenueDetails":         per_request,

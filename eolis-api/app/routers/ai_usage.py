@@ -9,7 +9,7 @@ from ..deps import get_current_user, require_roles
 
 router = APIRouter(prefix="/ai-usage", tags=["ai-usage"])
 
-TYPE_ICONS = {"bl_extraction": "📄", "voice_transcription": "🎙️"}
+TYPE_ICONS = {"bl_extraction": "📄", "voice_transcription": "🎙️", "sms_notification": "📱"}
 
 
 def _apply_date_filter(q, from_date: Optional[str], to_date: Optional[str]):
@@ -191,16 +191,19 @@ def admin_usage(
 
     urgency_list = [u.strip() for u in urgency.split(",")] if urgency else None
 
-    total_usd     = 0.0
-    total_fcfa    = 0.0
-    total_credits = 0.0
+    total_usd       = 0.0
+    total_fcfa      = 0.0
+    total_credits   = 0.0
+    total_ai_fcfa   = 0.0
+    total_sms_fcfa  = 0.0
+    total_sms_credits = 0.0
 
     by_client: dict = defaultdict(lambda: {
         "costUsd": 0.0, "costFcfa": 0.0, "credits": 0.0, "count": 0, "firstName": None, "lastName": None,
     })
     by_ticket: dict = defaultdict(lambda: {
         "ref": None, "ticketId": None, "clientId": None, "clientName": None, "urgency": None,
-        "costUsd": 0.0, "costFcfa": 0.0, "credits": 0.0, "blCount": 0, "voiceCount": 0,
+        "costUsd": 0.0, "costFcfa": 0.0, "credits": 0.0, "blCount": 0, "voiceCount": 0, "smsCount": 0,
     })
 
     items = []
@@ -220,6 +223,11 @@ def admin_usage(
         total_usd     += r.cost_usd
         total_fcfa    += r.cost_fcfa
         total_credits += credits
+        if r.type == "sms_notification":
+            total_sms_fcfa    += r.cost_fcfa
+            total_sms_credits += credits
+        else:
+            total_ai_fcfa += r.cost_fcfa
 
         by_client[r.client_id]["costUsd"]  += r.cost_usd
         by_client[r.client_id]["costFcfa"] += r.cost_fcfa
@@ -238,6 +246,8 @@ def admin_usage(
         by_ticket[ticket_key]["credits"]   += credits
         if r.type == "voice_transcription":
             by_ticket[ticket_key]["voiceCount"] += 1
+        elif r.type == "sms_notification":
+            by_ticket[ticket_key]["smsCount"]   += 1
         else:
             by_ticket[ticket_key]["blCount"]    += 1
 
@@ -284,6 +294,7 @@ def admin_usage(
             "urgency":      v["urgency"],
             "blCount":      v["blCount"],
             "voiceCount":   v["voiceCount"],
+            "smsCount":     v["smsCount"],
             "totalUsd":     round(v["costUsd"],              8),
             "totalFcfa":    round(v["costFcfa"],             4),
             "totalCredits": round(v["credits"],              2),
@@ -293,14 +304,19 @@ def admin_usage(
         for v in sorted(by_ticket.values(), key=lambda x: -x["costUsd"])
     ]
 
+    sms_count = sum(1 for it in items if it["type"] == "sms_notification")
     return {
-        "totalUsd":        round(total_usd,                    8),
-        "totalFcfa":       round(total_fcfa,                   4),
-        "totalCredits":    round(total_credits,                2),
-        "totalClientFcfa": round(total_credits,                2),
-        "totalProfitFcfa": round(total_credits - total_fcfa,   4),
-        "count":           len(items),
-        "clientsSummary":  clients_summary,
-        "ticketsSummary":  tickets_summary,
-        "items":           items,
+        "totalUsd":          round(total_usd,                          8),
+        "totalFcfa":         round(total_fcfa,                         4),
+        "totalAiFcfa":       round(total_ai_fcfa,                      4),
+        "totalSmsFcfa":      round(total_sms_fcfa,                     4),
+        "totalCredits":      round(total_credits,                      2),
+        "totalClientFcfa":   round(total_credits,                      2),
+        "totalProfitFcfa":   round(total_credits - total_fcfa,         4),
+        "smsCount":          sms_count,
+        "totalSmsCredits":   round(total_sms_credits,                  2),
+        "count":             len(items),
+        "clientsSummary":    clients_summary,
+        "ticketsSummary":    tickets_summary,
+        "items":             items,
     }

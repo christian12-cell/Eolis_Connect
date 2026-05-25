@@ -146,6 +146,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
 
   const blCount    = data?.items?.filter((i: any) => i.type === 'bl_extraction').length ?? 0
   const voiceCount = data?.items?.filter((i: any) => i.type === 'voice_transcription').length ?? 0
+  const smsCount   = data?.smsCount ?? 0
 
   const URGENCY_OPTIONS = [
     { value: 'HIGH',   label: isFr ? '🔴 Élevée'  : '🔴 High'   },
@@ -209,14 +210,16 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                   label: isFr ? 'Crédits consommés (prix client)' : 'Credits consumed (client cost)',
                   fcfa: fmt2(benefits.totalClientFcfa ?? 0),
                   usd: toUsd(benefits.totalClientFcfa ?? 0), eur: toEur(benefits.totalClientFcfa ?? 0),
-                  sub: `${fmt2(benefits.totalCreditsConsumed ?? 0)} crédits · ${fmt2(benefits.blCreditsConsumed ?? 0)} BL + ${fmt2(benefits.voiceCreditsConsumed ?? 0)} voix`,
+                  sub: `${fmt2(benefits.totalCreditsConsumed ?? 0)} crédits · BL ${fmt2(benefits.blCreditsConsumed ?? 0)} + voix ${fmt2(benefits.voiceCreditsConsumed ?? 0)}${(benefits.smsCreditsConsumed ?? 0) > 0 ? ` + SMS ${fmt2(benefits.smsCreditsConsumed)}` : ''}`,
                   color: 'bg-blue-50 text-blue-700',
                 },
                 {
                   label: isFr ? 'Coûts traitement réels' : 'Actual processing costs',
                   fcfa: fmt4(benefits.totalApiCost),
                   usd: toUsd4(benefits.totalApiCost), eur: toEur4(benefits.totalApiCost),
-                  sub: isFr ? 'Coût réel des traitements' : 'Actual cost of processing',
+                  sub: benefits.smsCount > 0
+                    ? `IA ${fmt4(benefits.aiCostFcfa ?? 0)} + SMS ${fmt4(benefits.smsCostFcfa ?? 0)} FCFA`
+                    : isFr ? 'Coût réel des traitements' : 'Actual cost of processing',
                   color: 'bg-red-50 text-red-600',
                 },
                 {
@@ -245,8 +248,9 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
               <p className="font-bold text-sm text-violet-800">{isFr ? '🧮 Comment lire ces chiffres' : '🧮 How to read these numbers'}</p>
               <p>{isFr ? '• 1 crédit = 1 FCFA (côté client). Ex : extraction BL = 50 crédits = 50 FCFA payés par le client.' : '• 1 credit = 1 FCFA (client side). E.g. BL extraction = 50 credits = 50 FCFA paid by client.'}</p>
               <p>{isFr ? '• Coût réel OpenAI = variable selon les tokens / la durée audio. Beaucoup moins que 50 FCFA en général.' : '• Actual OpenAI cost = variable by tokens / audio duration. Much less than 50 FCFA typically.'}</p>
-              <p>{isFr ? '• Bénéfice sur usages = crédits consommés − coûts OpenAI réels.' : '• Usage profit = credits consumed − actual OpenAI costs.'}</p>
-              <p>{isFr ? '• Bénéfice net recharges = revenus recharges − coûts OpenAI.' : '• Net top-up profit = top-up revenue − OpenAI costs.'}</p>
+              <p>{isFr ? '• SMS Premium : 160 crédits facturés au client, 107 FCFA de coût réel Seven.io → 53 FCFA de marge.' : '• Premium SMS: 160 credits charged to client, 107 FCFA real cost (Seven.io) → 53 FCFA margin.'}</p>
+              <p>{isFr ? '• Bénéfice sur usages = crédits consommés − coûts OpenAI − coûts SMS.' : '• Usage profit = credits consumed − OpenAI costs − SMS costs.'}</p>
+              <p>{isFr ? '• Bénéfice net recharges = revenus recharges − coûts OpenAI − coûts SMS.' : '• Net top-up profit = top-up revenue − OpenAI costs − SMS costs.'}</p>
             </div>
 
             {/* Crédits offerts */}
@@ -351,8 +355,8 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
               ))}
             </div>
 
-            {/* Compteurs BL / Voice */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Compteurs BL / Voice / SMS */}
+            <div className="grid grid-cols-3 gap-4">
               <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center gap-3">
                 <FileText size={20} className="text-blue-500" />
                 <div>
@@ -365,6 +369,13 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                 <div>
                   <p className="text-lg font-bold text-gray-900">{voiceCount}</p>
                   <p className="text-xs text-gray-400">{isFr ? 'Dictées vocales' : 'Voice dictations'}</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl border border-purple-100 p-4 shadow-sm flex items-center gap-3">
+                <span className="text-xl">📱</span>
+                <div>
+                  <p className="text-lg font-bold text-gray-900">{smsCount}</p>
+                  <p className="text-xs text-gray-400">{isFr ? 'SMS Premium' : 'Premium SMS'}</p>
                 </div>
               </div>
             </div>
@@ -455,10 +466,16 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                             {ticketItems.map((item: any) => (
                               <div key={item.id} className="grid grid-cols-4 gap-2 items-center py-1.5">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-base flex-shrink-0">{item.type === 'bl_extraction' ? '📄' : '🎙️'}</span>
+                                  <span className="text-base flex-shrink-0">
+                                    {item.type === 'bl_extraction' ? '📄' : item.type === 'sms_notification' ? '📱' : '🎙️'}
+                                  </span>
                                   <div>
                                     <p className="text-xs font-semibold text-gray-800">
-                                      {item.type === 'bl_extraction' ? (isFr ? 'Extraction BL' : 'BL extraction') : (isFr ? 'Dictée vocale' : 'Voice dictation')}
+                                      {item.type === 'bl_extraction'
+                                        ? (isFr ? 'Extraction BL' : 'BL extraction')
+                                        : item.type === 'sms_notification'
+                                          ? 'SMS Premium'
+                                          : (isFr ? 'Dictée vocale' : 'Voice dictation')}
                                     </p>
                                     <p className="text-[10px] text-gray-400">
                                       {new Date(item.createdAt).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', { day: '2-digit', month: 'short' })}
