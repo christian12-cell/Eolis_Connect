@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eolis Connect — Modèle économique</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a2535;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1B3A5C 0%, #2d5a8e 100%);
+      color: white;
+      padding: 48px 32px 40px;
+      text-align: center;
+    }
+    .header .logo {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .header p {
+      font-size: 15px;
+      opacity: 0.75;
+    }
+    .header .badge {
+      display: inline-block;
+      margin-top: 16px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin: 40px 0 16px;
+      padding-left: 2px;
+    }
+
+    /* ── Intro box ── */
+    .intro {
+      background: white;
+      border-radius: 16px;
+      padding: 28px 32px;
+      border-left: 4px solid #1B3A5C;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      margin-bottom: 8px;
+    }
+    .intro p {
+      font-size: 15px;
+      color: #374151;
+      margin-bottom: 10px;
+    }
+    .intro p:last-child { margin-bottom: 0; }
+    .intro strong { color: #1B3A5C; }
+
+    /* ── KPI grid ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+    .kpi-card {
+      background: white;
+      border-radius: 14px;
+      padding: 20px 18px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      text-align: center;
+    }
+    .kpi-card .val {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+    .kpi-card .lbl {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .kpi-card .sub {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+    .blue  { color: #1B3A5C; }
+    .green { color: #059669; }
+    .red   { color: #dc2626; }
+    .violet{ color: #7c3aed; }
+    .amber { color: #d97706; }
+    .teal  { color: #0d9488; }
+
+    /* ── Dossier cards ── */
+    .dossier-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    @media (max-width: 560px) { .dossier-grid { grid-template-columns: 1fr; } }
+
+    .dossier-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    .dossier-header {
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .dossier-header .icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .dossier-header h3 { font-size: 15px; font-weight: 700; }
+    .dossier-header p  { font-size: 11px; color: #6b7280; margin-top: 1px; }
+
+    .dossier-bl .dossier-header { background: #eff6ff; }
+    .dossier-bl .icon { background: #dbeafe; }
+    .dossier-ip .dossier-header { background: #f0fdf4; }
+    .dossier-ip .icon { background: #dcfce7; }
+
+    .dossier-body { padding: 16px 20px 20px; }
+    .dossier-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 13px;
+    }
+    .dossier-row:last-child { border-bottom: none; }
+    .dossier-row .row-lbl { color: #6b7280; }
+    .dossier-row .row-val { font-weight: 600; }
+
+    .margin-badge {
+      margin-top: 14px;
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .margin-badge .mb-lbl { font-size: 12px; font-weight: 600; }
+    .margin-badge .mb-val { font-size: 20px; font-weight: 800; }
+    .margin-badge .mb-pct { font-size: 11px; font-weight: 700; margin-top: 1px; text-align: right; }
+    .bg-blue-light  { background: #eff6ff; }
+    .bg-green-light { background: #f0fdf4; }
+
+    /* ── SMS card ── */
+    .sms-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px 28px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .sms-icon {
+      width: 48px; height: 48px;
+      background: #f3e8ff;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .sms-content h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .sms-content .sms-tag {
+      display: inline-block;
+      background: #f3e8ff; color: #7c3aed;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+      letter-spacing: 0.5px; text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .sms-row {
+      display: flex; justify-content: space-between;
+      font-size: 13px; padding: 5px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .sms-row:last-of-type { border-bottom: none; }
+    .sms-row .sr-lbl { color: #6b7280; }
+    .sms-row .sr-val { font-weight: 600; }
+    .sms-note {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #9ca3af;
+      font-style: italic;
+    }
+
+    /* ── Infra table ── */
+    .infra-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    .infra-card table { width: 100%; border-collapse: collapse; }
+    .infra-card thead tr { background: #f8fafc; }
+    .infra-card thead th {
+      text-align: left;
+      padding: 12px 20px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b7280;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .infra-card thead th:last-child { text-align: right; }
+    .infra-card tbody td {
+      padding: 12px 20px;
+      font-size: 13px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: middle;
+    }
+    .infra-card tbody td:last-child { text-align: right; font-weight: 600; }
+    .infra-card tbody tr:last-child td { border-bottom: none; }
+    .infra-card .total-row td {
+      background: #1B3A5C;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .infra-note {
+      background: #fef9c3;
+      border-top: 1px solid #fde68a;
+      padding: 10px 20px;
+      font-size: 11px;
+      color: #92400e;
+    }
+
+    /* ── Break-even ── */
+    .breakeven-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 560px) { .breakeven-grid { grid-template-columns: 1fr; } }
+    .breakeven-card {
+      background: white;
+      border-radius: 14px;
+      padding: 20px 22px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      border-top: 3px solid;
+    }
+    .breakeven-card.bl  { border-color: #3b82f6; }
+    .breakeven-card.ip  { border-color: #10b981; }
+    .breakeven-card.sms { border-color: #7c3aed; }
+    .breakeven-card h4  { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .breakeven-card .be-val { font-size: 28px; font-weight: 800; }
+    .breakeven-card .be-sub { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+
+    /* ── Projections table ── */
+    .proj-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+    }
+    .proj-card .proj-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .proj-card .proj-head h3 { font-size: 15px; font-weight: 700; }
+    .proj-card .proj-head span { font-size: 11px; color: #6b7280; }
+    .proj-card table { width: 100%; border-collapse: collapse; }
+    .proj-card thead tr { background: #f8fafc; }
+    .proj-card thead th {
+      padding: 10px 16px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #6b7280;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .proj-card thead th:first-child { text-align: left; }
+    .proj-card thead th:not(:first-child) { text-align: right; }
+    .proj-card tbody td {
+      padding: 12px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .proj-card tbody td:first-child { font-weight: 600; color: #374151; }
+    .proj-card tbody td:not(:first-child) { text-align: right; }
+    .proj-card tbody tr:last-child td { border-bottom: none; }
+    .proj-card tbody tr:hover { background: #f9fafb; }
+    .proj-card .net { color: #059669; font-weight: 700; }
+    .proj-card .net-sms { color: #7c3aed; font-weight: 700; }
+    .proj-card .deficit { color: #dc2626; }
+    .proj-card .seuil-row td { background: #fef3c7; font-style: italic; }
+
+    /* ── Maintenance box ── */
+    .maintenance-box {
+      background: white;
+      border-radius: 14px;
+      padding: 22px 26px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      border-left: 4px solid #6b7280;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .maintenance-box .mi { font-size: 28px; flex-shrink: 0; }
+    .maintenance-box h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #374151; }
+    .maintenance-box p  { font-size: 13px; color: #6b7280; }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 32px 20px;
+      color: #9ca3af;
+      font-size: 12px;
+    }
+    .footer strong { color: #6b7280; }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: #e5e7eb; margin: 8px 0; }
+  </style>
+</head>
+<body>
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════ -->
+<div class="header">
+  <div class="logo">Eolis Connect</div>
+  <h1>Modèle économique</h1>
+  <p>Analyse financière — prototype Cameroun</p>
+  <div class="badge">Mai 2026</div>
+</div>
+
+<div class="container">
+
+  <!-- ══ INTRO ══════════════════════════════════════════════════════ -->
+  <div class="section-title">Principe général</div>
+  <div class="intro">
+    <p>
+      Eolis Connect intègre un <strong>modèle économique autonome</strong> basé sur des crédits prépayés.
+      <strong>1 crédit = 1 FCFA.</strong>
+    </p>
+    <p>
+      Chaque action réalisée sur la plateforme — extraction de BL, dictée vocale, dossier Info Premium — consomme des crédits.
+      La différence entre ce que paie le client et le coût réel de traitement constitue le bénéfice de la plateforme.
+    </p>
+    <p>
+      Plus la plateforme est utilisée, plus elle couvre ses propres charges et génère une valeur financière directe pour l'entreprise.
+    </p>
+  </div>
+
+  <!-- ══ DEUX TYPES DE DOSSIERS ═════════════════════════════════════ -->
+  <div class="section-title">Les deux types de dossiers premium</div>
+  <div class="dossier-grid">
+
+    <!-- BL Premium -->
+    <div class="dossier-card dossier-bl">
+      <div class="dossier-header">
+        <div class="icon">📄</div>
+        <div>
+          <h3>Dossier BL Premium</h3>
+          <p>Traitement de connaissement</p>
+        </div>
+      </div>
+      <div class="dossier-body">
+        <div class="dossier-row">
+          <span class="row-lbl">Extraction BL (IA)</span>
+          <span class="row-val blue">50 FCFA</span>
+        </div>
+        <div class="dossier-row">
+          <span class="row-lbl">Dictée vocale (1 min)</span>
+          <span class="row-val blue">10 FCFA</span>
+        </div>
+        <div class="dossier-row">
+          <span class="row-lbl"><strong>Revenus client</strong></span>
+          <span class="row-val blue"><strong>60 FCFA</strong></span>
+        </div>
+        <div class="dossier-row">
+          <span class="row-lbl">Coût réel traitement</span>
+          <span class="row-val red">~3,90 FCFA</span>
+        </div>
+        <div class="margin-badge bg-blue-light">
+          <div>
+            <div class="mb-lbl blue">Bénéfice par dossier</div>
+          </div>
+          <div>
+            <div class="mb-val blue">~56 FCFA</div>
+            <div class="mb-pct blue">Marge 93 %</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Premium -->
+    <div class="dossier-card dossier-ip">
+      <div class="dossier-header">
+        <div class="icon">💼</div>
+        <div>
+          <h3>Dossier Info Premium</h3>
+          <p>Demande d'information directe</p>
+        </div>
+      </div>
+      <div class="dossier-body">
+        <div class="dossier-row">
+          <span class="row-lbl">Ouverture du dossier</span>
+          <span class="row-val green">5 FCFA</span>
+        </div>
+        <div class="dossier-row">
+          <span class="row-lbl">Dictée vocale (1 min)</span>
+          <span class="row-val green">10 FCFA</span>
+        </div>
+        <div class="dossier-row">
+          <span class="row-lbl"><strong>Revenus client</strong></span>
+          <span class="row-val green"><strong>15 FCFA</strong></span>
+        </div>
+        <div class="dossier-row">
+          <span class="row-lbl">Coût réel traitement</span>
+          <span class="row-val red">~3,60 FCFA</span>
+        </div>
+        <div class="margin-badge bg-green-light">
+          <div>
+            <div class="mb-lbl green">Bénéfice par dossier</div>
+          </div>
+          <div>
+            <div class="mb-val green">~11,40 FCFA</div>
+            <div class="mb-pct green">Marge 76 %</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SMS OPTIONNEL ══════════════════════════════════════════════ -->
+  <div class="section-title">Fonctionnalité optionnelle — SMS Premium</div>
+  <div class="sms-card">
+    <div class="sms-icon">📱</div>
+    <div class="sms-content">
+      <h3>Notifications SMS</h3>
+      <span class="sms-tag">Optionnel · Activé par le client</span>
+      <div class="sms-row">
+        <span class="sr-lbl">Facturation au client</span>
+        <span class="sr-val blue">160 FCFA / SMS</span>
+      </div>
+      <div class="sms-row">
+        <span class="sr-lbl">Coût réel fournisseur (SMS prévu)</span>
+        <span class="sr-val red">~98 FCFA / SMS</span>
+      </div>
+      <div class="sms-row">
+        <span class="sr-lbl"><strong>Marge par SMS envoyé</strong></span>
+        <span class="sr-val violet"><strong>62 FCFA = 39 %</strong></span>
+      </div>
+      <p class="sms-note">
+        Chaque client choisit librement d'activer ou non les SMS sur son dossier.
+        Hypothèse de projection : 30 % d'adoption, 2 SMS par dossier activé (demande de documents + clôture)
+        → <strong>+37 FCFA de marge moyenne par dossier</strong> sur l'ensemble.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ INFRASTRUCTURE ═════════════════════════════════════════════ -->
+  <div class="section-title">Coûts d'infrastructure mensuels réels</div>
+  <div class="infra-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Rôle</th>
+          <th>$/mois</th>
+          <th>FCFA/mois</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Railway</strong></td>
+          <td>Hébergement backend API</td>
+          <td>$25</td>
+          <td>~15 000 FCFA</td>
+        </tr>
+        <tr>
+          <td><strong>Vercel</strong></td>
+          <td>Hébergement frontend (PWA)</td>
+          <td>$20</td>
+          <td>~12 000 FCFA</td>
+        </tr>
+        <tr>
+          <td><strong>Neon PostgreSQL</strong></td>
+          <td>Base de données</td>
+          <td>$19</td>
+          <td>~11 400 FCFA</td>
+        </tr>
+        <tr>
+          <td><strong>Resend</strong></td>
+          <td>Emails transactionnels</td>
+          <td>$10</td>
+          <td>~6 000 FCFA</td>
+        </tr>
+        <tr>
+          <td><strong>AWS S3</strong></td>
+          <td>Stockage fichiers & documents</td>
+          <td>$5</td>
+          <td>~3 000 FCFA</td>
+        </tr>
+        <tr>
+          <td><strong>Twilio Verify</strong></td>
+          <td>Vérifications OTP (base 100/mois)</td>
+          <td>$6</td>
+          <td>~3 600 FCFA</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="2"><strong>Total infrastructure fixe mensuelle</strong></td>
+          <td><strong>$85</strong></td>
+          <td><strong>~51 000 FCFA</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="infra-note">
+      ⚠️ Ces coûts sont fixes et indépendants de l'usage. Les coûts IA (OpenAI) et SMS sont variables et déjà déduits par dossier dans les marges ci-dessus.
+      Ces chiffres ne comprennent pas les frais de maintenance technique.
+    </div>
+  </div>
+
+  <!-- ══ SEUIL D'ÉQUILIBRE ══════════════════════════════════════════ -->
+  <div class="section-title">Seuil d'équilibre (couverture infrastructure)</div>
+  <div class="breakeven-grid">
+    <div class="breakeven-card bl">
+      <h4>BL Premium · sans SMS</h4>
+      <div class="be-val blue">~911 dossiers</div>
+      <div class="be-sub">par mois pour couvrir les 51 000 FCFA</div>
+    </div>
+    <div class="breakeven-card sms">
+      <h4>BL Premium · avec 30 % SMS</h4>
+      <div class="be-val violet">~636 dossiers</div>
+      <div class="be-sub">les SMS réduisent le seuil de 30 %</div>
+    </div>
+    <div class="breakeven-card ip">
+      <h4>Info Premium · sans SMS</h4>
+      <div class="be-val green">~4 474 dossiers</div>
+      <div class="be-sub">marge plus faible, seuil plus haut</div>
+    </div>
+    <div class="breakeven-card bl" style="border-color:#f59e0b">
+      <h4>Mix BL + Info Premium</h4>
+      <div class="be-val amber">Selon le ratio</div>
+      <div class="be-sub">plus il y a de BL, plus le seuil est bas</div>
+    </div>
+  </div>
+
+  <!-- ══ PROJECTIONS ════════════════════════════════════════════════ -->
+  <div class="section-title">Projections financières — Dossiers BL Premium</div>
+
+  <div class="proj-card">
+    <div class="proj-head">
+      <span style="font-size:20px">📊</span>
+      <div>
+        <h3>Bénéfice mensuel et annuel net</h3>
+        <span>Après déduction des 51 000 FCFA d'infrastructure fixe</span>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Dossiers / mois</th>
+          <th>Brut / mois</th>
+          <th>Net / mois (sans SMS)</th>
+          <th>Net / an (sans SMS)</th>
+          <th>Net / mois (+30% SMS)</th>
+          <th>Net / an (+30% SMS)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>100</td>
+          <td>5 600 FCFA</td>
+          <td class="deficit">− 45 400 FCFA</td>
+          <td class="deficit">déficit</td>
+          <td class="deficit">− 33 500 FCFA</td>
+          <td class="deficit">déficit</td>
+        </tr>
+        <tr class="seuil-row">
+          <td>~636 (seuil SMS)</td>
+          <td>~35 600 FCFA</td>
+          <td class="deficit">− 15 400 FCFA</td>
+          <td>—</td>
+          <td class="net">≈ 0 FCFA</td>
+          <td>seuil d'équilibre</td>
+        </tr>
+        <tr class="seuil-row">
+          <td>~911 (seuil BL)</td>
+          <td>~51 000 FCFA</td>
+          <td class="net">≈ 0 FCFA</td>
+          <td>seuil d'équilibre</td>
+          <td class="net-sms">~25 000 FCFA</td>
+          <td class="net-sms">~300 000 FCFA</td>
+        </tr>
+        <tr>
+          <td><strong>1 000</strong></td>
+          <td>56 000 FCFA</td>
+          <td class="net">~5 000 FCFA</td>
+          <td class="net">~60 000 FCFA</td>
+          <td class="net-sms">~42 200 FCFA</td>
+          <td class="net-sms">~506 400 FCFA</td>
+        </tr>
+        <tr>
+          <td><strong>5 000</strong></td>
+          <td>280 000 FCFA</td>
+          <td class="net">~229 000 FCFA</td>
+          <td class="net">~2 748 000 FCFA</td>
+          <td class="net-sms">~303 200 FCFA</td>
+          <td class="net-sms">~3 638 400 FCFA</td>
+        </tr>
+        <tr>
+          <td><strong>10 000</strong></td>
+          <td>560 000 FCFA</td>
+          <td class="net">~509 000 FCFA</td>
+          <td class="net">~6 108 000 FCFA</td>
+          <td class="net-sms">~620 400 FCFA</td>
+          <td class="net-sms">~7 444 800 FCFA</td>
+        </tr>
+        <tr>
+          <td><strong>100 000</strong></td>
+          <td>5 600 000 FCFA</td>
+          <td class="net">~5 549 000 FCFA</td>
+          <td class="net">~66 588 000 FCFA</td>
+          <td class="net-sms">~6 289 000 FCFA</td>
+          <td class="net-sms">~75 468 000 FCFA</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:12px; padding:14px 18px; font-size:12px; color:#166534; margin-bottom:8px;">
+    💡 <strong>Note :</strong> Ces projections concernent uniquement les dossiers BL Premium. Les dossiers Info Premium s'ajoutent par-dessus et génèrent une marge supplémentaire de <strong>11,40 FCFA par dossier (76 %)</strong>.
+  </div>
+
+  <!-- ══ ESPACE FINANCIER ═══════════════════════════════════════════ -->
+  <div class="section-title">Pilotage financier intégré</div>
+  <div class="intro" style="border-left-color: #059669;">
+    <p>
+      Un <strong>espace financier dédié</strong> est intégré directement dans Eolis Connect.
+      Il permet de suivre en temps réel :
+    </p>
+    <p style="margin-top:10px; padding-left:16px; border-left: 3px solid #d1fae5;">
+      · Les <strong>revenus des recharges clients</strong><br>
+      · Les <strong>coûts réels IA et SMS</strong>, calculés automatiquement à chaque opération<br>
+      · Les <strong>coûts d'infrastructure</strong>, saisis manuellement chaque mois<br>
+      · Le <strong>bénéfice net</strong>, calculé automatiquement : <em>revenus − coûts IA − coûts SMS − infra</em>
+    </p>
+    <p style="margin-top:10px;">
+      Les agents financiers ont ainsi une visibilité claire et immédiate sur la <strong>rentabilité globale de la plateforme</strong>.
+    </p>
+  </div>
+
+  <!-- ══ MAINTENANCE ════════════════════════════════════════════════ -->
+  <div class="section-title">Note sur la maintenance</div>
+  <div class="maintenance-box">
+    <div class="mi">🔧</div>
+    <div>
+      <h4>Frais de maintenance technique non inclus</h4>
+      <p>
+        Les chiffres présentés dans ce document ne comprennent pas les frais de maintenance et d'évolution technique de la plateforme.
+        Eolis Connect est conçu pour être maintenu et évolué dans le temps par une <strong>ressource technique dédiée</strong>,
+        dont le coût fait partie de la stratégie de déploiement à long terme.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ FOOTER ═════════════════════════════════════════════════════════ -->
+<div class="footer">
+  <strong>Eolis Connect</strong> — Document confidentiel · Mai 2026<br>
+  Prototype Cameroun · Modèle économique v1
+</div>
+
+</body>
+</html>
