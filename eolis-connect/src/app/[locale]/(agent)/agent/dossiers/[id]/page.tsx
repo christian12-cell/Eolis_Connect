@@ -175,8 +175,12 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
               )}
               {/* Pastille SMS — visible uniquement sur tickets premium */}
               {(ticket.ticketMode === 'BL_PREMIUM' || ticket.ticketMode === 'INFO_PREMIUM') && (() => {
-                const slots = ticket.smsSlots ?? 0
-                const enabled = ticket.smsEnabled
+                const slots    = ticket.smsSlots ?? 0   // floor(credits/160), dynamique
+                const docSent  = ticket.smsDocSent ?? 0
+                const enabled  = ticket.smsEnabled
+                const finalOk  = slots >= 1
+                const docLeft  = Math.max(0, slots - 1 - docSent) // réserve 1 pour finale
+
                 if (!enabled) return (
                   <span className="inline-flex items-center gap-0.5 bg-gray-100 text-gray-400 text-[10px] font-medium px-2 py-0.5 rounded-md">
                     📵 SMS désactivé
@@ -187,14 +191,15 @@ export default function AgentDossierPage({ params }: { params: Promise<{ locale:
                     📵 SMS activé · crédits insuffisants
                   </span>
                 )
-                if (slots === 1) return (
-                  <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium px-2 py-0.5 rounded-md">
-                    📱 SMS activé · 1 SMS (réponse finale uniquement)
+                if (docLeft === 0 && finalOk) return (
+                  <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                    📱 SMS · réponse finale uniquement{docSent > 0 ? ` · ${docSent} doc envoyé${docSent > 1 ? 's' : ''}` : ''}
                   </span>
                 )
                 return (
                   <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium px-2 py-0.5 rounded-md">
-                    📱 SMS activé · 2 SMS (1 demande de documents + réponse finale)
+                    📱 SMS · {docLeft} demande{docLeft > 1 ? 's' : ''} doc + réponse finale
+                    {docSent > 0 ? ` · ${docSent} déjà envoyé${docSent > 1 ? 's' : ''}` : ''}
                   </span>
                 )
               })()}

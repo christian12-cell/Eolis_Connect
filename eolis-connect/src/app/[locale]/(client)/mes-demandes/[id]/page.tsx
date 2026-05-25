@@ -874,7 +874,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                   </p>
                   <p className="text-[10px] text-blue-200">
                     {smsEnabled
-                      ? (isFr ? 'Activé · max. 2 SMS pour ce dossier' : 'Enabled · max. 2 SMS for this file')
+                      ? (isFr
+                          ? `Activé · max. ${Math.floor((creditsRemaining ?? 0) / 160)} SMS pour ce dossier`
+                          : `Enabled · max. ${Math.floor((creditsRemaining ?? 0) / 160)} SMS for this file`)
                       : (isFr ? '160 crédits / SMS · Appuyer pour activer' : '160 credits / SMS · Tap to enable')}
                   </p>
                 </div>
@@ -939,13 +941,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ locale:
                 ) : (
                   <>
                     <p className="text-base font-bold text-white">📱 {isFr ? 'Activer les SMS pour ce dossier ?' : 'Enable SMS for this file?'}</p>
-                    {showSmsPopup === 'confirm_2' ? (
-                      <p className="text-sm text-blue-200">
-                        {isFr
-                          ? 'Vous serez notifié par SMS à deux moments : quand l\'agent demande des documents, et à la clôture de votre dossier.'
-                          : 'You will be notified by SMS at two stages: when the agent requests documents, and when your file is closed.'}
-                      </p>
-                    ) : (
+                    {showSmsPopup === 'confirm_2' ? (() => {
+                      const maxSms = Math.floor((creditsRemaining ?? 0) / 160)
+                      const docSlots = Math.max(0, maxSms - 1)
+                      return (
+                        <p className="text-sm text-blue-200">
+                          {isFr
+                            ? `Vous pouvez recevoir jusqu'à ${docSlots} SMS de demande de documents et 1 SMS à la clôture du dossier.`
+                            : `You can receive up to ${docSlots} document request SMS and 1 SMS when your file is closed.`}
+                        </p>
+                      )
+                    })() : (
                       <p className="text-sm text-blue-200">
                         {isFr
                           ? 'Vous recevrez un SMS à la clôture de votre dossier.'

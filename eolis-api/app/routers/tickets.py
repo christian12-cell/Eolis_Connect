@@ -107,15 +107,20 @@ def create_ticket(body: TicketCreateRequest, current_user: User = Depends(get_cu
 
 
 def _compute_sms_slots(ticket, db: Session) -> int:
-    """Compute how many SMS the client can still receive on this ticket (0, 1, or 2)."""
+    """Dynamic SMS capacity = floor(credits_remaining / 160). Uncapped."""
     if not ticket.sms_enabled or ticket.ticket_mode not in ("BL_PREMIUM", "INFO_PREMIUM"):
         return 0
     rem = credits_remaining(ticket.client_id, db)
-    if rem >= CREDITS_PER_SMS * 2:
-        return 2
-    if rem >= CREDITS_PER_SMS:
-        return 1
-    return 0
+    return max(0, int(rem // CREDITS_PER_SMS))
+
+
+def _count_sms_doc_sent(ticket_id: str, db: Session) -> int:
+    """Count doc-request SMS already sent on this ticket."""
+    return db.query(AIUsage).filter(
+        AIUsage.ticket_id == ticket_id,
+        AIUsage.type == "sms_notification",
+        AIUsage.model == "sms_doc",
+    ).count()
 
 
 @router.get("/{ticket_id}", response_model=TicketResponse)
@@ -126,8 +131,9 @@ def get_ticket(ticket_id: str, current_user: User = Depends(get_current_user), d
     if current_user.role == "CLIENT" and ticket.client_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     ai = db.query(AIUsage).filter(AIUsage.ticket_id == ticket.id).first()
-    ticket.__dict__["ai_usage"] = ai
-    ticket.__dict__["sms_slots"] = _compute_sms_slots(ticket, db)
+    ticket.__dict__["ai_usage"]    = ai
+    ticket.__dict__["sms_slots"]   = _compute_sms_slots(ticket, db)
+    ticket.__dict__["sms_doc_sent"] = _count_sms_doc_sent(ticket.id, db)
     return ticket
 
 
@@ -154,8 +160,9 @@ def toggle_ticket_sms(ticket_id: str, current_user: User = Depends(get_current_u
     ticket.sms_enabled = new_state
     db.commit()
     db.refresh(ticket)
-    ticket.__dict__["ai_usage"] = db.query(AIUsage).filter(AIUsage.ticket_id == ticket.id).first()
-    ticket.__dict__["sms_slots"] = _compute_sms_slots(ticket, db)
+    ticket.__dict__["ai_usage"]    = db.query(AIUsage).filter(AIUsage.ticket_id == ticket.id).first()
+    ticket.__dict__["sms_slots"]   = _compute_sms_slots(ticket, db)
+    ticket.__dict__["sms_doc_sent"] = _count_sms_doc_sent(ticket.id, db)
     return ticket
 
 

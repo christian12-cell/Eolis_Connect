@@ -183,7 +183,7 @@ def send_message(
                 from ..models import AIUsage
                 db.add(AIUsage(
                     client_id=client.id, ticket_id=ticket_id,
-                    type="sms_notification", model="sms",
+                    type="sms_notification", model="sms_final",
                     input_tokens=0, output_tokens=0,
                     cost_usd=SMS_REAL_COST_USD, cost_fcfa=SMS_REAL_COST_FCFA,
                     fcfa_rate=1.0, credits_cost=CREDITS_PER_SMS,
@@ -216,24 +216,35 @@ def send_message(
                 title="Documents requis" if (client.language != "en") else "Documents required",
                 message=f"Documents demandés pour le dossier {ticket.ref}" if (client.language != "en") else f"Documents requested for {ticket.ref}",
             ))
-            # SMS premium : demande de docs seulement si crédits ≥ 320 (réserve la finale)
-            if (client.phone
-                    and ticket.ticket_mode in ("BL_PREMIUM", "INFO_PREMIUM")
-                    and ticket.sms_enabled
-                    and credits_remaining(client.id, db) >= CREDITS_PER_SMS * 2):
-                deduct_credits(client.id, CREDITS_PER_SMS, db)
-                from ..models import AIUsage
-                db.add(AIUsage(
-                    client_id=client.id, ticket_id=ticket_id,
-                    type="sms_notification", model="sms",
-                    input_tokens=0, output_tokens=0,
-                    cost_usd=SMS_REAL_COST_USD, cost_fcfa=SMS_REAL_COST_FCFA,
-                    fcfa_rate=1.0, credits_cost=CREDITS_PER_SMS,
-                ))
-                background_tasks.add_task(
-                    sms_document_requested,
-                    client.phone, client.first_name, ticket.ref, client.language or "fr",
-                )
+            # SMS premium : demande de docs — crédits ≥ 320 (réserve 160 pour la finale)
+            _lang = client.language or "fr"
+            _en   = _lang == "en"
+            if (ticket.ticket_mode in ("BL_PREMIUM", "INFO_PREMIUM") and ticket.sms_enabled):
+                rem = credits_remaining(client.id, db)
+                if client.phone and rem >= CREDITS_PER_SMS * 2:
+                    deduct_credits(client.id, CREDITS_PER_SMS, db)
+                    from ..models import AIUsage
+                    db.add(AIUsage(
+                        client_id=client.id, ticket_id=ticket_id,
+                        type="sms_notification", model="sms_doc",
+                        input_tokens=0, output_tokens=0,
+                        cost_usd=SMS_REAL_COST_USD, cost_fcfa=SMS_REAL_COST_FCFA,
+                        fcfa_rate=1.0, credits_cost=CREDITS_PER_SMS,
+                    ))
+                    background_tasks.add_task(
+                        sms_document_requested,
+                        client.phone, client.first_name, ticket.ref, _lang,
+                    )
+                elif rem < CREDITS_PER_SMS * 2:
+                    # Crédits insuffisants pour SMS doc — notifier le client
+                    background_tasks.add_task(
+                        send_push_to_user, ticket.client_id, "SMS_QUOTA_LOW",
+                        "Crédits SMS insuffisants" if not _en else "Insufficient SMS credits",
+                        (f"Votre dossier {ticket.ref} nécessite des documents mais votre solde ne permet plus d'envoyer de SMS. Rechargez vos crédits."
+                         if not _en else
+                         f"Your file {ticket.ref} requires documents but your balance no longer allows SMS notifications. Top up your credits."),
+                        f"/{_lang}/recharger", ticket.urgency, ticket_id, 0,
+                    )
             _frontend = settings.ALLOWED_ORIGINS.split(",")[0].strip()
             _login_url = f"{_frontend}/{client.language or 'fr'}/mes-demandes/{ticket_id}"
             background_tasks.add_task(

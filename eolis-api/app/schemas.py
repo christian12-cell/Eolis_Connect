@@ -197,7 +197,8 @@ class TicketResponse(BaseModel):
     messages: list["MessageResponse"] = []
     ai_usage: Optional["AIUsageSummary"] = None
     sms_enabled: bool = False
-    sms_slots: int = 0  # 0, 1 ou 2 — calculé selon crédits client (pour la vue agent)
+    sms_slots: int = 0     # floor(credits/160) — dynamique, non capé
+    sms_doc_sent: int = 0  # nb de SMS "demande de documents" déjà envoyés sur ce ticket
 
     model_config = camel_config()
 
