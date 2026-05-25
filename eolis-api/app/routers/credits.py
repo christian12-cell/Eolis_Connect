@@ -821,8 +821,9 @@ def admin_benefits(
     total_api     = total_ai + total_sms_cost
     total_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in usages)
     sms_credits   = sum(getattr(u, "credits_cost", 0) or 0 for u in sms_usages)
-    bl_credits    = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "bl_extraction")
-    voice_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "voice_transcription")
+    bl_credits      = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "bl_extraction")
+    voice_credits   = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "voice_transcription")
+    opening_credits = sum(getattr(u, "credits_cost", 0) or 0 for u in usages if u.type == "info_premium_opening")
 
     nb_clients   = db.query(CreditBalance).count()
     free_credits = nb_clients * FREE_CREDITS_ON_SIGNUP
@@ -849,8 +850,9 @@ def admin_benefits(
         "usageProfit":            round(total_credits - total_api,         4),
         "grossProfit":            round(total_revenue - total_api,         2),
         "freeCreditsGiven":       free_credits,
-        "blCreditsConsumed":      round(bl_credits,                        2),
+        "blCreditsConsumed":       round(bl_credits,                        2),
         "voiceCreditsConsumed":   round(voice_credits,                     2),
+        "openingCreditsConsumed": round(opening_credits,                   2),
         "approvedRequestsCount":  len(approved),
         "pendingRequestsCount":   pending_count,
         "revenueDetails":         per_request,

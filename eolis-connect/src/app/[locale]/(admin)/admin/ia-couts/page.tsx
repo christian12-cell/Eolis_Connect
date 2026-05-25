@@ -210,7 +210,7 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                   label: isFr ? 'Crédits consommés (prix client)' : 'Credits consumed (client cost)',
                   fcfa: fmt2(benefits.totalClientFcfa ?? 0),
                   usd: toUsd(benefits.totalClientFcfa ?? 0), eur: toEur(benefits.totalClientFcfa ?? 0),
-                  sub: `${fmt2(benefits.totalCreditsConsumed ?? 0)} crédits · BL ${fmt2(benefits.blCreditsConsumed ?? 0)} + voix ${fmt2(benefits.voiceCreditsConsumed ?? 0)}${(benefits.smsCreditsConsumed ?? 0) > 0 ? ` + SMS ${fmt2(benefits.smsCreditsConsumed)}` : ''}`,
+                  sub: `${fmt2(benefits.totalCreditsConsumed ?? 0)} cr · BL ${fmt2(benefits.blCreditsConsumed ?? 0)} + voix ${fmt2(benefits.voiceCreditsConsumed ?? 0)}${(benefits.openingCreditsConsumed ?? 0) > 0 ? ` + ouv. ${fmt2(benefits.openingCreditsConsumed)}` : ''}${(benefits.smsCreditsConsumed ?? 0) > 0 ? ` + SMS ${fmt2(benefits.smsCreditsConsumed)}` : ''}`,
                   color: 'bg-blue-50 text-blue-700',
                 },
                 {
@@ -467,7 +467,10 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                               <div key={item.id} className="grid grid-cols-4 gap-2 items-center py-1.5">
                                 <div className="flex items-center gap-2">
                                   <span className="text-base flex-shrink-0">
-                                    {item.type === 'bl_extraction' ? '📄' : item.type === 'sms_notification' ? '📱' : '🎙️'}
+                                    {item.type === 'bl_extraction' ? '📄'
+                                      : item.type === 'sms_notification' ? '📱'
+                                      : item.type === 'info_premium_opening' ? '💼'
+                                      : '🎙️'}
                                   </span>
                                   <div>
                                     <p className="text-xs font-semibold text-gray-800">
@@ -475,7 +478,9 @@ export default function IACoutsPage({ params }: { params: Promise<{ locale: stri
                                         ? (isFr ? 'Extraction BL' : 'BL extraction')
                                         : item.type === 'sms_notification'
                                           ? 'SMS Premium'
-                                          : (isFr ? 'Dictée vocale' : 'Voice dictation')}
+                                          : item.type === 'info_premium_opening'
+                                            ? (isFr ? 'Ouverture Info Premium' : 'Info Premium opening')
+                                            : (isFr ? 'Dictée vocale' : 'Voice dictation')}
                                     </p>
                                     <p className="text-[10px] text-gray-400">
                                       {new Date(item.createdAt).toLocaleDateString(isFr ? 'fr-FR' : 'en-GB', { day: '2-digit', month: 'short' })}

@@ -86,7 +86,7 @@ def create_ticket(body: TicketCreateRequest, current_user: User = Depends(get_cu
             input_tokens=0,
             output_tokens=0,
             cost_usd=0.0,
-            cost_fcfa=CREDITS_INFO_PREMIUM_OPENING,
+            cost_fcfa=0.0,
             fcfa_rate=fcfa_rate,
             credits_cost=CREDITS_INFO_PREMIUM_OPENING,
         ))
